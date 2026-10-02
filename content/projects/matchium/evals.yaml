@@ -1,0 +1,12 @@
+- question: How does Matchium decide which questions to ask each user?
+  expects: [half-the-questions]
+- question: How did you know the matching works before there were any real users?
+  expects: [oracle-share, half-the-questions]
+- question: Why not just show everyone their top three matches?
+  expects: [exposure-gini]
+- question: Does the app learn from who people like, or only from their answers?
+  expects: [learning-from-likes]
+- question: How does the nightly matching job scale?
+  expects: [per-city-scoring]
+- question: How do you keep the TypeScript API and the Python engine from drifting apart?
+  expects: [contract-tests]

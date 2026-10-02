@@ -1,8 +1,18 @@
-import { readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import type { z } from 'zod';
-import { contentSchema, profileSchema, type Content } from './schema.ts';
+import {
+  cvSchema,
+  evalsSchema,
+  profileSchema,
+  projectSchema,
+  slugSchema,
+  type Content,
+  type Cv,
+  type Project,
+  type Role,
+} from './schema.ts';
 
 export type ContentIssue = {
   file: string;
@@ -57,6 +67,91 @@ function check<T>(
   return undefined;
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function newestFirst(roles: Role[]): Role[] {
+  return [...roles].sort((a, b) => b.from.localeCompare(a.from));
+}
+
+async function loadProject(
+  root: string,
+  slug: string,
+  issues: ContentIssue[],
+): Promise<Project | undefined> {
+  const dir = `projects/${slug}`;
+  if (!slugSchema.safeParse(slug).success) {
+    issues.push({ file: dir, path: '', message: 'folder name must be a slug' });
+    return undefined;
+  }
+  const projectFile = `${dir}/project.yaml`;
+  const evalsFile = `${dir}/evals.yaml`;
+  const project = check(
+    projectSchema,
+    await readYaml(root, projectFile, issues),
+    projectFile,
+    issues,
+  );
+  const evals = check(evalsSchema, await readYaml(root, evalsFile, issues), evalsFile, issues);
+  if (!project || !evals) {
+    return undefined;
+  }
+  const factIds = new Set(project.facts.map((fact) => fact.id));
+  evals.forEach((question, index) => {
+    question.expects.forEach((id, at) => {
+      if (!factIds.has(id)) {
+        issues.push({
+          file: evalsFile,
+          path: `${index}.expects.${at}`,
+          message: `"${id}" is not a fact of this project`,
+        });
+      }
+    });
+  });
+  const hasCaseStudy = await exists(join(root, dir, 'case-study.mdx'));
+  return { ...project, slug, evals, hasCaseStudy };
+}
+
+async function loadProjects(root: string, issues: ContentIssue[]): Promise<Project[]> {
+  let entries;
+  try {
+    entries = await readdir(join(root, 'projects'), { withFileTypes: true });
+  } catch {
+    issues.push({ file: 'projects', path: '', message: 'folder is missing' });
+    return [];
+  }
+  const slugs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  const projects: Project[] = [];
+  for (const slug of slugs) {
+    const project = await loadProject(root, slug, issues);
+    if (project) {
+      projects.push(project);
+    }
+  }
+  const byOrder = new Map<number, string>();
+  for (const project of projects) {
+    const taken = byOrder.get(project.order);
+    if (taken) {
+      issues.push({
+        file: `projects/${project.slug}/project.yaml`,
+        path: 'order',
+        message: `order ${project.order} is already used by ${taken}`,
+      });
+    }
+    byOrder.set(project.order, project.slug);
+  }
+  return projects.sort((a, b) => a.order - b.order);
+}
+
 export async function loadContent(root: string): Promise<Content> {
   const issues: ContentIssue[] = [];
   const profile = check(
@@ -65,8 +160,15 @@ export async function loadContent(root: string): Promise<Content> {
     'profile.yaml',
     issues,
   );
-  if (issues.length > 0 || !profile) {
+  const cv = check(cvSchema, await readYaml(root, 'cv.yaml', issues), 'cv.yaml', issues);
+  const projects = await loadProjects(root, issues);
+  if (issues.length > 0 || !profile || !cv) {
     throw new ContentError(issues);
   }
-  return contentSchema.parse({ profile });
+  const sortedCv: Cv = {
+    ...cv,
+    experience: newestFirst(cv.experience),
+    mentoring: newestFirst(cv.mentoring),
+  };
+  return { profile, cv: sortedCv, projects };
 }

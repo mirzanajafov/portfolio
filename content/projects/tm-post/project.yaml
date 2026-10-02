@@ -1,0 +1,38 @@
+name: TM Post
+order: 3
+hook: An API client that keeps working when the server doesn't
+summary: >-
+  A desktop API client for a small team: collections, environments with real secrets, scripts and
+  tests, shared with the few people who need them. Requests go out from your own machine, and the
+  app keeps working on a local copy while the server is away.
+visibility: private
+links:
+  live: https://tmpost.najafov.dev
+stack: [Electron, React, NestJS, PostgreSQL, Prisma]
+headline: cancel-latency
+facts:
+  - id: cancel-latency
+    text: Cancelling is one abort signal end to end; aborted at 300 ms, a request reports canceled at 306 ms, where the version before the fix was still waiting 230 seconds later.
+    kind: measured
+    source: { file: packages/executor/src/node-executor.ts }
+  - id: connect-timeout
+    text: A 1.2 s timeout against an address that never answers took 10.5 s until the timeout also covered connecting, and 1.5 s after.
+    kind: measured
+    source: { file: packages/executor/src/node-executor.ts }
+  - id: test-count
+    text: 625 tests, 91 of them driving the whole application over a stubbed network.
+    kind: measured
+    source: { file: apps/app/src/app.test.tsx }
+  - id: local-first-queue
+    text: Edits go to a local copy and a queue that drains to the server with optimistic version checks, and a change the server refuses is set aside rather than retried forever.
+    kind: design
+    source: { file: README.md, section: When the server cannot be reached }
+  - id: encrypted-secrets
+    text: Variables marked secret are encrypted with AES-256-GCM before they are stored and never come back out of the server in readable form.
+    kind: design
+    source: { file: apps/api/src/crypto/services/secret-cipher.service.ts }
+  - id: script-sandbox
+    text: Pre-request and test scripts run in a worker inside the app with a five-second limit, and the server never sees or runs them.
+    kind: design
+    source: { file: README.md, section: Scripts }
+health: https://tmpost.najafov.dev/api/health

@@ -1,0 +1,30 @@
+name: Task Manager
+order: 4
+hook: A task manager between Todoist and Jira
+summary: >-
+  A small, opinionated task manager with saved views that actually surface what you are looking
+  for. Next.js on the front, NestJS and PostgreSQL behind it, deployed with Docker Compose behind
+  Caddy.
+visibility: private
+links:
+  live: https://tm.najafov.dev
+stack: [Next.js, NestJS, PostgreSQL, Prisma, Redis]
+headline: per-viewer-views
+facts:
+  - id: per-viewer-views
+    text: Saved views are filter trees compiled into database queries, and "assigned to me" resolves per viewer, so one shared view showed its owner three tasks and a teammate two different ones.
+    kind: measured
+    source: { file: apps/api/src/tasks/utils/compile-filter.ts }
+  - id: rebuild-time
+    text: Reworking the Docker build took a deploy after a one-file change from 1m 55s to 16s, measured on the same machine with a cold cache first.
+    kind: measured
+    source: { file: apps/web/Dockerfile }
+  - id: refresh-token-rotation
+    text: Refresh tokens are 32 random bytes stored only as a SHA-256 hash, and every refresh rotates them with replay detection.
+    kind: design
+    source: { file: apps/api/src/auth/services/token.service.ts }
+  - id: trusted-proxies
+    text: The API finds the real caller by trusting proxies by subnet rather than by hop count; before that fix, ten wrong passwords could have locked out everybody.
+    kind: design
+    source: { file: apps/api/src/config/trusted-proxies.ts }
+health: https://tm.najafov.dev/api/health
