@@ -1,7 +1,21 @@
 import type { Metadata, Viewport } from 'next';
+import { IBM_Plex_Mono, Schibsted_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
 import './globals.css';
+
+const body = Schibsted_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const code = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-code',
+  display: 'swap',
+});
 
 const { profile } = content;
 
@@ -19,16 +33,16 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
+  colorScheme: 'dark light',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fafaf9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0a09' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0d11' },
+    { media: '(prefers-color-scheme: light)', color: '#f3f5f7' },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${body.variable} ${code.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

@@ -14,6 +14,14 @@ Every fact is marked `measured`, `parameter` or `design`. I added that after wri
 
 The CLI runs straight from TypeScript on Node 24, without a build step of its own, so the content package only uses syntax Node can strip.
 
+## The hero
+
+The top of the page is a live graph of what I actually run on my server: the browser, the edge proxy, Next.js, NestJS, Postgres, Redis, TimescaleDB, MQTT, the ESP32 receivers and Matchium's Python engine, with requests moving along the connections, coloured by project. You can pick one project and follow its route. I tried three directions as prototypes first (this graph, Marauder's floor plan and Matchium's population); the other two are going into those projects' case studies, where they explain something specific.
+
+The name, role, location and contact links are plain HTML on top of the canvas, so a recruiter sees them before any 3D exists. three.js and the scene load only after the page has loaded, as a separate 135 KB (gzip) of JavaScript, and adding the hero cost the first load 0.9 KB. With reduced motion turned on the scene holds still, and without WebGL there is no scene at all and nothing else changes.
+
+Measuring that turned up something else: the home page was already sending 221.6 KB of gzipped JavaScript before any 3D, and 73 KB of it was zod, which the Ask box used to check four event shapes. Switching the browser side to `zod/mini` took the first load to 148.4 KB, a third less, without changing what gets validated. The API keeps full zod, where the size doesn't matter.
+
 ## Asking it things
 
 What answers the text box today is the dumbest thing that could work: a keyword matcher (BM25 over the facts in `content/` and the CV) that picks one or two sentences and cites where each one came from. I built it first on purpose. The part around the model, the part that decides what is allowed to reach the visitor, has to work before there is a model at all, and the matcher gives me a baseline to beat.
