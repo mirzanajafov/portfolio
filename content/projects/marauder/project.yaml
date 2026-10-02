@@ -1,0 +1,37 @@
+name: Marauder
+order: 2
+hook: Live indoor positioning from noisy radio signals
+summary: >-
+  Opt-in tags report to fixed receivers over MQTT, and the backend turns that noisy RSSI stream into
+  dots moving live on a floor plan. It runs on simulated traffic and also takes real receivers: an
+  ESP32 sketch and a Python BLE scanner are in the repo.
+visibility: public
+links:
+  live: https://marauder.najafov.dev
+  repo: https://github.com/mirzanajafov/marauder
+stack: [NestJS, MQTT, Redis, TimescaleDB, React, ESP32]
+headline: batched-broadcast
+facts:
+  - id: batched-broadcast
+    text: Position updates reach the map as one batch every 150 ms instead of one event per radio reading.
+    kind: parameter
+    source: { file: apps/api/src/position/position.service.ts }
+  - id: race-free-first-sighting
+    text: The first sighting of a tag creates its entity exactly once, through a Redis SET NX with the database's unique constraint as the fallback.
+    kind: design
+    source: { file: apps/api/src/resolution/resolution.service.ts }
+  - id: trilateration
+    text: Positions come from a log-distance path-loss model, trilateration when three or more receivers hear a tag, and an exponential moving average against jumps.
+    kind: design
+    source: { file: README.md, section: How it works }
+  - id: lean-backups
+    text: Backups leave the position history out on purpose, because it is simulator traffic that refills in minutes and keeping it made a 3 GB volume out of a few kilobytes of real data.
+    kind: measured
+    source: { file: README.md, section: Deploying }
+  - id: real-receivers
+    text: Any receiver that publishes RSSI over MQTT works, and the repo has an ESP32 sketch and a Python BLE scanner as reference receivers.
+    kind: design
+    source: { file: README.md, section: Real sensors }
+health: https://marauder.najafov.dev/api/health
+knowledge:
+  - README.md

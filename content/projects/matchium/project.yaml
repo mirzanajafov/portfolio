@@ -1,0 +1,45 @@
+name: Matchium
+order: 1
+hook: Dating matches from a model that shows its work
+summary: >-
+  You answer a few questions a day and get a few matches each morning, each with how sure the model
+  is and why it picked that person. I built the matching engine in Python, proved it on a simulator
+  before any real user existed, and run it behind a NestJS API and a Next.js app.
+visibility: public
+links:
+  live: https://matchium.najafov.dev
+  repo: https://github.com/mirzanajafov/matchium
+stack: [Python, NestJS, Next.js, PostgreSQL, Prisma]
+headline: half-the-questions
+facts:
+  - id: half-the-questions
+    text: Adaptive questions reach the same accuracy with about half the questions, 12 instead of ~24.
+    kind: measured
+    source: { file: README.md, section: Does it work? }
+  - id: exposure-gini
+    text: Daily matches are assigned with greedy b-matching, which drops exposure inequality from a Gini of 0.46 to 0.02 for about 4 points of like rate.
+    kind: measured
+    source: { file: README.md, section: Does it work? }
+  - id: oracle-share
+    text: With the full 96-question bank, rank correlation reaches 0.718 by day 21, which is 94% of an oracle that knows everyone's true traits.
+    kind: measured
+    source: { file: README.md, section: Does it work? }
+  - id: learning-from-likes
+    text: Learning from likes and passes barely matters when people answer honestly (0.718 vs 0.720), but when stated preferences are noisy it lifts accuracy from 0.65 to 0.69 by day 28.
+    kind: measured
+    source: { file: README.md, section: Does it work? }
+  - id: per-city-scoring
+    text: Scoring each city on its own gives exactly the same matches, and memory grows with the largest city instead of the whole user base, 66 MB instead of 2.3 GB for 6,000 users across 6 cities.
+    kind: measured
+    source: { file: README.md, section: Running it }
+  - id: kalman-beliefs
+    text: Each user is a Gaussian belief over 8 dimensions, for who they are and who they want, and each answer is a Kalman-style update, so every number can be explained.
+    kind: design
+    source: { file: README.md, section: How matching works }
+  - id: contract-tests
+    text: The belief update exists in both Python and TypeScript, and the API tests replay fixtures exported by the Python side so the two cannot drift apart.
+    kind: design
+    source: { file: README.md, section: How the pieces fit }
+health: https://matchium.najafov.dev/
+knowledge:
+  - README.md

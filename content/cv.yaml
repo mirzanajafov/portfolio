@@ -1,0 +1,115 @@
+experience:
+  - company: NeuroTime AI
+    role: Senior Software Engineer
+    kind: employee
+    from: 2026-07
+    to: present
+    location: Baku, Azerbaijan
+    remote: false
+    about: AI company behind Obsera, a SaaS platform for media monitoring, social media management and AI content generation.
+    highlights:
+      - Own backend services and REST APIs in Node.js, NestJS and TypeScript from design to production.
+      - Design and build the payment system with Stripe, including checkout, subscriptions and webhook handling.
+      - Build and maintain React/TypeScript front-end features, turning designs into responsive UI.
+      - Develop large-scale web scraping pipelines collecting data from news websites and social media platforms for AI-driven media monitoring.
+      - Prepare datasets and training workflows in Python for NLP models, including sentiment analysis.
+      - Wrote data ingestion services in Go.
+
+  - company: MemeDroid
+    role: Backend Engineer
+    kind: freelance
+    from: 2025-09
+    to: present
+    location: Amsterdam, Netherlands
+    remote: true
+    about: Meme and AI content platform with millions of active users.
+    highlights:
+      - Planned and led the migration of the core codebase from PHP to NestJS and TypeScript.
+      - Migrated the multilingual (i18n) support from PHP to the new NestJS backend, keeping localized content working for users across languages.
+      - Moved heavy image processing into background workers with Redis and BullMQ, so API requests no longer wait on long-running jobs.
+      - Built the AI image processing service, integrating third-party AI APIs and handling file storage and processing jobs.
+      - Designed the PostgreSQL schema with Prisma for asset processing.
+      - Added Jest unit tests to migrated modules to catch regressions early.
+
+  - company: Thinking IT
+    role: Backend Engineer
+    kind: contract
+    from: 2025-04
+    to: 2025-12
+    location: Dubai, UAE
+    remote: true
+    about: Technology consultancy building backend systems for enterprise clients.
+    highlights:
+      - Built REST APIs in Node.js and NestJS for client projects and tuned slow SQL queries.
+      - Set up asynchronous processing pipelines to reduce data latency.
+      - Led refactoring work that shortened development cycles by ~20%.
+      - Agreed API contracts with frontend teams and supported client-side integration.
+
+  - company: UpSell (ex-ReConvert)
+    role: Backend Engineer
+    kind: employee
+    from: 2023-02
+    to: 2025-08
+    location: Tel Aviv, Israel
+    remote: true
+    about: E-commerce platform providing real-time upsells for high-volume Shopify and Wix stores.
+    highlights:
+      - Developed and maintained REST APIs using Node.js, TypeScript and NestJS, reducing response times for critical services by ~20%.
+      - Led a large codebase refactoring that improved performance by ~25% and cleared a lot of accumulated tech debt.
+      - Improved caching and AWS deployment workflows, reducing production incidents.
+      - Built backend integrations and payment processing pipelines for Minta.ai, an AI-powered video automation platform.
+      - Maintained and scaled the core backend infrastructure for ReConvert.io to support high-traffic e-commerce operations.
+
+  - company: Self-employed
+    role: Freelance Backend Developer
+    kind: freelance
+    from: 2019-01
+    to: 2023-01
+    location: Baku, Azerbaijan
+    remote: false
+    highlights:
+      - Built backend services and REST APIs for small business clients using Node.js, Express and PHP.
+      - Developed e-commerce sites, admin panels and booking systems with MySQL and MongoDB.
+      - Handled deployment and maintenance of client projects on VPS servers.
+
+mentoring:
+  - company: DIV Academy
+    role: Technical Mentor & Project Evaluator
+    kind: part-time
+    from: 2026-02
+    to: present
+    location: Baku, Azerbaijan
+    remote: false
+    highlights:
+      - Mentor backend engineering students by conducting code reviews and guiding their architectural decisions.
+      - Evaluate graduation projects (including clones of platforms like Upwork and Twitter), focusing on code reliability, security, and database query optimization.
+      - Updated the course curriculum to focus on modern backend best practices, database normalization, and clean code principles.
+
+skills:
+  - group: Backend & core
+    items: [Node.js, NestJS, TypeScript, Express, Go, Python, PHP]
+  - group: Databases
+    items: [PostgreSQL, Redis, MongoDB, MySQL]
+  - group: Messaging & architecture
+    items: [REST, GraphQL, BullMQ, RabbitMQ, Kafka, Microservices, Event-driven]
+  - group: ORM
+    items: [Prisma, TypeORM, Mongoose]
+  - group: AI & integrations
+    items:
+      [OpenAI API, AI image processing, Web scraping, Model training, Stripe, NLP data pipelines]
+  - group: DevOps
+    items: [Docker, AWS, CI/CD, Git, GitLab, GitHub]
+  - group: Testing
+    items: [Jest, Playwright]
+  - group: Frontend
+    items: [React, Next.js]
+
+languages:
+  - name: English
+    level: Professional working proficiency
+  - name: Azerbaijani
+    level: Native
+  - name: Turkish
+    level: Fluent
+  - name: Russian
+    level: Basic

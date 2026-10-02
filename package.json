@@ -13,7 +13,8 @@
     "typecheck": "pnpm --filter @portfolio/content build && pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "new-project": "node content/src/cli.ts new"
   },
   "devDependencies": {
     "prettier": "3.9.9",

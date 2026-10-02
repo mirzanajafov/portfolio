@@ -1,0 +1,10 @@
+- question: How does Marauder turn radio signal strength into a position?
+  expects: [trilateration]
+- question: What happens the first time a new tag shows up?
+  expects: [race-free-first-sighting]
+- question: How do position updates get to the browser?
+  expects: [batched-broadcast]
+- question: Does it work with real hardware or only the simulator?
+  expects: [real-receivers]
+- question: How do you back it up?
+  expects: [lean-backups]
