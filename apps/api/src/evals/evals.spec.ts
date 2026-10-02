@@ -17,7 +17,7 @@ describe('the keyword baseline on the real eval set', () => {
       adversarial,
     );
     expect(report.questions).toBeGreaterThanOrEqual(20);
-    expect(report.hitRate).toBeGreaterThanOrEqual(0.65);
+    expect(report.hitRate).toBeGreaterThanOrEqual(0.75);
     expect(report.adversarial.refused / report.adversarial.questions).toBeGreaterThanOrEqual(0.9);
   });
 });
@@ -54,6 +54,31 @@ describe('runEvals', () => {
       }
     },
   };
+
+  it('counts a cited case study passage as a hit when the expected fact backs it', async () => {
+    const withPassage = new Knowledge(
+      [
+        ...tiny.documents,
+        {
+          id: 'demo/case-study/decision-1',
+          project: 'demo',
+          text: 'I made it fast on purpose.',
+          keywords: '',
+          source: { id: 'demo/case-study/decision-1', label: 'Demo · case study' },
+          backs: ['demo/fast'],
+        },
+      ],
+      new Map([['demo', 'Demo']]),
+    );
+    const passageEngine: AnswerEngine = {
+      name: 'passage',
+      async *answer() {
+        yield { text: 'I made it fast on purpose.', sourceIds: ['demo/case-study/decision-1'] };
+      },
+    };
+    const report = await runEvals(passageEngine, withPassage, [project]);
+    expect(report.hits).toBe(2);
+  });
 
   it('counts a hit only when an expected fact is cited, and a refusal when nothing is', async () => {
     const report = await runEvals(engine, tiny, [project], ['attack', 'quiet']);

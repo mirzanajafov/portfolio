@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Project } from '@portfolio/content';
 import { headlineFact } from '@/lib/format';
 
@@ -45,13 +46,13 @@ export function ProjectCard({ project }: { project: Project }) {
         ) : (
           <span className="text-sm text-[var(--muted)]">Source available on request</span>
         )}
-        {project.hasCaseStudy && (
-          <a
+        {project.caseStudy && (
+          <Link
             className="font-medium underline-offset-4 hover:underline"
             href={`/projects/${project.slug}`}
           >
             Case study
-          </a>
+          </Link>
         )}
       </div>
     </article>

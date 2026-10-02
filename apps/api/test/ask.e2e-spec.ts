@@ -81,12 +81,12 @@ describe('POST /ask against a real database', () => {
     expect(events[0]?.data).toEqual({ type: 'meta', engine: 'keyword' });
     expect(events.at(-1)?.data).toEqual({ type: 'done' });
     const first = events.find((e) => e.event === 'sentence')?.data;
-    expect(first?.sources?.[0]).toEqual(
-      expect.objectContaining({
-        id: 'matchium/half-the-questions',
-        href: 'https://github.com/mirzanajafov/matchium/blob/main/README.md',
-      }),
-    );
+    const source = first?.sources?.[0];
+    expect(source?.id.startsWith('matchium/')).toBe(true);
+    const href = source?.href ?? '';
+    expect(
+      href.startsWith('https://github.com/mirzanajafov/matchium/') || href === '/projects/matchium',
+    ).toBe(true);
   });
 
   it('never links into a private repo', async () => {

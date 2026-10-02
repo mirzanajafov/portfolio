@@ -12,6 +12,7 @@ export type KnowledgeDocument = {
   text: string;
   keywords: string;
   source: Source;
+  backs?: string[];
 };
 
 export class Knowledge {
@@ -131,6 +132,31 @@ export function buildKnowledge(content: Content): Knowledge {
           href: factHref(project, fact.source.file),
         },
       });
+    }
+    const study = project.caseStudy;
+    if (study) {
+      const passages: [string, string, string, string[]][] = [
+        ['why', study.problem, 'why built problem motivation idea', []],
+        ...study.decisions.map((decision, index): [string, string, string, string[]] => [
+          `decision-${index + 1}`,
+          decision.body,
+          decision.title,
+          decision.facts.map((fact) => `${project.slug}/${fact}`),
+        ]),
+        ['proof', study.proof, 'tested testing tests prove proof works', []],
+        ['next', study.next, 'next improve change future plans', []],
+      ];
+      for (const [part, text, extra, backs] of passages) {
+        const id = `${project.slug}/case-study/${part}`;
+        documents.push({
+          id,
+          project: project.slug,
+          text,
+          keywords: `${keywords} ${extra}`,
+          source: { id, label: `${project.name} · case study`, href: `/projects/${project.slug}` },
+          backs,
+        });
+      }
     }
   }
 

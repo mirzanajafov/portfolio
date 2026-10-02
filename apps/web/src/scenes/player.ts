@@ -1,7 +1,8 @@
+import type { SceneName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
 import type { LegendItem, Palette, SceneFactory, SceneInstance } from './types';
 
-export type SceneName = 'systems' | 'floor' | 'population';
+export type { SceneName };
 
 const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   systems: () => import('./systems').then((m) => m.createSystemsScene),
