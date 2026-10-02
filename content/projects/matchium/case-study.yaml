@@ -1,0 +1,46 @@
+problem: >-
+  Dating apps tell you who to date without saying why or how sure they are. I wanted to see what
+  that loop looks like when the matching is grounded in data: you answer a few questions a day, a
+  few matches arrive each morning, and every match says how sure the model is and why it picked
+  that person.
+demo: population
+demoCaption: >-
+  Each point is a simulated person, placed where the model believes they are. The blur shrinks along
+  the learning curve Matchium's simulator measured, and the lines are each day's matches, at most
+  three per person, assigned the same greedy way the nightly job does it.
+decisions:
+  - title: Ask the questions that teach the model the most
+    body: >-
+      Questions aren't random. For each person I pick the ones expected to shrink the uncertainty in
+      their match scores the most, weighted by how much they care about each dimension. Every answer
+      is a Kalman-style update to a Gaussian belief, which keeps it cheap and keeps every number
+      explainable to the person it describes.
+    facts: [half-the-questions, kalman-beliefs]
+  - title: Share the attention fairly
+    body: >-
+      If everyone just sees their own top three, popular profiles end up in dozens of lists and a
+      lot of people get nothing. Daily matches are assigned with greedy b-matching instead: a match
+      is shown to both people and nobody gets more than three a day. It costs a little like rate,
+      and I think that trade is worth it.
+    facts: [exposure-gini]
+  - title: Prove it before anyone signs up
+    body: >-
+      There were no users, so I built a simulator first: people with hidden traits, answers with
+      noise, and a random chemistry term no questionnaire could ever capture. The engine never sees
+      the ground truth, and the simulator measures how close it gets. It also showed me where
+      learning from likes helps and where it doesn't.
+    facts: [oracle-share, learning-from-likes]
+  - title: Keep two languages honest
+    body: >-
+      The belief update runs in TypeScript in the API and in Python in the nightly job. The Python
+      side exports the question bank and recorded answer sequences with their expected results, and
+      the API tests replay them, so the math can't quietly drift between the two.
+    facts: [contract-tests]
+proof: >-
+  The simulator writes its numbers to a results file every time it runs, and the charts in the
+  README are drawn from that file rather than typed in. Two answers arriving at once from two tabs
+  are handled under a row lock on the person's belief, and there's a test for that. Scoring city by
+  city was checked against scoring everyone at once and gives exactly the same matches.
+next: >-
+  Use chat activity as a signal too, not only likes and passes, and replace the hand-written
+  question bank with a proper item response model once there is real data to fit it to.

@@ -116,6 +116,26 @@ export const projectSchema = z
     }
   });
 
+export const sceneNames = ['systems', 'floor', 'population'] as const;
+
+export const caseStudySchema = z.strictObject({
+  problem: z.string().min(1).max(600),
+  demo: z.enum(sceneNames).optional(),
+  demoCaption: z.string().min(1).max(400).optional(),
+  decisions: z
+    .array(
+      z.strictObject({
+        title: z.string().min(1).max(80),
+        body: z.string().min(1).max(900),
+        facts: z.array(slugSchema).default([]),
+      }),
+    )
+    .min(2)
+    .max(4),
+  proof: z.string().min(1).max(900),
+  next: z.string().min(1).max(600),
+});
+
 export const evalSchema = z.strictObject({
   question: z.string().min(1),
   expects: z.array(slugSchema).min(1),
@@ -128,10 +148,12 @@ export type Cv = z.infer<typeof cvSchema>;
 export type Role = Cv['experience'][number];
 export type Fact = z.infer<typeof factSchema>;
 export type EvalQuestion = z.infer<typeof evalSchema>;
+export type CaseStudy = z.infer<typeof caseStudySchema>;
+export type SceneName = (typeof sceneNames)[number];
 export type Project = z.infer<typeof projectSchema> & {
   slug: string;
   evals: EvalQuestion[];
-  hasCaseStudy: boolean;
+  caseStudy?: CaseStudy;
 };
 
 export type Content = {

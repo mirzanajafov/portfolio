@@ -4,7 +4,8 @@ import type { DraftSentence } from './answer-engine.js';
 import { KeywordAnswerEngine, tokenize } from './keyword-engine.js';
 import { buildKnowledge } from './knowledge.js';
 
-const engine = new KeywordAnswerEngine(buildKnowledge(content));
+const knowledge = buildKnowledge(content);
+const engine = new KeywordAnswerEngine(knowledge);
 
 async function draft(question: string): Promise<DraftSentence[]> {
   const sentences: DraftSentence[] = [];
@@ -25,9 +26,13 @@ describe('tokenize', () => {
 });
 
 describe('KeywordAnswerEngine', () => {
-  it('answers from the fact that matches, and cites it', async () => {
+  it('answers from the fact that matches, or a passage backed by it, and cites it', async () => {
     const sentences = await draft('How does Matchium pick which questions to ask?');
-    expect(sentences[0]?.sourceIds).toEqual(['matchium/half-the-questions']);
+    const cited = sentences[0]?.sourceIds[0] ?? '';
+    const backs = knowledge.get(cited)?.backs ?? [];
+    expect(
+      cited === 'matchium/half-the-questions' || backs.includes('matchium/half-the-questions'),
+    ).toBe(true);
   });
 
   it('stays inside a project once the question names it', async () => {

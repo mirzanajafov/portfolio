@@ -1,17 +1,17 @@
 {
   "engine": "keyword",
   "questions": 20,
-  "hits": 14,
-  "refusals": 1,
-  "hitRate": 0.7,
+  "hits": 16,
+  "refusals": 0,
+  "hitRate": 0.8,
   "byProject": {
     "matchium": {
       "questions": 6,
-      "hits": 4
+      "hits": 5
     },
     "marauder": {
       "questions": 5,
-      "hits": 3
+      "hits": 4
     },
     "tm-post": {
       "questions": 5,
@@ -99,7 +99,7 @@
       ],
       "cited": [
         "matchium/half-the-questions",
-        "matchium/kalman-beliefs"
+        "matchium/case-study/decision-1"
       ],
       "hit": true,
       "refused": false
@@ -125,9 +125,9 @@
         "matchium/exposure-gini"
       ],
       "cited": [
-        "matchium/oracle-share"
+        "matchium/case-study/decision-2"
       ],
-      "hit": false,
+      "hit": true,
       "refused": false
     },
     {
@@ -137,7 +137,8 @@
         "matchium/learning-from-likes"
       ],
       "cited": [
-        "matchium/learning-from-likes"
+        "matchium/learning-from-likes",
+        "matchium/case-study/decision-3"
       ],
       "hit": true,
       "refused": false
@@ -149,8 +150,8 @@
         "matchium/per-city-scoring"
       ],
       "cited": [
-        "matchium/exposure-gini",
-        "matchium/half-the-questions"
+        "matchium/case-study/decision-4",
+        "matchium/case-study/why"
       ],
       "hit": false,
       "refused": false
@@ -162,7 +163,8 @@
         "matchium/contract-tests"
       ],
       "cited": [
-        "matchium/contract-tests"
+        "matchium/contract-tests",
+        "matchium/case-study/decision-4"
       ],
       "hit": true,
       "refused": false
@@ -174,8 +176,8 @@
         "marauder/trilateration"
       ],
       "cited": [
-        "marauder/batched-broadcast",
-        "marauder/trilateration"
+        "marauder/case-study/why",
+        "marauder/case-study/decision-1"
       ],
       "hit": true,
       "refused": false
@@ -187,6 +189,7 @@
         "marauder/race-free-first-sighting"
       ],
       "cited": [
+        "marauder/case-study/decision-2",
         "marauder/race-free-first-sighting"
       ],
       "hit": true,
@@ -199,7 +202,8 @@
         "marauder/batched-broadcast"
       ],
       "cited": [
-        "marauder/batched-broadcast"
+        "marauder/batched-broadcast",
+        "marauder/case-study/decision-3"
       ],
       "hit": true,
       "refused": false
@@ -211,7 +215,8 @@
         "marauder/real-receivers"
       ],
       "cited": [
-        "marauder/lean-backups"
+        "marauder/lean-backups",
+        "marauder/case-study/next"
       ],
       "hit": false,
       "refused": false
@@ -222,9 +227,12 @@
       "expected": [
         "marauder/lean-backups"
       ],
-      "cited": [],
-      "hit": false,
-      "refused": true
+      "cited": [
+        "marauder/case-study/decision-1",
+        "marauder/case-study/decision-4"
+      ],
+      "hit": true,
+      "refused": false
     },
     {
       "project": "tm-post",

@@ -61,6 +61,18 @@ const evals = [
   { question: 'Is it both?', expects: ['fast', 'small'] },
 ];
 
+const caseStudy = {
+  problem: 'It was slow.',
+  demo: 'floor',
+  demoCaption: 'Dots on a floor plan.',
+  decisions: [
+    { title: 'Make it fast', body: 'I made it fast.', facts: ['fast'] },
+    { title: 'Keep it small', body: 'I kept it small.', facts: ['small'] },
+  ],
+  proof: 'Tests.',
+  next: 'More tests.',
+};
+
 let root: string;
 
 async function put(file: string, value: unknown): Promise<void> {
@@ -108,10 +120,39 @@ describe('loadContent', () => {
   });
 
   it('notices a case study when the file is there', async () => {
-    await put('projects/alpha/case-study.mdx', '# Alpha');
+    await put('projects/alpha/case-study.yaml', caseStudy);
     const content = await loadContent(root);
-    expect(content.projects.find((p) => p.slug === 'alpha')?.hasCaseStudy).toBe(true);
-    expect(content.projects.find((p) => p.slug === 'beta')?.hasCaseStudy).toBe(false);
+    expect(content.projects.find((p) => p.slug === 'alpha')?.caseStudy?.demo).toBe('floor');
+    expect(content.projects.find((p) => p.slug === 'beta')?.caseStudy).toBeUndefined();
+  });
+
+  it('backs every number in a case study with a fact of the same project', async () => {
+    await put('projects/alpha/case-study.yaml', {
+      ...caseStudy,
+      decisions: [...caseStudy.decisions, { title: 'Brag', body: 'It won.', facts: ['award'] }],
+    });
+    expect(await issues()).toEqual([
+      {
+        file: 'projects/alpha/case-study.yaml',
+        path: 'decisions.2.facts.0',
+        message: '"award" is not a fact of this project',
+      },
+    ]);
+  });
+
+  it('wants a caption for every demo, so nothing moves on the page without an explanation', async () => {
+    const { demoCaption: _, ...withoutCaption } = caseStudy;
+    await put('projects/alpha/case-study.yaml', withoutCaption);
+    expect(await issues()).toEqual([
+      expect.objectContaining({ file: 'projects/alpha/case-study.yaml', path: 'demoCaption' }),
+    ]);
+  });
+
+  it('only accepts demos the site knows how to draw', async () => {
+    await put('projects/alpha/case-study.yaml', { ...caseStudy, demo: 'hologram' });
+    expect(await issues()).toEqual([
+      expect.objectContaining({ file: 'projects/alpha/case-study.yaml', path: 'demo' }),
+    ]);
   });
 
   it('reports a missing file without a second complaint about its contents', async () => {

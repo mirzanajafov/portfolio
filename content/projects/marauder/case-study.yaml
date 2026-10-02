@@ -1,0 +1,41 @@
+problem: >-
+  I wanted to see how far indoor positioning from radio signal strength can go with a clean
+  streaming pipeline: fixed receivers hear opt-in tags, a staff badge or an asset tag, and the
+  backend turns that noisy stream into dots moving live on a floor plan.
+demo: floor
+demoCaption: >-
+  Five receivers and six tags walking at 1.4 m/s, with readings at 10 Hz smoothed by the same moving
+  average the API uses and sent to the map in 150 ms batches. The ring under each dot is where the
+  tag really is, so the gap between them is the error.
+decisions:
+  - title: From signal strength to a position
+    body: >-
+      A log-distance path-loss model turns each reading into a distance, trilateration combines
+      three or more receivers into a position, and an exponential moving average keeps the markers
+      from jumping around. Fewer than three receivers falls back to a weighted centroid.
+    facts: [trilateration]
+  - title: Recognize a tag exactly once
+    body: >-
+      Several receivers can hear a new tag in the same instant, so several messages race to create
+      it. Resolution goes through a Redis SET NX first and the database's unique constraint second,
+      and the first sighting creates one entity no matter how many messages arrive together.
+    facts: [race-free-first-sighting]
+  - title: Batch what the browser sees
+    body: >-
+      Ten readings a second from every receiver would be far more events than a map needs. The
+      API keeps the latest estimate per tag and flushes them to the browser every 150 ms as one
+      batch over the socket.
+    facts: [batched-broadcast]
+  - title: Back up what matters
+    body: >-
+      Position history is simulator traffic that refills itself within minutes, so the nightly
+      backup leaves it out on purpose and keeps the names, floor plans and receivers.
+    facts: [lean-backups]
+proof: >-
+  Unit tests cover the trilateration and the race between two first sightings, and an end-to-end
+  suite runs against a real TimescaleDB and Redis. The receivers are interchangeable: the simulator,
+  an ESP32 sketch and a Python BLE scanner all publish the same MQTT message.
+next: >-
+  Measure the position error against the simulator's ground truth and publish it, because it's the
+  number this project is missing. And make scaling out real: tracks live in process memory today, so
+  two API instances would each compute everything.

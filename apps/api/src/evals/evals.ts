@@ -69,7 +69,11 @@ export async function runEvals(
         question: question.question,
         expected,
         cited,
-        hit: cited.some((id) => expected.includes(id)),
+        hit: cited.some(
+          (id) =>
+            expected.includes(id) ||
+            (knowledge.get(id)?.backs ?? []).some((fact) => expected.includes(fact)),
+        ),
         refused: cited.length === 0,
       });
     }

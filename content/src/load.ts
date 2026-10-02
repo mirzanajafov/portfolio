@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import type { z } from 'zod';
 import {
+  caseStudySchema,
   cvSchema,
   evalsSchema,
   profileSchema,
@@ -114,8 +115,35 @@ async function loadProject(
       }
     });
   });
-  const hasCaseStudy = await exists(join(root, dir, 'case-study.mdx'));
-  return { ...project, slug, evals, hasCaseStudy };
+  const caseStudyFile = `${dir}/case-study.yaml`;
+  if (!(await exists(join(root, caseStudyFile)))) {
+    return { ...project, slug, evals };
+  }
+  const caseStudy = check(
+    caseStudySchema,
+    await readYaml(root, caseStudyFile, issues),
+    caseStudyFile,
+    issues,
+  );
+  caseStudy?.decisions.forEach((decision, index) => {
+    decision.facts.forEach((id, at) => {
+      if (!factIds.has(id)) {
+        issues.push({
+          file: caseStudyFile,
+          path: `decisions.${index}.facts.${at}`,
+          message: `"${id}" is not a fact of this project`,
+        });
+      }
+    });
+  });
+  if (caseStudy && Boolean(caseStudy.demo) !== Boolean(caseStudy.demoCaption)) {
+    issues.push({
+      file: caseStudyFile,
+      path: 'demoCaption',
+      message: 'a demo needs a caption that says what it shows, and a caption needs a demo',
+    });
+  }
+  return caseStudy ? { ...project, slug, evals, caseStudy } : { ...project, slug, evals };
 }
 
 async function loadProjects(root: string, issues: ContentIssue[]): Promise<Project[]> {

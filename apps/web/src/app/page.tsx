@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { content } from '@portfolio/content';
 import { Ask } from '@/components/ask';
 import { ExperienceTimeline } from '@/components/experience';
@@ -46,12 +47,12 @@ export default function Home() {
             >
               Email me
             </a>
-            <a
+            <Link
               className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5"
               href="/cv"
             >
               CV
-            </a>
+            </Link>
             <a
               className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5"
               href={links.github}
