@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
 export const sourceSchema = z.object({
   id: z.string(),
   label: z.string(),
-  href: z.string().optional(),
+  href: z.optional(z.string()),
 });
 
 export const askEventSchema = z.discriminatedUnion('type', [

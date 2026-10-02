@@ -110,7 +110,7 @@ export function Ask({
         <button
           type="submit"
           disabled={state.status === 'asking' || question.trim() === ''}
-          className="rounded-full bg-[var(--foreground)] px-6 py-3 text-[var(--background)] disabled:opacity-50"
+          className="rounded-full bg-[var(--fg)] px-6 py-3 text-[var(--bg)] disabled:opacity-50"
         >
           {state.status === 'asking' ? 'Thinking…' : 'Ask'}
         </button>
@@ -125,7 +125,7 @@ export function Ask({
                   setQuestion(suggestion);
                   void ask(suggestion);
                 }}
-                className="rounded-full border border-[var(--line)] px-3 py-1.5 text-left text-sm text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+                className="rounded-full border border-[var(--line)] px-3 py-1.5 text-left text-sm text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--fg)]"
               >
                 {suggestion}
               </button>
