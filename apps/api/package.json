@@ -9,13 +9,20 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --type-aware src/",
     "test": "vitest run",
-    "eval": "nest build && node dist/evals/run.js"
+    "eval": "nest build && node dist/evals/run.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "test:e2e": "vitest run --config vitest.config.e2e.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "12.1.2",
     "@nestjs/core": "12.1.2",
     "@nestjs/platform-express": "12.1.2",
     "@portfolio/content": "workspace:*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "dotenv": "18.0.3",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.6.5"
@@ -29,6 +36,7 @@
     "@types/supertest": "7.2.1",
     "oxlint": "1.86.0",
     "oxlint-tsgolint": "7.0.2003",
+    "prisma": "7.10.0",
     "supertest": "7.3.0",
     "typescript": "6.0.3",
     "unplugin-swc": "2.0.0",

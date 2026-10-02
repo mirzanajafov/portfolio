@@ -1,0 +1,22 @@
+name: portfolio
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: portfolio-postgres
+    environment:
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: portfolio
+      POSTGRES_DB: portfolio
+    ports:
+      - '5442:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'portfolio']
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

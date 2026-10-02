@@ -58,6 +58,19 @@ describe('Ask', () => {
     expect(await screen.findByText('You asked: How do you back it up?')).toBeInTheDocument();
   });
 
+  it('says when to come back after hitting the rate limit', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 429, headers: { 'retry-after': '120' } })),
+    );
+    render(<Ask suggestions={[]} email="me@example.com" />);
+
+    await userEvent.type(screen.getByLabelText('Your question'), 'Again?');
+    await userEvent.click(screen.getByRole('button', { name: 'Ask' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Try again in 2 minutes');
+  });
+
   it('points to email when the service is down', async () => {
     vi.stubGlobal(
       'fetch',
