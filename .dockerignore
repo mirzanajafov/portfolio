@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+.*
+*.md
+backups
+content/src/.generated
+apps/api/src/generated

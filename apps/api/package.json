@@ -2,6 +2,11 @@
   "name": "@portfolio/api",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "prisma",
+    "prisma.config.ts"
+  ],
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",

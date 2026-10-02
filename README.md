@@ -53,6 +53,20 @@ pnpm build
 
 `pnpm --filter @portfolio/content validate` checks the content without building anything.
 
+To see the whole thing the way the server runs it, Docker alone is enough:
+
+```bash
+docker compose --profile app up -d --build   # site on http://localhost:3202
+```
+
+## Deploying
+
+One Dockerfile builds everything once and has three targets: `api`, `web`, and `migrate`, a one-shot container that applies migrations before the API is allowed to start. The API image is a `pnpm deploy` of just the API and its production dependencies; the web image is Next's standalone output.
+
+On the server it runs with `docker-compose.prod.yml` on top, which publishes no ports, puts the site on the reverse proxy's network and takes every secret from `.env` (see `.env.example`). `deploy/deploy.sh` does nothing if `main` hasn't moved; otherwise it takes a backup, fast-forwards, rebuilds, waits for both containers to report healthy and goes back to the previous commit if they don't. A rollback can't undo a migration that already ran, which is why the backup comes first.
+
+The backup container dumps the database every day, checks the dump with `pg_restore --list` before it counts, and keeps 14 days. It leaves out the question log and the rate-limit counters on purpose: the page promises questions are gone after 30 days, and a 14-day-old backup would otherwise keep some of them for 44.
+
 ## Layout
 
 ```
