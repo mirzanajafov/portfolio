@@ -6,6 +6,7 @@ const workspaceRoot = join(import.meta.dirname, '../..');
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  compress: false,
   output: 'standalone',
   outputFileTracingRoot: workspaceRoot,
   turbopack: {

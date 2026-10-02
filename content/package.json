@@ -2,6 +2,9 @@
   "name": "@portfolio/content",
   "private": true,
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

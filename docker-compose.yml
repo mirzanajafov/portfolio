@@ -18,5 +18,66 @@ services:
       interval: 5s
       retries: 10
 
+  migrate:
+    build:
+      context: .
+      target: migrate
+    profiles: ['app']
+    environment:
+      DATABASE_URL: postgresql://portfolio:portfolio@postgres:5432/portfolio
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      target: api
+    container_name: portfolio-api
+    profiles: ['app']
+    environment:
+      DATABASE_URL: postgresql://portfolio:portfolio@postgres:5432/portfolio
+      CLIENT_HASH_SECRET: ${CLIENT_HASH_SECRET:-local-docker-secret-not-for-production}
+      TRUST_PROXY: loopback,linklocal,uniquelocal
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3201/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: web
+    container_name: portfolio-web
+    profiles: ['app']
+    environment:
+      API_URL: http://api:3201
+    ports:
+      - '3202:3200'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3200/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   pgdata:

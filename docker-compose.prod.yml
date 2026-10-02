@@ -1,0 +1,46 @@
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    restart: unless-stopped
+
+  migrate:
+    environment:
+      DATABASE_URL: postgresql://portfolio:${POSTGRES_PASSWORD}@postgres:5432/portfolio
+
+  api:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://portfolio:${POSTGRES_PASSWORD}@postgres:5432/portfolio
+      CLIENT_HASH_SECRET: ${CLIENT_HASH_SECRET:?set CLIENT_HASH_SECRET}
+
+  web:
+    ports: !reset []
+    networks:
+      - default
+      - edge
+
+  backup:
+    build: ./deploy/backup
+    container_name: portfolio-backup
+    profiles: ['app']
+    user: '${BACKUP_UID:-1000}:${BACKUP_GID:-1000}'
+    environment:
+      PGHOST: postgres
+      PGUSER: portfolio
+      PGDATABASE: portfolio
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      RUN_AT: ${BACKUP_AT:-04:30}
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  edge:
+    name: ${EDGE_NETWORK:?set EDGE_NETWORK}
+    external: true
