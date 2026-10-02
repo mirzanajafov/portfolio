@@ -60,8 +60,7 @@ experience:
       - Built backend integrations and payment processing pipelines for Minta.ai, an AI-powered video automation platform.
       - Maintained and scaled the core backend infrastructure for ReConvert.io to support high-traffic e-commerce operations.
 
-  - company: Self-employed
-    role: Freelance Backend Developer
+  - role: Freelance Backend Developer
     kind: freelance
     from: 2019-01
     to: 2023-01

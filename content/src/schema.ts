@@ -23,7 +23,7 @@ export const profileSchema = z.strictObject({
 
 const roleSchema = z
   .strictObject({
-    company: z.string().min(1),
+    company: z.string().min(1).optional(),
     role: z.string().min(1),
     kind: z.enum(['employee', 'contract', 'freelance', 'part-time']),
     from: yearMonth,

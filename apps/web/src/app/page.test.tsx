@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import Home from './page';
 
@@ -12,5 +12,37 @@ describe('home page', () => {
       'href',
       'mailto:mirza@najafov.dev',
     );
+    expect(screen.getByRole('link', { name: 'CV' })).toHaveAttribute('href', '/cv');
+  });
+
+  it('shows every project with a live link, and links code only for public repos', () => {
+    render(<Home />);
+    const matchium = screen.getByRole('article', { name: 'Matchium' });
+    expect(within(matchium).getByRole('link', { name: 'Code' })).toHaveAttribute(
+      'href',
+      'https://github.com/mirzanajafov/matchium',
+    );
+    const tmPost = screen.getByRole('article', { name: 'TM Post' });
+    expect(within(tmPost).getByRole('link', { name: 'Live' })).toHaveAttribute(
+      'href',
+      'https://tmpost.najafov.dev',
+    );
+    expect(within(tmPost).queryByRole('link', { name: 'Code' })).toBeNull();
+    expect(within(tmPost).getByText('Source available on request')).toBeInTheDocument();
+  });
+
+  it('never dresses a design parameter up as a measurement', () => {
+    render(<Home />);
+    const marauder = screen.getByRole('article', { name: 'Marauder' });
+    expect(within(marauder).getByText('design parameter')).toBeInTheDocument();
+    const matchium = screen.getByRole('article', { name: 'Matchium' });
+    expect(within(matchium).queryByText('design parameter')).toBeNull();
+  });
+
+  it('labels contract and freelance roles so overlapping dates read the same as on the CV', () => {
+    render(<Home />);
+    const thinkingIt = screen.getByRole('heading', { name: /Thinking IT/ }).parentElement;
+    expect(thinkingIt).not.toBeNull();
+    expect(within(thinkingIt as HTMLElement).getByText('Contract')).toBeInTheDocument();
   });
 });
