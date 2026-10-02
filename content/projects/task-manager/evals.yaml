@@ -4,5 +4,5 @@
   expects: [refresh-token-rotation]
 - question: How does the API know who is really calling behind the proxies?
   expects: [trusted-proxies]
-- question: Did you do anything about slow deploys?
+- question: Did you do anything about slow deploys in the task manager?
   expects: [rebuild-time]

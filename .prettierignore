@@ -4,3 +4,4 @@ dist/
 coverage/
 content/src/.generated/
 *.md
+apps/api/evals/
