@@ -1,0 +1,13 @@
+packages:
+  - 'apps/*'
+  - 'content'
+
+allowBuilds:
+  '@swc/core': true
+  '@tailwindcss/oxide': true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@types/node@24.19.1'
