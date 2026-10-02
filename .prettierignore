@@ -5,3 +5,4 @@ coverage/
 content/src/.generated/
 *.md
 apps/api/evals/
+apps/api/src/generated/

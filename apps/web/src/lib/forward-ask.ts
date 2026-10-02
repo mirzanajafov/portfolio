@@ -28,6 +28,12 @@ export async function forwardAsk(
   if (upstream.status === 400) {
     return Response.json({ message: 'question must be 1 to 300 characters' }, { status: 400 });
   }
+  if (upstream.status === 429) {
+    return Response.json(
+      { message: 'too many questions' },
+      { status: 429, headers: { 'retry-after': upstream.headers.get('retry-after') ?? '60' } },
+    );
+  }
   if (!upstream.ok || !upstream.body) {
     return Response.json({ message: 'could not answer right now' }, { status: 502 });
   }

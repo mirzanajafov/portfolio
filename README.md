@@ -31,14 +31,22 @@ My first version also cited the right fact for 14 of 20, but for the wrong reaso
 
 The browser never talks to the API. It posts to `/api/ask` on the Next server, which forwards the question and streams the answer back as server-sent events.
 
+Questions are rate limited per caller (20 per 10 minutes, 100 a day) and overall (2,000 a day, which is mostly there for when a paid model sits behind it). The counters live in Postgres, one `INSERT ... ON CONFLICT DO UPDATE ... RETURNING count` per limit, so any number of API instances agree without Redis. The caller is an HMAC of the IP address keyed with a secret and the date: the limits work within a day, a stored key can't follow anyone from one day to the next, and the address itself is never written down. The API only believes `X-Forwarded-For` from proxies it trusts by subnet, and a test checks that a caller can't dodge the limit by inventing addresses.
+
+Every question is logged with what was cited and what the gate withheld, and deleted after 30 days. That log is how I'll find out where the answers fail, which matters more than anything I can think of in advance. The page says so next to the box.
+
 ## Running it
 
-You need Node 24 and pnpm 11.
+You need Node 24, pnpm 11 and Docker.
 
 ```bash
 pnpm install
-pnpm dev          # site on http://localhost:3200, API on http://localhost:3201
+docker compose up -d                      # Postgres on localhost:5442
+cp apps/api/.env.example apps/api/.env
+pnpm --filter @portfolio/api db:migrate
+pnpm dev                                  # site on http://localhost:3200, API on http://localhost:3201
 pnpm test
+pnpm test:e2e                             # the API against the real Postgres
 pnpm typecheck
 pnpm build
 ```

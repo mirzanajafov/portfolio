@@ -1,0 +1,32 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}
+
+model AskLog {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  createdAt  DateTime @default(now())
+  client     String
+  question   String
+  engine     String
+  sentences  Json
+  withheld   String[]
+  refused    Boolean
+  durationMs Int
+
+  @@index([createdAt])
+}

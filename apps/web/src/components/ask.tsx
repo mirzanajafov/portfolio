@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { readEvents, type AskSource } from '@/lib/ask-events';
+import { AskFailure, failureMessage } from '@/lib/ask-failure';
 
 type Sentence = { text: string; sources: AskSource[] };
 
@@ -10,7 +11,15 @@ type State =
   | { status: 'asking' | 'done'; asked: string; sentences: Sentence[] }
   | { status: 'error'; asked: string; sentences: Sentence[]; message: string };
 
-export function Ask({ suggestions, email }: { suggestions: string[]; email: string }) {
+export function Ask({
+  suggestions,
+  email,
+  retentionDays = 30,
+}: {
+  suggestions: string[];
+  email: string;
+  retentionDays?: number;
+}) {
   const [question, setQuestion] = useState('');
   const [state, setState] = useState<State>({ status: 'idle' });
   const current = useRef<AbortController | null>(null);
@@ -32,7 +41,9 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
         signal: abort.signal,
       });
       if (!response.ok || !response.body) {
-        throw new Error(response.status === 400 ? 'Keep it under 300 characters.' : 'unavailable');
+        throw new AskFailure(
+          failureMessage(response.status, response.headers.get('retry-after'), email),
+        );
       }
       for await (const event of readEvents(response.body)) {
         if (event.type === 'sentence') {
@@ -51,10 +62,7 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
       if (abort.signal.aborted) {
         return;
       }
-      const message =
-        error instanceof Error && error.message !== 'unavailable'
-          ? error.message
-          : `I can't answer right now. Email me at ${email} instead.`;
+      const message = error instanceof AskFailure ? error.message : failureMessage(0, null, email);
       setState((previous) =>
         previous.status === 'idle'
           ? previous
@@ -78,6 +86,11 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
           Answers come only from my CV and my project notes, with the source under every sentence,
           and it says so when it doesn&apos;t know. For now a keyword matcher picks the sentences; a
           language model and my own voice come later.
+        </p>
+        <p className="max-w-2xl text-xs text-[var(--muted)]">
+          I keep questions for {retentionDays} days to see where the answers fail, then they are
+          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
+          used for rate limiting.
         </p>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
