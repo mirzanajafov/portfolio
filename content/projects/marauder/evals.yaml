@@ -4,7 +4,7 @@
   expects: [race-free-first-sighting]
 - question: How do position updates get to the browser?
   expects: [batched-broadcast]
-- question: Does it work with real hardware or only the simulator?
+- question: Does Marauder work with real hardware or only the simulator?
   expects: [real-receivers]
-- question: How do you back it up?
+- question: How do you back up Marauder?
   expects: [lean-backups]

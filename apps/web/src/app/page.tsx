@@ -1,4 +1,5 @@
 import { content } from '@portfolio/content';
+import { Ask } from '@/components/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { ProjectCard } from '@/components/project-card';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
@@ -6,6 +7,9 @@ import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
 export default function Home() {
   const { profile, projects, cv } = content;
   const { links } = profile;
+  const suggestions = projects.flatMap((project) =>
+    project.evals.slice(0, 1).map((q) => q.question),
+  );
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-24 px-4 py-16 sm:px-8 sm:py-24">
@@ -44,6 +48,8 @@ export default function Home() {
           </a>
         </nav>
       </section>
+
+      <Ask suggestions={suggestions} email={links.email} />
 
       <section aria-labelledby="projects" className="flex flex-col gap-8">
         <h2 id="projects" className="text-3xl font-semibold tracking-tight">
