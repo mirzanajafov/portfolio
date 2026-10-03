@@ -59,35 +59,265 @@ h3 {
   outline-offset: 2px;
 }
 
-.hero {
+.intro {
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(100svh, 980px);
+  padding-block: 96px 120px;
   overflow: hidden;
-  min-height: clamp(560px, 78vh, 760px);
+}
+
+.intro::before {
+  content: '';
+  position: absolute;
+  inset: -20% -10% 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      60% 50% at 70% 40%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 70%
+    ),
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 72px);
+  mask-image: radial-gradient(70% 60% at 60% 45%, #000 30%, transparent 80%);
+}
+
+.intro-word {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  vertical-align: bottom;
+}
+
+.intro-word > span {
+  display: inline-block;
+}
+
+.intro-scroll {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tour {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  max-width: 1400px;
+  margin-inline: auto;
+  width: 100%;
+  padding-inline: 16px;
+}
+
+.tour-stage {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 5vh;
+  height: 90vh;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 20px;
+  overflow: hidden;
   background: var(--bg);
 }
 
-.hero-copy {
-  position: absolute;
-  inset: auto 0 0 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: clamp(18px, 4vw, 40px);
-  pointer-events: none;
-  background: linear-gradient(
-    to top,
-    color-mix(in srgb, var(--bg) 90%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 60%, transparent) 55%,
-    transparent 100%
-  );
+.tour-steps {
+  grid-column: 1;
+  grid-row: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0 32px 0 0;
 }
 
-.hero-copy a {
-  pointer-events: auto;
+.tour-step {
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+}
+
+.tour-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 34rem;
+  transition:
+    opacity 400ms ease,
+    transform 400ms ease;
+}
+
+.tour-step[data-active='false'] .tour-card {
+  opacity: 0.45;
+}
+
+.scene-label-app {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.scene-label[data-hidden='true'] {
+  display: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--line);
+  transform-origin: top;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0, 1);
+}
+
+@media (max-width: 860px) {
+  .tour {
+    display: block;
+    padding-inline: 0;
+  }
+  .tour-stage {
+    top: 0;
+    height: 100svh;
+    border-radius: 0;
+    border-inline: 0;
+  }
+  .tour-steps {
+    position: relative;
+    z-index: 2;
+    margin-top: -100svh;
+    padding: 0 16px;
+  }
+  .tour-step {
+    min-height: 100svh;
+    align-items: flex-end;
+    padding-bottom: 8svh;
+  }
+  .tour-card {
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .tour-step[data-active='false'] .tour-card {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .intro-word > span {
+    animation: rise 900ms cubic-bezier(0.2, 0.7, 0, 1) both;
+    animation-delay: calc(var(--i, 0) * 110ms + 80ms);
+  }
+  .intro-eyebrow,
+  .intro-role,
+  .intro-summary,
+  .intro-actions {
+    animation: fade-up 800ms cubic-bezier(0.2, 0.7, 0, 1) both;
+  }
+  .intro-role {
+    animation-delay: 300ms;
+  }
+  .intro-summary {
+    animation-delay: 420ms;
+  }
+  .intro-actions {
+    animation-delay: 540ms;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .intro-inner {
+      animation: drift-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 80vh;
+    }
+    .intro::before {
+      animation: grid-drift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+    .intro-scroll {
+      animation: fade-away linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 30vh;
+    }
+  }
+
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+    .timeline::before {
+      animation: draw linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 60%;
+    }
+    .tour-step .tour-card {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes drift-out {
+  to {
+    opacity: 0.1;
+    transform: translateY(-14vh) scale(0.94);
+  }
+}
+
+@keyframes grid-drift {
+  to {
+    transform: translateY(18vh);
+  }
+}
+
+@keyframes fade-away {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0.3;
+    transform: translateY(40px) scale(0.98);
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 .scene {

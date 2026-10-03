@@ -1,10 +1,25 @@
 import Link from 'next/link';
-import { content } from '@portfolio/content';
+import { content, type Project } from '@portfolio/content';
 import { Ask } from '@/components/ask';
 import { ExperienceTimeline } from '@/components/experience';
-import { ProjectCard } from '@/components/project-card';
-import { ScenePlayer } from '@/components/scene-player';
+import { SystemsTour, type TourStop } from '@/components/systems-tour';
+import { headlineFact } from '@/lib/format';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
+
+function toStop(project: Project): TourStop {
+  const fact = headlineFact(project);
+  return {
+    id: project.slug,
+    name: project.name,
+    hook: project.hook,
+    fact: { text: fact.text, kind: fact.kind },
+    stack: project.stack,
+    live: project.links.live,
+    code: project.links.repo,
+    caseStudy: project.caseStudy ? `/projects/${project.slug}` : undefined,
+    privateSource: project.visibility === 'private',
+  };
+}
 
 export default function Home() {
   const { profile, projects, cv } = content;
@@ -12,35 +27,40 @@ export default function Home() {
   const suggestions = projects.flatMap((project) =>
     project.evals.slice(0, 1).map((q) => q.question),
   );
+  const [first, last] = profile.name.split(' ');
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-20 px-4 py-6 sm:px-8 sm:py-10">
+    <main className="flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: serializeJsonLd(personJsonLd(profile, 'https://najafov.dev')),
         }}
       />
-      <section aria-labelledby="intro" className="hero">
-        <ScenePlayer
-          name="systems"
-          showLegend
-          description="A live graph of what I run on my server: the browser, the edge proxy, Next.js, NestJS, the databases, MQTT and the ESP32 receivers, with requests moving between them."
-        />
-        <div className="hero-copy">
-          <h1
-            id="intro"
-            className="text-[clamp(44px,7.4vw,96px)] leading-[0.92] font-extrabold tracking-[-0.035em]"
-          >
-            {profile.name}
-          </h1>
-          <p className="text-[clamp(18px,2.2vw,24px)] font-medium text-[var(--accent)]">
-            {profile.headline}
-          </p>
-          <p className="font-mono text-[13px] text-[var(--muted)]">
+
+      <section aria-labelledby="intro" className="intro">
+        <div className="intro-inner mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 sm:px-8">
+          <p className="intro-eyebrow font-mono text-[13px] text-[var(--muted)]">
             {profile.location} · {profile.timezone} · {profile.availability}
           </p>
-          <nav aria-label="Contact" className="mt-2 flex flex-wrap gap-2">
+          <h1
+            id="intro"
+            className="text-[clamp(56px,11vw,168px)] leading-[0.86] font-extrabold tracking-[-0.045em]"
+          >
+            <span className="intro-word">
+              <span style={{ ['--i' as string]: 0 }}>{first}</span>
+            </span>{' '}
+            <span className="intro-word">
+              <span style={{ ['--i' as string]: 1 }}>{last}</span>
+            </span>
+          </h1>
+          <p className="intro-role text-[clamp(20px,2.6vw,30px)] font-medium text-[var(--accent)]">
+            {profile.headline}
+          </p>
+          <p className="intro-summary max-w-2xl text-lg leading-relaxed text-pretty">
+            {profile.summary}
+          </p>
+          <nav aria-label="Contact" className="intro-actions flex flex-wrap gap-2">
             <a
               className="rounded-full bg-[var(--fg)] px-5 py-2.5 text-[var(--bg)]"
               href={`mailto:${links.email}`}
@@ -67,42 +87,52 @@ export default function Home() {
             </a>
           </nav>
         </div>
-      </section>
-
-      <p className="max-w-3xl text-xl leading-relaxed text-pretty">{profile.summary}</p>
-
-      <Ask suggestions={suggestions} email={links.email} />
-
-      <section aria-labelledby="projects" className="flex flex-col gap-8">
-        <h2 id="projects" className="text-3xl font-bold tracking-tight">
-          Things I built
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          {projects.map((project) => (
-            <ProjectCard key={project.slug} project={project} />
-          ))}
-        </div>
-      </section>
-
-      <section aria-labelledby="experience" className="flex flex-col gap-8">
-        <h2 id="experience" className="text-3xl font-bold tracking-tight">
-          Where I worked
-        </h2>
-        <ExperienceTimeline roles={cv.experience} />
-      </section>
-
-      <footer className="flex flex-col gap-2 border-t border-[var(--line)] pt-8 pb-10 text-[var(--muted)]">
-        <p>
-          The fastest way to reach me is{' '}
-          <a
-            className="text-[var(--fg)] underline underline-offset-4"
-            href={`mailto:${links.email}`}
-          >
-            {links.email}
-          </a>
-          .
+        <p
+          aria-hidden="true"
+          className="intro-scroll font-mono text-xs whitespace-nowrap text-[var(--muted)]"
+        >
+          scroll to see what I built
         </p>
-      </footer>
+      </section>
+
+      <SystemsTour
+        intro={{
+          title: 'Things I built',
+          body: `${projects.length} apps, each with its own database, backups and a deploy script that rolls back, all on one server behind a shared proxy. Scroll and the camera moves from one to the next.`,
+        }}
+        stops={projects.map(toStop)}
+        apps={projects.map((project) => ({
+          id: project.slug,
+          name: project.name,
+          stack: project.stack,
+        }))}
+      />
+
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 py-24 sm:px-8">
+        <div className="reveal">
+          <Ask suggestions={suggestions} email={links.email} />
+        </div>
+
+        <section aria-labelledby="experience" className="reveal flex flex-col gap-8">
+          <h2 id="experience" className="text-3xl font-bold tracking-tight">
+            Where I worked
+          </h2>
+          <ExperienceTimeline roles={cv.experience} />
+        </section>
+
+        <footer className="flex flex-col gap-2 border-t border-[var(--line)] pt-8 text-[var(--muted)]">
+          <p>
+            The fastest way to reach me is{' '}
+            <a
+              className="text-[var(--fg)] underline underline-offset-4"
+              href={`mailto:${links.email}`}
+            >
+              {links.email}
+            </a>
+            .
+          </p>
+        </footer>
+      </div>
     </main>
   );
 }

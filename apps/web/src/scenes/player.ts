@@ -13,6 +13,7 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
 export type PlayerOptions = {
   onReadout: (lines: string[]) => void;
   onLegend: (items: LegendItem[]) => void;
+  data?: unknown;
 };
 
 export type PlayerHandle = {
@@ -51,25 +52,28 @@ export async function play(
   const projected = new Vector3();
   const host = canvas.parentElement ?? canvas;
 
-  const instance: SceneInstance = factory({
-    renderer,
-    label(text, kind) {
-      const element = document.createElement('div');
-      element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
-      element.textContent = text;
-      labels.appendChild(element);
-      return element;
+  const instance: SceneInstance = factory(
+    {
+      renderer,
+      label(text, kind) {
+        const element = document.createElement('div');
+        element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
+        element.textContent = text;
+        labels.appendChild(element);
+        return element;
+      },
+      place(element, x, y, z) {
+        projected.set(x, y, z).project(instance.camera);
+        const visible =
+          projected.z < 1 && Math.abs(projected.x) < 1.15 && Math.abs(projected.y) < 1.15;
+        element.style.display = visible ? '' : 'none';
+        element.style.left = `${((projected.x + 1) / 2) * host.clientWidth}px`;
+        element.style.top = `${((1 - projected.y) / 2) * host.clientHeight}px`;
+      },
+      size: () => ({ width: host.clientWidth, height: host.clientHeight }),
     },
-    place(element, x, y, z) {
-      projected.set(x, y, z).project(instance.camera);
-      const visible =
-        projected.z < 1 && Math.abs(projected.x) < 1.15 && Math.abs(projected.y) < 1.15;
-      element.style.display = visible ? '' : 'none';
-      element.style.left = `${((projected.x + 1) / 2) * host.clientWidth}px`;
-      element.style.top = `${((1 - projected.y) / 2) * host.clientHeight}px`;
-    },
-    size: () => ({ width: host.clientWidth, height: host.clientHeight }),
-  });
+    options.data,
+  );
 
   const applyColors = () => {
     const palette = readPalette(document.documentElement);
@@ -104,7 +108,7 @@ export async function play(
         clock += dt;
         instance.step(dt, clock);
       }
-      instance.render(clock);
+      instance.render(clock, playing ? dt : 10);
       renderer.render(instance.scene, instance.camera);
       if (now - readoutAt > 250) {
         readoutAt = now;

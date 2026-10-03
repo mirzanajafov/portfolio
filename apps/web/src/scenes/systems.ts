@@ -13,161 +13,201 @@ import {
   Vector3,
 } from 'three';
 import { seeded } from './random';
-import { graphNodes, graphRoutes, routeTouches, uniqueEdges, type NodeId } from './systems-graph';
+import { buildGraph, focusPose, type GraphApp, type GraphNode } from './systems-graph';
 import type { Palette, SceneFactory } from './types';
 
-type Pulse = { route: string; from: NodeId; to: NodeId; t: number; speed: number; mesh: Mesh };
+type NodeView = { node: GraphNode; mesh: Mesh; ring?: Mesh; label: HTMLElement };
+type Pulse = {
+  app: string;
+  from: string;
+  to: string;
+  t: number;
+  speed: number;
+  mesh: Mesh;
+  then?: string;
+};
 
-export const createSystemsScene: SceneFactory = (hooks) => {
+const sizes = { server: 0.7, app: 0.46, part: 0.17 };
+
+export const createSystemsScene: SceneFactory = (hooks, data) => {
+  const apps = Array.isArray(data) && data.length > 0 ? (data as GraphApp[]) : [];
+  const graph = buildGraph(apps);
   const scene = new Scene();
-  const camera = new PerspectiveCamera(38, 1, 0.1, 500);
+  const camera = new PerspectiveCamera(36, 1, 0.1, 500);
   const random = seeded(3);
-  const nodeIds = Object.keys(graphNodes) as NodeId[];
-  const position = (id: NodeId) => new Vector3(...graphNodes[id].position);
 
-  const nodeGeometry = new SphereGeometry(0.34, 24, 18);
-  const ringGeometry = new RingGeometry(0.85, 0.92, 48);
-  type NodeView = { mesh: Mesh; ring: Mesh; label: HTMLElement };
-  const nodes = {} as Record<NodeId, NodeView>;
-  for (const id of nodeIds) {
-    const mesh: Mesh = new Mesh(nodeGeometry, new MeshBasicMaterial({ transparent: true }));
-    mesh.position.copy(position(id));
-    const ring: Mesh = new Mesh(
-      ringGeometry,
-      new MeshBasicMaterial({ transparent: true, opacity: 0.6, side: DoubleSide }),
-    );
-    ring.position.copy(mesh.position);
-    scene.add(mesh, ring);
-    nodes[id] = { mesh, ring, label: hooks.label(graphNodes[id].label, 'node') };
+  const geometries = {
+    server: new SphereGeometry(sizes.server, 28, 20),
+    app: new SphereGeometry(sizes.app, 24, 18),
+    part: new SphereGeometry(sizes.part, 14, 10),
+    ring: new RingGeometry(0.9, 0.97, 48),
+    pulse: new SphereGeometry(0.13, 10, 8),
+  };
+
+  const views = new Map<string, NodeView>();
+  for (const node of graph.nodes) {
+    const mesh = new Mesh(geometries[node.kind], new MeshBasicMaterial({ transparent: true }));
+    mesh.position.set(...node.position);
+    scene.add(mesh);
+    let ring: Mesh | undefined;
+    if (node.kind !== 'part') {
+      ring = new Mesh(
+        geometries.ring,
+        new MeshBasicMaterial({ transparent: true, opacity: 0.55, side: DoubleSide }),
+      );
+      ring.position.copy(mesh.position);
+      ring.scale.setScalar(node.kind === 'server' ? 1.5 : 1);
+      scene.add(ring);
+    }
+    const label = hooks.label(node.label, node.kind === 'part' ? undefined : 'node');
+    if (node.kind === 'app') label.classList.add('scene-label-app');
+    views.set(node.id, { node, mesh, ring, label });
   }
 
-  const edges = uniqueEdges();
   const edgeGeometry = new BufferGeometry();
   edgeGeometry.setAttribute(
     'position',
     new Float32BufferAttribute(
-      edges.flatMap(([a, b]) => [...graphNodes[a].position, ...graphNodes[b].position]),
+      graph.edges.flatMap((edge) => [
+        ...views.get(edge.from)!.node.position,
+        ...views.get(edge.to)!.node.position,
+      ]),
       3,
     ),
   );
-  const edgeMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.5 });
+  const edgeMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.45 });
   scene.add(new LineSegments(edgeGeometry, edgeMaterial));
 
-  const pulseGeometry = new SphereGeometry(0.17, 12, 10);
   const pulses: Pulse[] = [];
-  const spawnIn = Object.fromEntries(Object.keys(graphRoutes).map((id) => [id, random()]));
   let palette: Palette | null = null;
   let focus: string | null = null;
-  let delivered = 0;
+  let spawnIn = 0;
+  const pose = focusPose(graph, null);
+  const cameraPosition = new Vector3(...pose.position);
+  const cameraTarget = new Vector3(...pose.target);
+  const wantedPosition = cameraPosition.clone();
+  const wantedTarget = cameraTarget.clone();
+  const offset = new Vector3();
+  const up = new Vector3(0, 1, 0);
+
+  const inFocus = (app?: string) => !focus || app === focus;
 
   function applyFocus() {
-    for (const id of nodeIds) {
-      const on = routeTouches(focus, id);
-      const node = nodes[id];
-      (node.mesh.material as MeshBasicMaterial).opacity = on ? 1 : 0.18;
-      (node.ring.material as MeshBasicMaterial).opacity = on ? 0.6 : 0.08;
-      node.label.classList.toggle('scene-label-dim', !on);
+    for (const { node, mesh, ring, label } of views.values()) {
+      const on = node.kind === 'server' || inFocus(node.app);
+      (mesh.material as MeshBasicMaterial).opacity = on ? 1 : 0.15;
+      if (ring) (ring.material as MeshBasicMaterial).opacity = on ? 0.55 : 0.08;
+      label.classList.toggle('scene-label-dim', !on);
+      if (node.kind === 'part') label.dataset.hidden = focus === node.app ? 'false' : 'true';
     }
-    edgeMaterial.opacity = focus ? 0.16 : 0.5;
+    edgeMaterial.opacity = focus ? 0.18 : 0.45;
+    const next = focusPose(graph, focus);
+    wantedPosition.set(...next.position);
+    wantedTarget.set(...next.target);
   }
 
-  function spawn(routeId: string) {
-    const route = graphRoutes[routeId];
-    if (!route || !palette) {
-      return;
-    }
-    const [from, to] = route.path[Math.floor(random() * route.path.length)] ?? route.path[0]!;
+  function spawn() {
+    if (!palette) return;
+    const app = apps[Math.floor(random() * apps.length)]!;
+    const parts = graph.edges.filter((edge) => edge.from === app.id);
+    const part = parts[Math.floor(random() * parts.length)]?.to;
     const mesh = new Mesh(
-      pulseGeometry,
-      new MeshBasicMaterial({ color: palette[route.tone], transparent: true }),
+      geometries.pulse,
+      new MeshBasicMaterial({ color: palette.accent, transparent: true }),
     );
     scene.add(mesh);
-    pulses.push({ route: routeId, from, to, t: 0, speed: 0.6 + random() * 0.5, mesh });
+    pulses.push({
+      app: app.id,
+      from: 'server',
+      to: app.id,
+      t: 0,
+      speed: 0.7 + random() * 0.5,
+      mesh,
+      then: part,
+    });
   }
+
+  applyFocus();
 
   return {
     scene,
     camera,
-    legend: Object.entries(graphRoutes).map(([id, route]) => ({ id, label: route.label })),
+    legend: [],
     focus(id) {
       focus = id;
       applyFocus();
     },
     setColors(next) {
       palette = next;
-      for (const { mesh, ring } of Object.values(nodes)) {
-        (mesh.material as MeshBasicMaterial).color.copy(next.accent);
-        (ring.material as MeshBasicMaterial).color.copy(next.muted);
+      for (const { node, mesh, ring } of views.values()) {
+        const tone =
+          node.kind === 'server' ? next.fg : node.kind === 'app' ? next.accent : next.muted;
+        (mesh.material as MeshBasicMaterial).color.copy(tone);
+        if (ring) (ring.material as MeshBasicMaterial).color.copy(next.muted);
       }
       edgeMaterial.color.copy(next.muted);
-      for (const pulse of pulses) {
-        const tone = graphRoutes[pulse.route]?.tone ?? 'fg';
-        (pulse.mesh.material as MeshBasicMaterial).color.copy(next[tone]);
-      }
-      applyFocus();
+      for (const pulse of pulses)
+        (pulse.mesh.material as MeshBasicMaterial).color.copy(next.accent);
     },
     step(dt) {
-      for (const id of Object.keys(spawnIn)) {
-        spawnIn[id] = (spawnIn[id] ?? 0) - dt;
-        if ((spawnIn[id] ?? 0) <= 0) {
-          spawnIn[id] = 0.12 + random() * 0.25;
-          spawn(id);
-        }
+      spawnIn -= dt;
+      if (spawnIn <= 0) {
+        spawnIn = 0.06 + random() * 0.12;
+        spawn();
       }
       for (let i = pulses.length - 1; i >= 0; i -= 1) {
         const pulse = pulses[i]!;
         pulse.t += dt * pulse.speed;
         pulse.mesh.position.lerpVectors(
-          nodes[pulse.from].mesh.position,
-          nodes[pulse.to].mesh.position,
+          views.get(pulse.from)!.mesh.position,
+          views.get(pulse.to)!.mesh.position,
           Math.min(pulse.t, 1),
         );
-        const on = !focus || focus === pulse.route;
-        (pulse.mesh.material as MeshBasicMaterial).opacity = on
-          ? 1 - Math.max(0, pulse.t - 0.85) * 6
-          : 0.05;
+        (pulse.mesh.material as MeshBasicMaterial).opacity = inFocus(pulse.app) ? 1 : 0.06;
         if (pulse.t >= 1) {
-          delivered += 1;
-          scene.remove(pulse.mesh);
-          (pulse.mesh.material as MeshBasicMaterial).dispose();
-          pulses.splice(i, 1);
+          if (pulse.then) {
+            pulse.from = pulse.to;
+            pulse.to = pulse.then;
+            pulse.then = undefined;
+            pulse.t = 0;
+          } else {
+            scene.remove(pulse.mesh);
+            (pulse.mesh.material as MeshBasicMaterial).dispose();
+            pulses.splice(i, 1);
+          }
         }
       }
     },
-    render(time) {
+    render(time, dt) {
+      const ease = 1 - Math.exp(-(dt ?? 0.016) * 2.6);
+      cameraPosition.lerp(wantedPosition, ease);
+      cameraTarget.lerp(wantedTarget, ease);
       const portrait = camera.aspect < 0.9;
-      if (portrait) {
-        const pan = Math.sin(time * 0.09) * 4.5;
-        camera.position.set(pan, -1, 48);
-        camera.lookAt(pan, -3.6, 0);
+      const far = Math.max(1, (focus ? 0.9 : 1.2) / camera.aspect);
+      offset.copy(cameraPosition).sub(cameraTarget);
+      if (!focus) offset.applyAxisAngle(up, time * 0.05);
+      camera.position.copy(cameraTarget).addScaledVector(offset, far);
+      camera.lookAt(cameraTarget);
+      const { width, height } = hooks.size();
+      if (portrait && width > 0 && height > 0) {
+        camera.setViewOffset(width, height, 0, height * 0.16, width, height);
       } else {
-        const swing = Math.sin(time * 0.07) * 0.5;
-        const far = Math.max(1, 1.6 / camera.aspect);
-        camera.position.set(Math.sin(swing) * 34 * far, 4, Math.cos(swing) * 34 * far);
-        camera.lookAt(-0.5, -2.5 - 3 * (far - 1), 0);
+        camera.clearViewOffset();
       }
-      for (const { mesh, ring, label } of Object.values(nodes)) {
-        ring.lookAt(camera.position);
+      for (const { node, mesh, ring, label } of views.values()) {
+        if (ring) ring.lookAt(camera.position);
         hooks.place(label, mesh.position.x, mesh.position.y, mesh.position.z);
+        if (node.kind === 'part' && label.dataset.hidden === 'true') label.style.display = 'none';
       }
     },
     readout() {
-      const shown = focus ? (graphRoutes[focus]?.label ?? focus) : 'all four systems';
-      return [
-        `What runs on my server · ${shown}`,
-        `${nodeIds.length} components · ${edges.length} connections · ${delivered} requests drawn`,
-      ];
+      const focused = focus ? graph.apps.find((app) => app.id === focus)?.name : null;
+      return [focused ? `following ${focused}` : `${graph.apps.length} apps on one server`];
     },
     dispose() {
-      for (const { label } of Object.values(nodes)) {
-        label.remove();
-      }
-      for (const pulse of pulses) {
-        (pulse.mesh.material as MeshBasicMaterial).dispose();
-      }
-      nodeGeometry.dispose();
-      ringGeometry.dispose();
-      pulseGeometry.dispose();
+      for (const { label } of views.values()) label.remove();
+      for (const pulse of pulses) (pulse.mesh.material as MeshBasicMaterial).dispose();
+      for (const geometry of Object.values(geometries)) geometry.dispose();
       edgeGeometry.dispose();
       edgeMaterial.dispose();
     },

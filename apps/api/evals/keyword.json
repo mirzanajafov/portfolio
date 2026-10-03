@@ -1,9 +1,9 @@
 {
   "engine": "keyword",
-  "questions": 20,
-  "hits": 16,
+  "questions": 24,
+  "hits": 20,
   "refusals": 0,
-  "hitRate": 0.8,
+  "hitRate": 0.833,
   "byProject": {
     "matchium": {
       "questions": 6,
@@ -18,6 +18,10 @@
       "hits": 3
     },
     "task-manager": {
+      "questions": 4,
+      "hits": 4
+    },
+    "najafov-dev": {
       "questions": 4,
       "hits": 4
     }
@@ -99,7 +103,7 @@
       ],
       "cited": [
         "matchium/half-the-questions",
-        "matchium/case-study/decision-1"
+        "matchium/kalman-beliefs"
       ],
       "hit": true,
       "refused": false
@@ -340,6 +344,55 @@
       ],
       "cited": [
         "task-manager/rebuild-time"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "najafov-dev",
+      "question": "How does the Ask box on this site avoid making things up?",
+      "expected": [
+        "najafov-dev/sentence-gate",
+        "najafov-dev/keyword-baseline"
+      ],
+      "cited": [
+        "najafov-dev/keyword-baseline"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "najafov-dev",
+      "question": "How heavy is this site to load?",
+      "expected": [
+        "najafov-dev/first-load"
+      ],
+      "cited": [
+        "najafov-dev/first-load"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "najafov-dev",
+      "question": "Do you store my IP address when I ask a question?",
+      "expected": [
+        "najafov-dev/daily-client-key"
+      ],
+      "cited": [
+        "najafov-dev/daily-client-key"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "najafov-dev",
+      "question": "How often does the Ask box give the right answer?",
+      "expected": [
+        "najafov-dev/keyword-baseline"
+      ],
+      "cited": [
+        "najafov-dev/keyword-baseline"
       ],
       "hit": true,
       "refused": false
