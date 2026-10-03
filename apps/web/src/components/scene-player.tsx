@@ -33,19 +33,27 @@ export function ScenePlayer({
   name,
   description,
   showLegend = false,
+  showReadout = true,
+  data,
+  focus: controlledFocus,
 }: {
   name: SceneName;
   description: string;
   showLegend?: boolean;
+  showReadout?: boolean;
+  data?: unknown;
+  focus?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<PlayerHandle | null>(null);
+  const dataRef = useRef(data);
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
   const [readout, setReadout] = useState<string[]>([]);
   const [legend, setLegend] = useState<LegendItem[]>([]);
-  const [focus, setFocus] = useState<string | null>(null);
+  const [ownFocus, setFocus] = useState<string | null>(null);
+  const focus = controlledFocus === undefined ? ownFocus : controlledFocus;
   const [choice, setChoice] = useState<boolean | null>(null);
   const playing = choice ?? !reducedMotion;
 
@@ -64,7 +72,11 @@ export function ScenePlayer({
         return import('@/scenes/player');
       })
       .then(({ play }) =>
-        play(name, canvas, labels, { onReadout: setReadout, onLegend: setLegend }),
+        play(name, canvas, labels, {
+          onReadout: setReadout,
+          onLegend: setLegend,
+          data: dataRef.current,
+        }),
       )
       .then((handle) => {
         if (cancelled) {
@@ -101,11 +113,15 @@ export function ScenePlayer({
       <div ref={labelsRef} className="scene-labels" aria-hidden="true" />
       {state === 'running' && (
         <div className="scene-hud">
-          <p className="scene-readout" aria-hidden="true">
-            {readout.map((line, index) => (
-              <span key={index}>{line}</span>
-            ))}
-          </p>
+          {showReadout ? (
+            <p className="scene-readout" aria-hidden="true">
+              {readout.map((line, index) => (
+                <span key={index}>{line}</span>
+              ))}
+            </p>
+          ) : (
+            <span />
+          )}
           <div className="scene-controls">
             <button type="button" className="scene-button" onClick={() => setChoice(!playing)}>
               {playing ? 'Pause motion' : 'Play motion'}

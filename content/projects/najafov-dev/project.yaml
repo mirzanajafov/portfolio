@@ -1,0 +1,33 @@
+name: najafov.dev
+order: 5
+hook: This site, which answers questions about me from sourced facts
+summary: >-
+  The site you are on. Next.js and NestJS, content that is checked before anything builds, an Ask
+  box where every sentence carries its source, and three.js scenes that load only after the page
+  itself has.
+visibility: public
+links:
+  live: https://najafov.dev
+  repo: https://github.com/mirzanajafov/portfolio
+stack: [Next.js, NestJS, PostgreSQL, three.js]
+headline: first-load
+facts:
+  - id: first-load
+    text: The first load is 153.2 KB of gzipped JavaScript, about 70 KB less than before the browser side switched from zod to zod/mini, and three.js and the scenes arrive after the page has loaded.
+    kind: measured
+    source: { file: README.md, section: The first screen and the tour }
+  - id: keyword-baseline
+    text: The keyword matcher behind the Ask box answers 20 of 24 eval questions from an expected fact and cites nothing for 11 of 12 attacks.
+    kind: measured
+    source: { file: README.md, section: Asking it things }
+  - id: sentence-gate
+    text: Every sentence is checked before it is sent; it needs a source that exists, it cannot repeat 8 or more words of the question, and it cannot commit to anything on my behalf.
+    kind: design
+    source: { file: apps/api/src/ask/sentence-gate.ts }
+  - id: daily-client-key
+    text: Rate limits key on an HMAC of the IP address and the date, so the address is never stored and a stored key cannot follow anyone from one day to the next.
+    kind: design
+    source: { file: apps/api/src/ask/client-key.ts }
+health: https://najafov.dev/
+knowledge:
+  - README.md

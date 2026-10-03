@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ViewTransition } from 'react';
 import { content, type Fact, type Project } from '@portfolio/content';
 import { ScenePlayer } from '@/components/scene-player';
 
@@ -80,9 +81,11 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
       </nav>
 
       <header className="flex flex-col gap-4">
-        <h1 className="text-[clamp(40px,6vw,72px)] leading-[0.95] font-extrabold tracking-[-0.03em]">
-          {project.name}
-        </h1>
+        <ViewTransition name={`project-${project.slug}`} share="morph" default="none">
+          <h1 className="text-[clamp(40px,6vw,72px)] leading-[0.95] font-extrabold tracking-[-0.03em]">
+            {project.name}
+          </h1>
+        </ViewTransition>
         <p className="text-xl text-[var(--accent)]">{project.hook}</p>
         <ul
           aria-label="Built with"

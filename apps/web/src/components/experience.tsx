@@ -33,7 +33,7 @@ export function RoleHeading({ role }: { role: Role }) {
 
 export function ExperienceTimeline({ roles }: { roles: Role[] }) {
   return (
-    <ol className="flex flex-col gap-6 border-l border-[var(--line)] pl-6">
+    <ol className="timeline relative flex flex-col gap-6 pl-6">
       {roles.map((role) => (
         <li key={roleKey(role)} className="flex flex-col gap-2">
           <RoleHeading role={role} />

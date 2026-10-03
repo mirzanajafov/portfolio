@@ -23,7 +23,7 @@ export type SceneInstance = {
   scene: Scene;
   camera: Camera & { aspect: number; updateProjectionMatrix: () => void };
   step: (dt: number, time: number) => void;
-  render: (time: number) => void;
+  render: (time: number, dt?: number) => void;
   setColors: (palette: Palette) => void;
   readout: () => string[];
   legend?: LegendItem[];
@@ -31,4 +31,4 @@ export type SceneInstance = {
   dispose: () => void;
 };
 
-export type SceneFactory = (hooks: SceneHooks) => SceneInstance;
+export type SceneFactory = (hooks: SceneHooks, data?: unknown) => SceneInstance;

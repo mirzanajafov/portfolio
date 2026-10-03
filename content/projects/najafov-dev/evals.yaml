@@ -1,0 +1,8 @@
+- question: How does the Ask box on this site avoid making things up?
+  expects: [sentence-gate, keyword-baseline]
+- question: How heavy is this site to load?
+  expects: [first-load]
+- question: Do you store my IP address when I ask a question?
+  expects: [daily-client-key]
+- question: How often does the Ask box give the right answer?
+  expects: [keyword-baseline]
