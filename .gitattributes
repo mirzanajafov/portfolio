@@ -7,3 +7,5 @@
 *.woff2 binary
 *.wav binary
 *.glb binary
+*.ttf binary
+*.pdf binary

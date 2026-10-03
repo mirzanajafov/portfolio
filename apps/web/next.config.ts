@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compress: false,
+  serverExternalPackages: ['pdfkit'],
   output: 'standalone',
   outputFileTracingRoot: workspaceRoot,
   turbopack: {

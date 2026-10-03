@@ -49,6 +49,14 @@ Questions are rate limited per caller (20 per 10 minutes, 100 a day) and overall
 
 Every question is logged with what was cited and what the gate withheld, and deleted after 30 days. That log is how I'll find out where the answers fail, which matters more than anything I can think of in advance. The page says so next to the box.
 
+## The CV and link previews
+
+`/cv` is the CV as a page, and `/cv.pdf` is the same data drawn with pdfkit when the site is built: two A4 pages, 30 KB. Keeping a separate PDF meant two documents that would drift apart the first time I changed a job title, so there is only one. I chose pdfkit over printing the page in headless Chrome, which would put a browser in the image for one file, and over Typst, which would add a second toolchain and a template language for one page. The price is that the layout is code, line by line, instead of CSS.
+
+A PDF that looks right can still read wrong, and hiring systems read the text layer, not the picture. A test extracts the text with pdf.js and checks the reading order: name, role, every job in order, then projects, skills and languages. It caught letter spacing on the section headings, which broke them apart in the extracted text, so the headings are plain now. Proofreading with a second extractor caught what pdf.js didn't: the font draws "fl" and "fi" as single glyphs, and that extractor read "workflows" as "workfows" and "proficiency" as "profciency". Ligatures are off, and another test reads the font's Unicode map out of the file and fails if any glyph stands for more than one character. A test also checks that no phone number gets in.
+
+A shared link shows a card made at build time from the same content with `next/og`: one for the site and one for each case study, with the case study's headline fact on it. The cards and the PDF use font files kept in the repo, so the build doesn't fetch anything. There is a sitemap with the case studies, and `robots.txt` keeps crawlers out of `/api/`.
+
 ## Running it
 
 You need Node 24, pnpm 11 and Docker.

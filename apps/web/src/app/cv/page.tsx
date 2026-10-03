@@ -54,6 +54,14 @@ export default function CvPage() {
             {profile.links.linkedin.replace('https://www.', '')}
           </a>
         </p>
+        <p className="print:hidden">
+          <a
+            className="inline-flex rounded-full bg-[var(--fg)] px-5 py-2.5 text-sm text-[var(--bg)]"
+            href="/cv.pdf"
+          >
+            Download as PDF
+          </a>
+        </p>
       </header>
       <Roles title="Experience" roles={cv.experience} />
       <Roles title="Mentoring" roles={cv.mentoring} />
