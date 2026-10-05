@@ -61,7 +61,7 @@ services:
     container_name: portfolio-web
     profiles: ['app']
     environment:
-      API_URL: http://api:3201
+      API_URL: http://portfolio-api:3201
     ports:
       - '3202:3200'
     depends_on:

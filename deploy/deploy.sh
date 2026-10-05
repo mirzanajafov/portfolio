@@ -9,11 +9,16 @@ force=false
 
 say() { printf '\n== %s\n' "$1"; }
 
+web_reaches_api() {
+  docker exec portfolio-web node -e \
+    "fetch(process.env.API_URL + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+}
+
 healthy() {
   for _ in $(seq 1 60); do
     api=$(docker inspect -f '{{.State.Health.Status}}' portfolio-api 2>/dev/null || true)
     web=$(docker inspect -f '{{.State.Health.Status}}' portfolio-web 2>/dev/null || true)
-    if [ "$api" = healthy ] && [ "$web" = healthy ]; then
+    if [ "$api" = healthy ] && [ "$web" = healthy ] && web_reaches_api; then
       return 0
     fi
     sleep 3
