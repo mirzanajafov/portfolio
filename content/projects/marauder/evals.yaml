@@ -1,5 +1,9 @@
 - question: How does Marauder turn radio signal strength into a position?
-  expects: [trilateration]
+  expects: [log-distance-fit]
+- question: How accurate is Marauder's positioning?
+  expects: [accuracy, default-noise-accuracy]
+- question: What happens in Marauder when the path-loss exponent is set wrong?
+  expects: [wrong-exponent]
 - question: What happens the first time a new tag shows up?
   expects: [race-free-first-sighting]
 - question: How do position updates get to the browser?
@@ -8,3 +12,5 @@
   expects: [real-receivers]
 - question: How do you back up Marauder?
   expects: [lean-backups]
+- question: How long does Marauder keep its position history?
+  expects: [history-retention]

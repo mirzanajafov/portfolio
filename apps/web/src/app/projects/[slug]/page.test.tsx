@@ -33,12 +33,12 @@ describe('case study pages', () => {
     ).toHaveAttribute('href', 'https://github.com/mirzanajafov/matchium/blob/main/README.md');
   });
 
-  it('labels a configured number as a design parameter', async () => {
+  it('labels every fact behind a decision by what kind of number it is', async () => {
     await renderCaseStudy('marauder');
-    const decision = screen.getByRole('heading', {
-      name: 'Batch what the browser sees',
-    }).parentElement;
-    expect(within(decision as HTMLElement).getByText(/design parameter/)).toBeInTheDocument();
+    const decision = screen.getByRole('heading', { name: 'Measure before tuning' }).parentElement;
+    expect(within(decision as HTMLElement).getAllByText(/^measured/)).toHaveLength(2);
+    expect(within(decision as HTMLElement).getAllByText(/^design ·|^design$/)).toHaveLength(1);
+    expect(within(decision as HTMLElement).queryByText(/design parameter/)).toBeNull();
   });
 
   it('refuses a project without a case study', async () => {

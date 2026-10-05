@@ -16,6 +16,7 @@ import {
   SphereGeometry,
   Vector2,
 } from 'three';
+import { fitPosition, rssiToDistance } from './position-fit';
 import { gaussian, seeded } from './random';
 import type { Palette, SceneFactory } from './types';
 
@@ -25,10 +26,16 @@ export const floorParameters = {
   tags: 6,
   walkingSpeed: 1.4,
   readingHz: 10,
-  emaAlpha: 0.18,
   flushMs: 150,
-  noiseMetres: 0.9,
+  txPower: -59,
+  pathLossExponent: 2.5,
+  noiseDb: 3,
+  dropRate: 0.08,
+  rssiAlpha: 0.2,
+  positionAlpha: 0.3,
 };
+
+const bounds = { minX: -20, minY: -12.5, maxX: 20, maxY: 12.5 };
 
 const walls: [number, number, number, number][] = [
   [-20, -12.5, 20, -12.5],
@@ -137,7 +144,8 @@ export const createFloorScene: SceneFactory = (hooks) => {
       id,
       truth,
       estimate: truth.clone(),
-      smooth: truth.clone(),
+      fitted: false,
+      rssi: receiverSpots.map(() => Number.NaN),
       target: null as Vector2 | null,
       dot,
       halo,
@@ -189,11 +197,21 @@ export const createFloorScene: SceneFactory = (hooks) => {
       while (readingClock >= readingEvery) {
         readingClock -= readingEvery;
         for (const tag of tags) {
-          const reading = new Vector2(
-            tag.truth.x + gaussian(random) * p.noiseMetres,
-            tag.truth.y + gaussian(random) * p.noiseMetres,
-          );
-          tag.smooth.lerp(reading, p.emaAlpha);
+          receivers.forEach((receiver, index) => {
+            if (random() < p.dropRate) return;
+            const range = Math.max(
+              0.1,
+              Math.hypot(tag.truth.x - receiver.x, tag.truth.y - receiver.y),
+            );
+            const rssi =
+              p.txPower -
+              10 * p.pathLossExponent * Math.log10(range) +
+              gaussian(random) * p.noiseDb;
+            const previous = tag.rssi[index]!;
+            tag.rssi[index] = Number.isNaN(previous)
+              ? rssi
+              : p.rssiAlpha * rssi + (1 - p.rssiAlpha) * previous;
+          });
         }
       }
       flushClock += dt;
@@ -201,7 +219,27 @@ export const createFloorScene: SceneFactory = (hooks) => {
         flushClock %= p.flushMs / 1000;
         flushes += 1;
         for (const tag of tags) {
-          tag.estimate.copy(tag.smooth);
+          const anchors = receivers.flatMap((receiver, index) => {
+            const rssi = tag.rssi[index]!;
+            return Number.isNaN(rssi)
+              ? []
+              : [
+                  {
+                    x: receiver.x,
+                    y: receiver.y,
+                    distance: rssiToDistance(rssi, p.txPower, p.pathLossExponent),
+                  },
+                ];
+          });
+          if (anchors.length > 0) {
+            const fit = fitPosition(anchors, bounds);
+            if (tag.fitted) {
+              tag.estimate.lerp(new Vector2(fit.x, fit.y), p.positionAlpha);
+            } else {
+              tag.estimate.set(fit.x, fit.y);
+              tag.fitted = true;
+            }
+          }
           tag.trail.copyWithin(3, 0, tag.trail.length - 3);
           tag.trail[0] = tag.estimate.x;
           tag.trail[1] = 0.05;
@@ -267,7 +305,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
         tags.reduce((sum, tag) => sum + tag.estimate.distanceTo(tag.truth), 0) / tags.length;
       return [
         `${p.width} × ${p.depth} m floor · ${receivers.length} receivers · ${p.tags} tags at ${p.walkingSpeed} m/s`,
-        `readings at ${p.readingHz} Hz · EMA α ${p.emaAlpha} · ${flushes} batches of ${p.flushMs} ms`,
+        `RSSI at ${p.readingHz} Hz with ${p.noiseDb} dB noise · log-distance fit · ${flushes} batches of ${p.flushMs} ms`,
         `estimate error now ${error.toFixed(2)} m`,
       ];
     },
