@@ -1,3 +1,4 @@
+import { content } from '@portfolio/content';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import Home from './page';
@@ -33,10 +34,16 @@ describe('home page', () => {
 
   it('never dresses a design parameter up as a measurement', () => {
     render(<Home />);
-    const marauder = screen.getByRole('article', { name: 'Marauder' });
-    expect(within(marauder).getByText('design parameter')).toBeInTheDocument();
-    const matchium = screen.getByRole('article', { name: 'Matchium' });
-    expect(within(matchium).queryByText('design parameter')).toBeNull();
+    for (const project of content.projects) {
+      const headline = project.facts.find((fact) => fact.id === project.headline);
+      const card = screen.getByRole('article', { name: project.name });
+      const label = within(card).queryByText('design parameter');
+      if (headline?.kind === 'parameter') {
+        expect(label, project.name).toBeInTheDocument();
+      } else {
+        expect(label, project.name).toBeNull();
+      }
+    }
   });
 
   it('labels contract and freelance roles so overlapping dates read the same as on the CV', () => {

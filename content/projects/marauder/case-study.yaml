@@ -4,38 +4,49 @@ problem: >-
   backend turns that noisy stream into dots moving live on a floor plan.
 demo: floor
 demoCaption: >-
-  Five receivers and six tags walking at 1.4 m/s, with readings at 10 Hz smoothed by the same moving
-  average the API uses and sent to the map in 150 ms batches. The ring under each dot is where the
-  tag really is, so the gap between them is the error.
+  Five receivers and six tags walking at 1.4 m/s. Every receiver hears every tag ten times a second
+  with 3 dB of noise, and the scene runs a port of the API's estimator: RSSI smoothed per receiver,
+  a log-distance fit, a light moving average, 150 ms batches. The ring under each dot is where the
+  tag really is, so the gap is the error, about 1.5 m on average here.
 decisions:
-  - title: From signal strength to a position
+  - title: Measure before tuning
     body: >-
-      A log-distance path-loss model turns each reading into a distance, trilateration combines
-      three or more receivers into a position, and an exponential moving average keeps the markers
-      from jumping around. Fewer than three receivers falls back to a weighted centroid.
-    facts: [trilateration]
+      For a long time I judged the positions by watching the map. Now a seeded replay of the
+      simulator compares every update with where the tag really was, and every variant sees the
+      same signals. The first run was humbling: the linearised trilateration I started with lost to
+      a plain weighted centroid from 3 dB of noise up and put a quarter of its answers outside the
+      building at 6 dB. Each receiver's RSSI is now smoothed in dB and the position is fitted in
+      log-distance space, where the noise actually is, clamped to the floor plan.
+    facts: [accuracy, default-noise-accuracy, log-distance-fit]
+  - title: Fit the error nobody calibrates
+    body: >-
+      Nobody knows their building's path-loss exponent exactly. With four or more receivers the fit
+      also estimates one scale on the distances, which is what a wrong exponent does to them.
+      Smoothing the readings without it hurt that case, 3.03 m to 5.20 m median, because the fit
+      settled confidently on the biased answer. That scenario is the one the scale models, so the
+      benchmark also has one it doesn't: a fixed offset per receiver, where the new estimator beats
+      the old one but the scale term barely helps.
+    facts: [wrong-exponent]
   - title: Recognize a tag exactly once
     body: >-
       Several receivers can hear a new tag in the same instant, so several messages race to create
       it. Resolution goes through a Redis SET NX first and the database's unique constraint second,
       and the first sighting creates one entity no matter how many messages arrive together.
     facts: [race-free-first-sighting]
-  - title: Batch what the browser sees
+  - title: Keep a day, back up what matters
     body: >-
-      Ten readings a second from every receiver would be far more events than a map needs. The
-      API keeps the latest estimate per tag and flushes them to the browser every 150 ms as one
-      batch over the socket.
-    facts: [batched-broadcast]
-  - title: Back up what matters
-    body: >-
-      Position history is simulator traffic that refills itself within minutes, so the nightly
-      backup leaves it out on purpose and keeps the names, floor plans and receivers.
-    facts: [lean-backups]
+      Position history is simulator traffic, so the nightly backup leaves it out and the table keeps
+      one day in hourly chunks. I added the retention after finding a 3.65 GB table on the server and
+      a history view that never finished loading; it now loads the last 10 minutes or hour.
+    facts: [history-retention, lean-backups]
 proof: >-
-  Unit tests cover the trilateration and the race between two first sightings, and an end-to-end
-  suite runs against a real TimescaleDB and Redis. The receivers are interchangeable: the simulator,
-  an ESP32 sketch and a Python BLE scanner all publish the same MQTT message.
+  A seeded benchmark replays the simulator's world on a virtual clock and compares every 150 ms
+  update with the true position, across five noise and calibration scenarios, and tests hold the live
+  estimator to it. Unit tests cover the fit and the race between two first sightings, and an
+  end-to-end suite runs against a real TimescaleDB and Redis. The receivers are interchangeable: the
+  simulator, an ESP32 sketch and a Python BLE scanner all publish the same MQTT message.
 next: >-
-  Measure the position error against the simulator's ground truth and publish it, because it's the
-  number this project is missing. And make scaling out real: tracks live in process memory today, so
-  two API instances would each compute everything.
+  Per-receiver calibration, since a fixed offset per receiver still costs about 3 m over the clean
+  case. A constant-velocity filter, since walking lag is now most of the error at low noise. And
+  scaling out for real: tracks live in process memory, so two API instances would each compute
+  everything.

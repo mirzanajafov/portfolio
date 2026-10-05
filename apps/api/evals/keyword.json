@@ -1,17 +1,17 @@
 {
   "engine": "keyword",
-  "questions": 24,
-  "hits": 20,
+  "questions": 27,
+  "hits": 23,
   "refusals": 0,
-  "hitRate": 0.833,
+  "hitRate": 0.852,
   "byProject": {
     "matchium": {
       "questions": 6,
       "hits": 5
     },
     "marauder": {
-      "questions": 5,
-      "hits": 4
+      "questions": 8,
+      "hits": 7
     },
     "tm-post": {
       "questions": 5,
@@ -177,11 +177,38 @@
       "project": "marauder",
       "question": "How does Marauder turn radio signal strength into a position?",
       "expected": [
-        "marauder/trilateration"
+        "marauder/log-distance-fit"
       ],
       "cited": [
         "marauder/case-study/why",
-        "marauder/case-study/decision-1"
+        "marauder/log-distance-fit"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "marauder",
+      "question": "How accurate is Marauder's positioning?",
+      "expected": [
+        "marauder/accuracy",
+        "marauder/default-noise-accuracy"
+      ],
+      "cited": [
+        "marauder/accuracy",
+        "marauder/batched-broadcast"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "marauder",
+      "question": "What happens in Marauder when the path-loss exponent is set wrong?",
+      "expected": [
+        "marauder/wrong-exponent"
+      ],
+      "cited": [
+        "marauder/case-study/decision-2",
+        "marauder/wrong-exponent"
       ],
       "hit": true,
       "refused": false
@@ -193,7 +220,7 @@
         "marauder/race-free-first-sighting"
       ],
       "cited": [
-        "marauder/case-study/decision-2",
+        "marauder/case-study/decision-3",
         "marauder/race-free-first-sighting"
       ],
       "hit": true,
@@ -207,7 +234,7 @@
       ],
       "cited": [
         "marauder/batched-broadcast",
-        "marauder/case-study/decision-3"
+        "marauder/case-study/decision-1"
       ],
       "hit": true,
       "refused": false
@@ -220,7 +247,7 @@
       ],
       "cited": [
         "marauder/lean-backups",
-        "marauder/case-study/next"
+        "marauder/case-study/proof"
       ],
       "hit": false,
       "refused": false
@@ -232,8 +259,20 @@
         "marauder/lean-backups"
       ],
       "cited": [
-        "marauder/case-study/decision-1",
         "marauder/case-study/decision-4"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "marauder",
+      "question": "How long does Marauder keep its position history?",
+      "expected": [
+        "marauder/history-retention"
+      ],
+      "cited": [
+        "marauder/history-retention",
+        "marauder/lean-backups"
       ],
       "hit": true,
       "refused": false

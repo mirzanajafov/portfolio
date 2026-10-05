@@ -10,8 +10,24 @@ links:
   live: https://marauder.najafov.dev
   repo: https://github.com/mirzanajafov/marauder
 stack: [NestJS, MQTT, Redis, TimescaleDB, React, ESP32]
-headline: batched-broadcast
+headline: accuracy
 facts:
+  - id: accuracy
+    text: Median position error at 6 dB of noise went from 3.59 m to 2.04 m, measured against the simulator's truth.
+    kind: measured
+    source: { file: README.md, section: How accurate it is }
+  - id: default-noise-accuracy
+    text: At the simulator's default noise of 1.2 dB, the median error is 1.03 m and the 95th percentile 1.62 m, down from 1.95 m.
+    kind: measured
+    source: { file: README.md, section: How accurate it is }
+  - id: wrong-exponent
+    text: When the building's path-loss exponent is 3.0 and the solver assumes 2.5, the 95th percentile error is 2.4 m, where the old solver's was 20.1 m with a third of its answers outside the building.
+    kind: measured
+    source: { file: README.md, section: How accurate it is }
+  - id: log-distance-fit
+    text: Each receiver's signal strength is smoothed in dB, the position is fitted in log-distance space with one fitted path-loss scale and clamped to the floor plan, and a light moving average keeps markers from jumping.
+    kind: design
+    source: { file: README.md, section: How it works }
   - id: batched-broadcast
     text: Position updates reach the map as one batch every 150 ms instead of one event per radio reading.
     kind: parameter
@@ -20,10 +36,10 @@ facts:
     text: The first sighting of a tag creates its entity exactly once, through a Redis SET NX with the database's unique constraint as the fallback.
     kind: design
     source: { file: apps/api/src/resolution/resolution.service.ts }
-  - id: trilateration
-    text: Positions come from a log-distance path-loss model, trilateration when three or more receivers hear a tag, and an exponential moving average against jumps.
-    kind: design
-    source: { file: README.md, section: How it works }
+  - id: history-retention
+    text: Position history keeps one day in hourly chunks; without retention it had grown to a 3.65 GB table in under four days and the history view never loaded.
+    kind: measured
+    source: { file: README.md, section: Deploying }
   - id: lean-backups
     text: Backups leave the position history out on purpose, because it is simulator traffic that refills in minutes and keeping it made a 3 GB volume out of a few kilobytes of real data.
     kind: measured
