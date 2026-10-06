@@ -1,0 +1,62 @@
+name: poof
+order: 2
+hook: A deadline scheduler that measured when helpers help
+summary: >-
+  You send a batch of photos with a deadline, and poof either finishes it on one small server or says
+  up front that it can't. Next to it runs the naive version: workers that fall behind call helpers,
+  who call helpers, inside a cage of 1.5 CPUs. I simulated every policy on benchmarks from the server
+  before building it, then checked the simulator against the real cage.
+visibility: public
+links:
+  live: https://poof.najafov.dev
+  repo: https://github.com/mirzanajafov/poof
+stack: [NestJS, Next.js, PostgreSQL, Redis, sharp, OpenTelemetry]
+headline: pool-beats-splitting
+facts:
+  - id: pool-beats-splitting
+    text: A plain earliest-deadline pool met 5 to 24 points more deadlines than splitting late work across helpers.
+    kind: measured
+    source: { file: README.md, section: The short version }
+  - id: no-budget-storm
+    text: Without a global worker budget, splitting falls over even at half load; the box spends 36-40% of its CPU on spawns and killed work and meets 17% of deadlines, where never splitting meets 44%.
+    kind: measured
+    source: { file: README.md, section: What the simulator said }
+  - id: preemption
+    text: The pool wins because it is preemptive; adding a yield to the splitting policy brings it level on the cage, but it still starts 1.3 to 4.6 processes per task against 0.1 to 0.25 for the pool.
+    kind: measured
+    source: { file: README.md, section: What the simulator said }
+  - id: simulator
+    text: The simulator replays an hour of arrivals across five scenarios, seventeen policies, three machine sizes and 20 seeds, with the same arrivals for every policy; the 5,100 runs take about six minutes.
+    kind: measured
+    source: { file: README.md, section: What the simulator said }
+  - id: cost-model
+    text: Resizing one image costs about 152 · MP^0.40 ms on the server, 81 ms below 1 MP and 520 ms at 40-70 MP, so work is predicted from image dimensions rather than a flat average.
+    kind: measured
+    source: { file: README.md, section: What I measured first }
+  - id: sim-vs-reality
+    text: With a worker budget the simulator matches the real cage run for run; tasks turned away agree in 14 of 15 runs and spawns are within one in every budgeted run.
+    kind: measured
+    source: { file: README.md, section: Simulator against reality }
+  - id: found-bugs
+    text: Comparing the simulator with the real cage found three bugs in the real system, a timeout that killed heavy images as hung, admission counting contention twice, and helpers that skipped their warm-up.
+    kind: measured
+    source: { file: README.md, section: The short version }
+  - id: day-to-day-speed
+    text: The server's own speed moves by about a quarter between days; a single worker ran 27% slower on 5 October than on 2 October, so replays scale costs by a same-day speed probe.
+    kind: measured
+    source: { file: README.md, section: Simulator against reality }
+  - id: admission
+    text: A batch is admitted only if the earliest-deadline schedule of everything already admitted still fits; a flat per-preset average had turned away 45% of tasks in a calm hour.
+    kind: measured
+    source: { file: README.md, section: What runs now }
+  - id: crash-isolation
+    text: An image that crashes three workers goes to a dead letter queue, and workers raise their own oom_score_adj, so under memory pressure the kernel kills a worker and never the supervisor.
+    kind: design
+    source: { file: README.md, section: What runs now }
+  - id: restart-safe
+    text: Only the supervisor changes scheduling state; it checkpoints cursors every two seconds and writes outputs through a rename, and a test stops it halfway through a task and checks no image is lost.
+    kind: design
+    source: { file: README.md, section: What runs now }
+health: https://poof.najafov.dev/api/health
+knowledge:
+  - README.md

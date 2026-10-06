@@ -1,0 +1,49 @@
+problem: >-
+  Press a button, a helper appears, does one job and disappears. If the job drags on, it calls more
+  helpers, who call more helpers, until the whole thing falls over. It isn't only a cartoon problem:
+  an autoscaler that adds workers when a queue falls behind, or a client that retries a slow call,
+  can do the same, because the extra load makes everything later. I wanted to build the engineering
+  version of that on one small server and find out, with numbers, when calling for help actually
+  helps.
+decisions:
+  - title: Simulate before building
+    body: >-
+      Before writing the service I simulated it, calibrated on benchmarks from the server it runs
+      on, in a container capped like the real cage. One image is not linear in megapixels, most of a
+      fresh worker's memory is shared libraries, and past 1.5 cores more workers only make everything
+      slower. My laptop's numbers were useless for concurrency, because single and multi-process
+      runs landed on different core types.
+    facts: [cost-model, simulator]
+  - title: The pool runs, splitting is the exhibit
+    body: >-
+      A forecast beat a timer for deciding when to split, and anything without a global budget fell
+      over even at half load. But a plain pool that hands out ten images at a time, earliest
+      deadline first, beat the best splitting policy, and the reason is preemption, not the
+      forecast. So the button runs the pool, and the splitting policies, the box included, run as
+      one-minute exhibits that visitors can start.
+    facts: [pool-beats-splitting, no-budget-storm, preemption]
+  - title: Check the simulator against the cage
+    body: >-
+      A simulator is only worth something if it predicts the real box, so I ran five policies in
+      the real cage and replayed every run with the same tasks. With a budget it holds. Getting the
+      storm right took three fixes to the simulator, and the comparison turned up three bugs in the
+      real system. The server itself is not the same machine from one day to the next, so replays
+      now take a speed probe from the day of the runs.
+    facts: [sim-vs-reality, found-bugs, day-to-day-speed]
+  - title: A promise you can check, and crashes that stay small
+    body: >-
+      A batch is accepted only if the deadlines still fit, and a refusal comes back with a
+      Retry-After. Workers know nothing but IPC, and the supervisor kills one that goes over its
+      memory, misses heartbeats or runs far past its prediction, and blames the image in flight,
+      so one corrupt photo costs three restarts instead of the batch.
+    facts: [admission, crash-isolation, restart-safe]
+proof: >-
+  5,100 seeded simulator runs with the same arrivals for every policy, calibrated on benchmarks from
+  the server. Five policies run in the real cage and replayed in the simulator, with the raw runs in
+  the repo. End-to-end tests run against real Postgres, Redis and worker processes, including one that
+  stops the supervisor halfway through a task and one that fails on the old helper warm-up. Both
+  suites run in CI on every push.
+next: >-
+  Find out where the storm's work goes that the simulator thinks gets done, take a speed probe before
+  every real series instead of after, and try worker pools on two machines, where splitting could
+  still come out ahead.

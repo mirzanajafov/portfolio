@@ -1,5 +1,5 @@
 name: Marauder
-order: 2
+order: 3
 hook: Live indoor positioning from noisy radio signals
 summary: >-
   Opt-in tags report to fixed receivers over MQTT, and the backend turns that noisy RSSI stream into
