@@ -1,13 +1,17 @@
 {
   "engine": "keyword",
-  "questions": 27,
-  "hits": 23,
+  "questions": 34,
+  "hits": 29,
   "refusals": 0,
-  "hitRate": 0.852,
+  "hitRate": 0.853,
   "byProject": {
     "matchium": {
       "questions": 6,
       "hits": 5
+    },
+    "poof": {
+      "questions": 7,
+      "hits": 7
     },
     "marauder": {
       "questions": 8,
@@ -19,7 +23,7 @@
     },
     "task-manager": {
       "questions": 4,
-      "hits": 4
+      "hits": 3
     },
     "najafov-dev": {
       "questions": 4,
@@ -116,8 +120,8 @@
         "matchium/half-the-questions"
       ],
       "cited": [
-        "matchium/oracle-share",
-        "matchium/per-city-scoring"
+        "matchium/per-city-scoring",
+        "matchium/oracle-share"
       ],
       "hit": true,
       "refused": false
@@ -154,8 +158,7 @@
         "matchium/per-city-scoring"
       ],
       "cited": [
-        "matchium/case-study/decision-4",
-        "matchium/case-study/why"
+        "matchium/case-study/decision-4"
       ],
       "hit": false,
       "refused": false
@@ -169,6 +172,95 @@
       "cited": [
         "matchium/contract-tests",
         "matchium/case-study/decision-4"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "Does splitting late work across helpers beat a plain pool in poof?",
+      "expected": [
+        "poof/pool-beats-splitting",
+        "poof/preemption"
+      ],
+      "cited": [
+        "poof/pool-beats-splitting"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "What happens in poof without a global worker budget?",
+      "expected": [
+        "poof/no-budget-storm"
+      ],
+      "cited": [
+        "poof/no-budget-storm",
+        "poof/case-study/decision-2"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "How well does poof's simulator match the real cage?",
+      "expected": [
+        "poof/sim-vs-reality"
+      ],
+      "cited": [
+        "poof/sim-vs-reality",
+        "poof/found-bugs"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "What bugs did the poof simulator find in the real system?",
+      "expected": [
+        "poof/found-bugs"
+      ],
+      "cited": [
+        "poof/found-bugs",
+        "poof/case-study/decision-3"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "How does poof decide whether to accept a batch?",
+      "expected": [
+        "poof/admission"
+      ],
+      "cited": [
+        "poof/case-study/decision-4"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "What happens in poof when an image keeps crashing workers?",
+      "expected": [
+        "poof/crash-isolation"
+      ],
+      "cited": [
+        "poof/crash-isolation"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "poof",
+      "question": "How does poof predict how long an image will take to resize?",
+      "expected": [
+        "poof/cost-model"
+      ],
+      "cited": [
+        "poof/cost-model",
+        "poof/case-study/decision-3"
       ],
       "hit": true,
       "refused": false
@@ -370,9 +462,9 @@
         "task-manager/trusted-proxies"
       ],
       "cited": [
-        "task-manager/trusted-proxies"
+        "poof/case-study/why"
       ],
-      "hit": true,
+      "hit": false,
       "refused": false
     },
     {

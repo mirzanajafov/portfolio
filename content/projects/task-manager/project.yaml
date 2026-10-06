@@ -1,5 +1,5 @@
 name: Task Manager
-order: 4
+order: 5
 hook: A task manager between Todoist and Jira
 summary: >-
   A small, opinionated task manager with saved views that actually surface what you are looking

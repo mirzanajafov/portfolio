@@ -1,5 +1,5 @@
 name: TM Post
-order: 3
+order: 4
 hook: An API client that keeps working when the server doesn't
 summary: >-
   A desktop API client for a small team: collections, environments with real secrets, scripts and

@@ -1,0 +1,14 @@
+- question: Does splitting late work across helpers beat a plain pool in poof?
+  expects: [pool-beats-splitting, preemption]
+- question: What happens in poof without a global worker budget?
+  expects: [no-budget-storm]
+- question: How well does poof's simulator match the real cage?
+  expects: [sim-vs-reality]
+- question: What bugs did the poof simulator find in the real system?
+  expects: [found-bugs]
+- question: How does poof decide whether to accept a batch?
+  expects: [admission]
+- question: What happens in poof when an image keeps crashing workers?
+  expects: [crash-isolation]
+- question: How does poof predict how long an image will take to resize?
+  expects: [cost-model]
