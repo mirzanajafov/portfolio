@@ -8,7 +8,8 @@
     "start": "next start -p 3200",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "storm-data": "node scripts/storm-data.mjs"
   },
   "dependencies": {
     "@portfolio/content": "workspace:*",

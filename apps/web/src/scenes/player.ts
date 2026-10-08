@@ -8,6 +8,7 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   systems: () => import('./systems').then((m) => m.createSystemsScene),
   floor: () => import('./floor').then((m) => m.createFloorScene),
   population: () => import('./population').then((m) => m.createPopulationScene),
+  storm: () => import('./storm').then((m) => m.createStormScene),
 };
 
 export type PlayerOptions = {
