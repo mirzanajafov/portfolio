@@ -5,6 +5,12 @@ problem: >-
   can do the same, because the extra load makes everything later. I wanted to build the engineering
   version of that on one small server and find out, with numbers, when calling for help actually
   helps.
+demo: storm
+demoCaption: >-
+  poof's simulator, calibrated on the server, replaying 25 minutes of the burst scenario in the cage
+  (1.5 CPUs, 35 processes, seed 1) at 30 times speed. The box lets late workers call helpers with no
+  budget, so the cage fills and work queues up. The pool runs two workers, earliest deadline first.
+  Over 20 seeds the pool met 64% of deadlines here, the box 14%.
 decisions:
   - title: Simulate before building
     body: >-

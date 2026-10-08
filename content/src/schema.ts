@@ -116,7 +116,7 @@ export const projectSchema = z
     }
   });
 
-export const sceneNames = ['systems', 'floor', 'population'] as const;
+export const sceneNames = ['systems', 'floor', 'population', 'storm'] as const;
 
 export const caseStudySchema = z.strictObject({
   problem: z.string().min(1).max(600),

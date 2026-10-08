@@ -6,3 +6,4 @@ content/src/.generated/
 *.md
 apps/api/evals/
 apps/api/src/generated/
+apps/web/src/scenes/storm-data.json
