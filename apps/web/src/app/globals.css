@@ -110,10 +110,16 @@ h3 {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  max-width: 1400px;
+  max-width: 80rem;
   margin-inline: auto;
   width: 100%;
   padding-inline: 16px;
+}
+
+@media (min-width: 640px) {
+  .tour {
+    padding-inline: 32px;
+  }
 }
 
 .tour-stage {
@@ -265,7 +271,7 @@ h3 {
     .timeline::before {
       animation: draw linear both;
       animation-timeline: view();
-      animation-range: entry 20% cover 60%;
+      animation-range: entry 0% entry 100%;
     }
     .tour-step .tour-card {
       animation: reveal linear both;

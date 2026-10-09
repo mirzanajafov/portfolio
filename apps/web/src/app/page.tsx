@@ -39,7 +39,7 @@ export default function Home() {
       />
 
       <section aria-labelledby="intro" className="intro">
-        <div className="intro-inner mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 sm:px-8">
+        <div className="intro-inner mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 sm:px-8">
           <p className="intro-eyebrow font-mono text-[13px] text-[var(--muted)]">
             {profile.location} · {profile.timezone} · {profile.availability}
           </p>
@@ -108,7 +108,7 @@ export default function Home() {
         }))}
       />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 py-24 sm:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-24 px-4 py-24 sm:px-8">
         <div className="reveal">
           <Ask suggestions={suggestions} email={links.email} />
         </div>
@@ -120,7 +120,7 @@ export default function Home() {
           <ExperienceTimeline roles={cv.experience} />
         </section>
 
-        <footer className="flex flex-col gap-2 border-t border-[var(--line)] pt-8 text-[var(--muted)]">
+        <footer className="flex flex-col gap-4 border-t border-[var(--line)] pt-8 text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
           <p>
             The fastest way to reach me is{' '}
             <a
@@ -131,6 +131,20 @@ export default function Home() {
             </a>
             .
           </p>
+          <nav aria-label="Elsewhere" className="flex gap-5">
+            <Link className="underline underline-offset-4 hover:text-[var(--fg)]" href="/cv">
+              CV
+            </Link>
+            <a className="underline underline-offset-4 hover:text-[var(--fg)]" href={links.github}>
+              GitHub
+            </a>
+            <a
+              className="underline underline-offset-4 hover:text-[var(--fg)]"
+              href={links.linkedin}
+            >
+              LinkedIn
+            </a>
+          </nav>
         </footer>
       </div>
     </main>

@@ -35,6 +35,8 @@ export const createSystemsScene: SceneFactory = (hooks, data) => {
   const scene = new Scene();
   const camera = new PerspectiveCamera(36, 1, 0.1, 500);
   const random = seeded(3);
+  const cardsOverStage =
+    typeof window === 'undefined' ? null : window.matchMedia('(max-width: 860px)');
 
   const geometries = {
     server: new SphereGeometry(sizes.server, 28, 20),
@@ -182,14 +184,14 @@ export const createSystemsScene: SceneFactory = (hooks, data) => {
       const ease = 1 - Math.exp(-(dt ?? 0.016) * 2.6);
       cameraPosition.lerp(wantedPosition, ease);
       cameraTarget.lerp(wantedTarget, ease);
-      const portrait = camera.aspect < 0.9;
-      const far = Math.max(1, (focus ? 0.9 : 1.2) / camera.aspect);
+      const covered = cardsOverStage?.matches ?? false;
+      const far = Math.max(1, (focus ? 1.15 : 1.2) / camera.aspect);
       offset.copy(cameraPosition).sub(cameraTarget);
       if (!focus) offset.applyAxisAngle(up, time * 0.05);
       camera.position.copy(cameraTarget).addScaledVector(offset, far);
       camera.lookAt(cameraTarget);
       const { width, height } = hooks.size();
-      if (portrait && width > 0 && height > 0) {
+      if (covered && width > 0 && height > 0) {
         camera.setViewOffset(width, height, 0, height * 0.16, width, height);
       } else {
         camera.clearViewOffset();
