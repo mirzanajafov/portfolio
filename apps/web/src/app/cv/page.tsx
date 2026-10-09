@@ -39,7 +39,7 @@ export default function CvPage() {
     <main className="mx-auto flex max-w-3xl flex-col gap-10 px-4 py-16 sm:px-8 print:py-0">
       <header className="flex flex-col gap-2">
         <h1 className="text-4xl font-semibold tracking-tight">{profile.name}</h1>
-        <p className="text-xl text-[var(--accent)]">{profile.headline}</p>
+        <p className="text-xl text-[var(--soft)]">{profile.headline}</p>
         <p className="text-[var(--muted)]">
           {profile.location} ({profile.timezone}) · {profile.availability}
         </p>

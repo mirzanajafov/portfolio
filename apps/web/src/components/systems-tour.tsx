@@ -88,7 +88,7 @@ export function SystemsTour({
                   {stop.name}
                 </h3>
               </ViewTransition>
-              <p className="text-lg text-[var(--accent)]">{stop.hook}</p>
+              <p className="text-lg text-[var(--soft)]">{stop.hook}</p>
               {stop.fact && (
                 <p className="leading-relaxed">
                   {stop.fact.text}

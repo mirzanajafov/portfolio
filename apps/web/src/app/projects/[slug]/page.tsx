@@ -86,7 +86,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             {project.name}
           </h1>
         </ViewTransition>
-        <p className="text-xl text-[var(--accent)]">{project.hook}</p>
+        <p className="text-xl text-[var(--soft)]">{project.hook}</p>
         <ul
           aria-label="Built with"
           className="flex flex-wrap gap-2 font-mono text-xs text-[var(--muted)]"
