@@ -1,5 +1,6 @@
 import type { SceneName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
+import { labelPosition } from './label-position';
 import type { LegendItem, Palette, SceneFactory, SceneInstance } from './types';
 
 export type { SceneName };
@@ -52,6 +53,18 @@ export async function play(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const projected = new Vector3();
   const host = canvas.parentElement ?? canvas;
+  const labelWidths = new WeakMap<HTMLElement, number>();
+  const labelHalfWidth = (element: HTMLElement) => {
+    const known = labelWidths.get(element);
+    if (known !== undefined) {
+      return known;
+    }
+    const half = element.offsetWidth / 2;
+    if (half > 0) {
+      labelWidths.set(element, half);
+    }
+    return half;
+  };
 
   const instance: SceneInstance = factory(
     {
@@ -65,11 +78,17 @@ export async function play(
       },
       place(element, x, y, z) {
         projected.set(x, y, z).project(instance.camera);
-        const visible =
-          projected.z < 1 && Math.abs(projected.x) < 1.15 && Math.abs(projected.y) < 1.15;
-        element.style.display = visible ? '' : 'none';
-        element.style.left = `${((projected.x + 1) / 2) * host.clientWidth}px`;
-        element.style.top = `${((1 - projected.y) / 2) * host.clientHeight}px`;
+        const spot = labelPosition(
+          projected,
+          host.clientWidth,
+          host.clientHeight,
+          labelHalfWidth(element),
+        );
+        element.style.display = spot ? '' : 'none';
+        if (spot) {
+          element.style.left = `${spot.left}px`;
+          element.style.top = `${spot.top}px`;
+        }
       },
       size: () => ({ width: host.clientWidth, height: host.clientHeight }),
     },

@@ -37,7 +37,7 @@ export function ExperienceTimeline({ roles }: { roles: Role[] }) {
       {roles.map((role) => (
         <li key={roleKey(role)} className="flex flex-col gap-2">
           <RoleHeading role={role} />
-          {role.about && <p className="text-[var(--muted)]">{role.about}</p>}
+          {role.about && <p className="max-w-3xl text-[var(--muted)]">{role.about}</p>}
         </li>
       ))}
     </ol>

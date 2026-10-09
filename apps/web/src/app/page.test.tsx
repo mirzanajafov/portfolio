@@ -9,11 +9,26 @@ describe('home page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Mirza Najafov' })).toBeInTheDocument();
     expect(screen.getByText('Senior Backend Engineer')).toBeInTheDocument();
     expect(screen.getByText(/Open to remote roles and relocation/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Email me' })).toHaveAttribute(
+    const contact = within(screen.getByRole('navigation', { name: 'Contact' }));
+    expect(contact.getByRole('link', { name: 'Email me' })).toHaveAttribute(
       'href',
       'mailto:mirza@najafov.dev',
     );
-    expect(screen.getByRole('link', { name: 'CV' })).toHaveAttribute('href', '/cv');
+    expect(contact.getByRole('link', { name: 'CV' })).toHaveAttribute('href', '/cv');
+  });
+
+  it('repeats the CV and profiles at the bottom, so nobody scrolls back up to leave', () => {
+    render(<Home />);
+    const elsewhere = within(screen.getByRole('navigation', { name: 'Elsewhere' }));
+    expect(elsewhere.getByRole('link', { name: 'CV' })).toHaveAttribute('href', '/cv');
+    expect(elsewhere.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+      'href',
+      content.profile.links.github,
+    );
+    expect(elsewhere.getByRole('link', { name: 'LinkedIn' })).toHaveAttribute(
+      'href',
+      content.profile.links.linkedin,
+    );
   });
 
   it('shows every project with a live link, and links code only for public repos', () => {

@@ -93,7 +93,7 @@ export function Ask({
           used for rate limiting.
         </p>
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
+      <form onSubmit={submit} className="flex max-w-3xl gap-2 sm:gap-3">
         <label htmlFor="question" className="sr-only">
           Your question
         </label>
@@ -104,13 +104,13 @@ export function Ask({
           onChange={(event) => setQuestion(event.target.value)}
           maxLength={300}
           autoComplete="off"
-          placeholder="How does Matchium decide which questions to ask?"
+          placeholder="Ask about my work"
           className="min-w-0 flex-1 rounded-full border border-[var(--line)] bg-transparent px-5 py-3 outline-none focus:border-[var(--accent)]"
         />
         <button
           type="submit"
           disabled={state.status === 'asking' || question.trim() === ''}
-          className="rounded-full bg-[var(--fg)] px-6 py-3 text-[var(--bg)] disabled:opacity-50"
+          className="shrink-0 rounded-full bg-[var(--fg)] px-5 py-3 text-[var(--bg)] disabled:opacity-50 sm:px-6"
         >
           {state.status === 'asking' ? 'Thinking…' : 'Ask'}
         </button>
