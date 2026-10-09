@@ -4,11 +4,11 @@ import { loadFont } from './fonts';
 export const ogSize = { width: 1200, height: 630 };
 
 const colours = {
-  bg: '#0a0d11',
-  fg: '#e9edf1',
-  muted: '#8a96a3',
-  accent: '#f2a33a',
-  line: '#232c36',
+  bg: '#121110',
+  fg: '#ede9e2',
+  muted: '#a09a90',
+  accent: '#e8794a',
+  line: '#2d2b27',
 };
 
 export type Card = {
@@ -36,7 +36,7 @@ export async function renderCard(card: Card): Promise<ImageResponse> {
         justifyContent: 'space-between',
         padding: '64px 72px',
         backgroundColor: colours.bg,
-        backgroundImage: `radial-gradient(circle at 82% 18%, rgba(242,163,58,0.22), rgba(10,13,17,0) 48%), linear-gradient(${colours.line} 1px, transparent 1px), linear-gradient(90deg, ${colours.line} 1px, transparent 1px)`,
+        backgroundImage: `radial-gradient(circle at 82% 18%, rgba(232,121,74,0.2), rgba(18,17,16,0) 48%), linear-gradient(${colours.line} 1px, transparent 1px), linear-gradient(90deg, ${colours.line} 1px, transparent 1px)`,
         backgroundSize: '100% 100%, 72px 72px, 72px 72px',
         color: colours.fg,
         fontFamily: 'Schibsted Grotesk',

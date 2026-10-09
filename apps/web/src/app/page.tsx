@@ -54,7 +54,7 @@ export default function Home() {
               <span style={{ ['--i' as string]: 1 }}>{last}</span>
             </span>
           </h1>
-          <p className="intro-role text-[clamp(20px,2.6vw,30px)] font-medium text-[var(--accent)]">
+          <p className="intro-role text-[clamp(20px,2.6vw,30px)] font-medium text-[var(--soft)]">
             {profile.headline}
           </p>
           <p className="intro-summary max-w-2xl text-lg leading-relaxed text-pretty">

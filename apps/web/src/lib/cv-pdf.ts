@@ -4,9 +4,9 @@ import { fontPath } from './fonts';
 import { formatPeriod, kindLabel } from './format';
 import { siteUrl } from './site';
 
-const ink = '#0f151c';
-const muted = '#4b5563';
-const accent = '#a55a07';
+const ink = '#1a1814';
+const muted = '#57524a';
+const accent = '#b23f12';
 const margin = 50;
 const noLigatures = { features: { liga: false } } as unknown as PDFKit.Mixins.TextOptions;
 
@@ -58,7 +58,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
       .moveTo(margin, y)
       .lineTo(margin + width, y)
       .lineWidth(0.6)
-      .strokeColor('#cfd6dd')
+      .strokeColor('#dad3c6')
       .stroke();
     doc.moveDown(0.6);
   };
