@@ -29,6 +29,27 @@ function useReducedMotion(): boolean {
   );
 }
 
+let motionChoice: boolean | null = null;
+const motionListeners = new Set<() => void>();
+
+function subscribeToMotionChoice(onChange: () => void): () => void {
+  motionListeners.add(onChange);
+  return () => motionListeners.delete(onChange);
+}
+
+function chooseMotion(playing: boolean) {
+  motionChoice = playing;
+  motionListeners.forEach((listener) => listener());
+}
+
+function useMotionChoice(): boolean | null {
+  return useSyncExternalStore(
+    subscribeToMotionChoice,
+    () => motionChoice,
+    () => null,
+  );
+}
+
 export function ScenePlayer({
   name,
   description,
@@ -36,6 +57,7 @@ export function ScenePlayer({
   showReadout = true,
   data,
   focus: controlledFocus,
+  shown = true,
 }: {
   name: SceneName;
   description: string;
@@ -43,6 +65,7 @@ export function ScenePlayer({
   showReadout?: boolean;
   data?: unknown;
   focus?: string | null;
+  shown?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
@@ -54,7 +77,7 @@ export function ScenePlayer({
   const [legend, setLegend] = useState<LegendItem[]>([]);
   const [ownFocus, setFocus] = useState<string | null>(null);
   const focus = controlledFocus === undefined ? ownFocus : controlledFocus;
-  const [choice, setChoice] = useState<boolean | null>(null);
+  const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
 
   useEffect(() => {
@@ -107,6 +130,10 @@ export function ScenePlayer({
     handleRef.current?.focus(focus);
   }, [focus, state]);
 
+  useEffect(() => {
+    handleRef.current?.setShown(shown);
+  }, [shown, state]);
+
   return (
     <div className="scene" data-state={state}>
       <canvas ref={canvasRef} className="scene-canvas" role="img" aria-label={description} />
@@ -123,7 +150,7 @@ export function ScenePlayer({
             <span />
           )}
           <div className="scene-controls">
-            <button type="button" className="scene-button" onClick={() => setChoice(!playing)}>
+            <button type="button" className="scene-button" onClick={() => chooseMotion(!playing)}>
               {playing ? 'Pause motion' : 'Play motion'}
             </button>
             {showLegend && legend.length > 0 && (

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ViewTransition, useEffect, useRef, useState } from 'react';
+import type { SceneName } from '@portfolio/content';
 import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
 
@@ -15,7 +16,10 @@ export type TourStop = {
   code?: string;
   caseStudy?: string;
   privateSource?: boolean;
+  demo?: { scene: SceneName; caption: string };
 };
+
+const settleMs = 900;
 
 export function SystemsTour({
   intro,
@@ -27,6 +31,8 @@ export function SystemsTour({
   apps: GraphApp[];
 }) {
   const [active, setActive] = useState<string | null>(null);
+  const [near, setNear] = useState<ReadonlySet<string>>(new Set());
+  const [settled, setSettled] = useState<string | null>(null);
   const stepsRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -34,20 +40,49 @@ export function SystemsTour({
     if (!steps || typeof IntersectionObserver === 'undefined') {
       return;
     }
-    const observer = new IntersectionObserver(
+    const idOf = (entry: IntersectionObserverEntry) =>
+      (entry.target as HTMLElement).dataset.stop ?? '';
+    const center = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            const id = (entry.target as HTMLElement).dataset.stop ?? '';
+            const id = idOf(entry);
             setActive(id === 'overview' ? null : id);
           }
         }
       },
       { rootMargin: '-45% 0px -45% 0px' },
     );
-    steps.forEach((step) => observer.observe(step));
-    return () => observer.disconnect();
+    const ahead = new IntersectionObserver(
+      (entries) => {
+        const coming = entries.filter((entry) => entry.isIntersecting).map(idOf);
+        if (coming.length > 0) {
+          setNear((previous) =>
+            coming.every((id) => previous.has(id)) ? previous : new Set([...previous, ...coming]),
+          );
+        }
+      },
+      { rootMargin: '50% 0px 50% 0px' },
+    );
+    steps.forEach((step) => {
+      center.observe(step);
+      ahead.observe(step);
+    });
+    return () => {
+      center.disconnect();
+      ahead.disconnect();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const timer = window.setTimeout(() => setSettled(active), settleMs);
+    return () => window.clearTimeout(timer);
+  }, [active]);
+
+  const covered = settled === active && stops.some((stop) => stop.id === active && stop.demo);
 
   return (
     <section aria-labelledby="built" className="tour">
@@ -56,9 +91,33 @@ export function SystemsTour({
           name="systems"
           data={apps}
           focus={active}
+          shown={!covered}
           showReadout={false}
           description="A map of the apps I run on my server. Each app sits around the server with its own stack, and requests travel from the server to the apps and into their parts. Scrolling moves the camera from app to app."
         />
+        {stops.map(
+          (stop) =>
+            stop.demo &&
+            near.has(stop.id) && (
+              <div
+                key={stop.id}
+                className="tour-demo"
+                data-stop={stop.id}
+                data-shown={active === stop.id}
+                aria-hidden={active !== stop.id}
+                inert={active !== stop.id}
+              >
+                <ScenePlayer
+                  name={stop.demo.scene}
+                  description={stop.demo.caption}
+                  shown={active === stop.id}
+                />
+                <p className="tour-caption" aria-hidden="true">
+                  {stop.demo.caption}
+                </p>
+              </div>
+            ),
+        )}
       </div>
       <ol ref={stepsRef} className="tour-steps">
         <li data-stop="overview" className="tour-step">
