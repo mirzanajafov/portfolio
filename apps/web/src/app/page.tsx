@@ -8,6 +8,7 @@ import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
 
 function toStop(project: Project): TourStop {
   const fact = headlineFact(project);
+  const { demo, demoCaption } = project.caseStudy ?? {};
   return {
     id: project.slug,
     name: project.name,
@@ -18,6 +19,7 @@ function toStop(project: Project): TourStop {
     code: project.links.repo,
     caseStudy: project.caseStudy ? `/projects/${project.slug}` : undefined,
     privateSource: project.visibility === 'private',
+    demo: demo && demoCaption ? { scene: demo, caption: demoCaption } : undefined,
   };
 }
 
@@ -98,7 +100,7 @@ export default function Home() {
       <SystemsTour
         intro={{
           title: 'Things I built',
-          body: `${projects.length} apps, each with its own database, backups and a deploy script that rolls back, all on one server behind a shared proxy. Scroll and the camera moves from one to the next.`,
+          body: `${projects.length} apps, each with its own database, backups and a deploy script that rolls back, all on one server behind a shared proxy. Scroll and the camera moves from one to the next; where an app has a simulator, the picture switches to it.`,
         }}
         stops={projects.map(toStop)}
         apps={projects.map((project) => ({

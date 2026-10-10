@@ -1,12 +1,55 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SystemsTour, type TourStop } from './systems-tour';
 
 vi.mock('@/components/scene-player', () => ({
-  ScenePlayer: ({ focus }: { focus?: string | null }) => (
-    <div data-testid="scene" data-focus={focus ?? 'overview'} />
-  ),
+  ScenePlayer: ({
+    name,
+    focus,
+    shown = true,
+  }: {
+    name: string;
+    focus?: string | null;
+    shown?: boolean;
+  }) => <div data-testid={`scene-${name}`} data-focus={focus ?? 'overview'} data-shown={shown} />,
 }));
+
+type Watcher = { callback: IntersectionObserverCallback; targets: Element[] };
+const watchers: Watcher[] = [];
+
+class FakeObserver {
+  private watcher: Watcher;
+  constructor(callback: IntersectionObserverCallback) {
+    this.watcher = { callback, targets: [] };
+    watchers.push(this.watcher);
+  }
+  observe(target: Element) {
+    this.watcher.targets.push(target);
+  }
+  disconnect() {
+    this.watcher.targets = [];
+  }
+}
+
+function arriveAt(id: string) {
+  act(() => {
+    for (const { callback, targets } of watchers) {
+      const target = targets.find((element) => (element as HTMLElement).dataset.stop === id);
+      if (target) {
+        callback(
+          [{ target, isIntersecting: true } as unknown as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      }
+    }
+  });
+}
+
+afterEach(() => {
+  watchers.length = 0;
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 const stops: TourStop[] = [
   {
@@ -18,6 +61,7 @@ const stops: TourStop[] = [
     live: 'https://matchium.example',
     code: 'https://github.com/x/matchium',
     caseStudy: '/projects/matchium',
+    demo: { scene: 'population', caption: 'Each point is a simulated person.' },
   },
   {
     id: 'tm-post',
@@ -54,6 +98,29 @@ describe('SystemsTour', () => {
 
   it('starts on the overview before anything is scrolled into view', () => {
     render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
-    expect(screen.getByTestId('scene')).toHaveAttribute('data-focus', 'overview');
+    expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'overview');
+  });
+
+  it("hands the stage to the project's own scene once the camera has flown there", () => {
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    vi.useFakeTimers();
+    render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
+    expect(screen.queryByTestId('scene-population')).toBeNull();
+
+    arriveAt('matchium');
+    const systems = screen.getByTestId('scene-systems');
+    const population = screen.getByTestId('scene-population');
+    expect(systems).toHaveAttribute('data-focus', 'matchium');
+    expect(population).toHaveAttribute('data-shown', 'true');
+    expect(systems).toHaveAttribute('data-shown', 'true');
+    act(() => vi.advanceTimersByTime(900));
+    expect(systems).toHaveAttribute('data-shown', 'false');
+    expect(screen.getByText('Each point is a simulated person.')).toBeVisible();
+
+    arriveAt('tm-post');
+    expect(systems).toHaveAttribute('data-shown', 'true');
+    expect(systems).toHaveAttribute('data-focus', 'tm-post');
+    expect(population).toHaveAttribute('data-shown', 'false');
+    expect(population.parentElement).toHaveAttribute('aria-hidden', 'true');
   });
 });

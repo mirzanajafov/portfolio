@@ -172,11 +172,11 @@ export const createStormScene: SceneFactory = (hooks) => {
     },
     render(time) {
       const swing = Math.sin(time * 0.05) * 0.16;
-      const portrait = camera.aspect < 1.05;
       const narrow = hooks.size().width < 600;
+      const stacked = narrow || camera.aspect < 1.05;
       for (const cage of cages) {
         const side = cage.index === 0 ? -1 : 1;
-        if (portrait) {
+        if (stacked) {
           cage.root.position.set(0, 0, side * (p.cageDepth / 2 + p.gap / 2 + 1.5));
         } else {
           cage.root.position.set(side * (p.cageWidth / 2 + p.gap / 2 + 0.8), 0, 0);
@@ -188,7 +188,7 @@ export const createStormScene: SceneFactory = (hooks) => {
         cage.usefulLabel.style.display = narrow ? 'none' : '';
         cage.queueLabel.style.display = narrow ? 'none' : '';
       }
-      if (portrait) {
+      if (stacked) {
         const far = Math.max(1, 0.62 / camera.aspect);
         camera.position.set(Math.sin(swing) * 24 * far, 64 * far, Math.cos(swing) * 40 * far);
         camera.lookAt(0, 0, 1);
@@ -197,7 +197,7 @@ export const createStormScene: SceneFactory = (hooks) => {
         camera.position.set(Math.sin(swing) * 46 * far, 34 * far, Math.cos(swing) * 50 * far);
         camera.lookAt(0, 1.5, 1);
       }
-      if (portrait) {
+      if (stacked) {
         hooks.place(burstLabel, 0, 0.2, 1.2);
       } else {
         hooks.place(burstLabel, 0, p.cageHeight + 3.4, -p.cageDepth / 2);

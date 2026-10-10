@@ -20,6 +20,7 @@ export type PlayerOptions = {
 
 export type PlayerHandle = {
   setPlaying: (playing: boolean) => void;
+  setShown: (shown: boolean) => void;
   focus: (id: string | null) => void;
   dispose: () => void;
 };
@@ -115,6 +116,7 @@ export async function play(
 
   let playing = true;
   let visible = true;
+  let shown = true;
   let clock = 0;
   let last = performance.now();
   let readoutAt = 0;
@@ -123,7 +125,7 @@ export async function play(
   const draw = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (visible && !document.hidden) {
+    if (visible && shown && !document.hidden) {
       if (playing) {
         clock += dt;
         instance.step(dt, clock);
@@ -156,6 +158,9 @@ export async function play(
   return {
     setPlaying(next) {
       playing = next;
+    },
+    setShown(next) {
+      shown = next;
     },
     focus(id) {
       instance.focus?.(id);
