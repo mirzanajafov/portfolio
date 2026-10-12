@@ -31,19 +31,21 @@ class FakeObserver {
   }
 }
 
-function arriveAt(id: string) {
+function cross(attribute: 'stop' | 'scene', id: string, isIntersecting: boolean) {
   act(() => {
     for (const { callback, targets } of watchers) {
-      const target = targets.find((element) => (element as HTMLElement).dataset.stop === id);
+      const target = targets.find((element) => (element as HTMLElement).dataset[attribute] === id);
       if (target) {
         callback(
-          [{ target, isIntersecting: true } as unknown as IntersectionObserverEntry],
+          [{ target, isIntersecting } as unknown as IntersectionObserverEntry],
           {} as IntersectionObserver,
         );
       }
     }
   });
 }
+
+const arriveAt = (id: string) => cross('stop', id, true);
 
 afterEach(() => {
   watchers.length = 0;
@@ -109,12 +111,22 @@ describe('SystemsTour', () => {
     }
   });
 
+  it('goes back to the stop above when scrolling up past the line between two stops', () => {
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
+    arriveAt('matchium');
+    arriveAt('tm-post');
+    expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'tm-post');
+    cross('stop', 'tm-post', false);
+    expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'matchium');
+  });
+
   it('starts on the overview before anything is scrolled into view', () => {
     render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
     expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'overview');
   });
 
-  it("hands the stage to the project's own scene once the camera has flown there", () => {
+  it("shows the map close-up for the first half of a stop and the project's own scene for the rest", () => {
     vi.stubGlobal('IntersectionObserver', FakeObserver);
     vi.useFakeTimers();
     render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
@@ -124,12 +136,23 @@ describe('SystemsTour', () => {
     const systems = screen.getByTestId('scene-systems');
     const population = screen.getByTestId('scene-population');
     expect(systems).toHaveAttribute('data-focus', 'matchium');
+    expect(systems).toHaveAttribute('data-shown', 'true');
+    expect(population).toHaveAttribute('data-shown', 'false');
+    act(() => vi.advanceTimersByTime(5000));
+    expect(population).toHaveAttribute('data-shown', 'false');
+
+    cross('scene', 'matchium', true);
     expect(population).toHaveAttribute('data-shown', 'true');
     expect(systems).toHaveAttribute('data-shown', 'true');
-    act(() => vi.advanceTimersByTime(900));
+    act(() => vi.advanceTimersByTime(500));
     expect(systems).toHaveAttribute('data-shown', 'false');
     expect(screen.getByText('Each point is a simulated person.')).toBeVisible();
 
+    cross('scene', 'matchium', false);
+    expect(population).toHaveAttribute('data-shown', 'false');
+    expect(systems).toHaveAttribute('data-shown', 'true');
+
+    cross('scene', 'matchium', true);
     arriveAt('tm-post');
     expect(systems).toHaveAttribute('data-shown', 'true');
     expect(systems).toHaveAttribute('data-focus', 'tm-post');
