@@ -129,11 +129,27 @@ export function SystemsTour({
               {intro.title}
             </h2>
             <p className="text-lg leading-relaxed text-[var(--muted)]">{intro.body}</p>
+            <nav aria-label="Projects">
+              <ol className="tour-index">
+                {stops.map((stop, index) => (
+                  <li key={stop.id}>
+                    <a href={`#${stop.id}`}>
+                      <span aria-hidden="true" className="tour-index-number">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="tour-index-name">{stop.name}</span>
+                      <span className="tour-index-hook">{stop.hook}</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
           </div>
         </li>
         {stops.map((stop) => (
           <li
             key={stop.id}
+            id={stop.id}
             data-stop={stop.id}
             className="tour-step"
             data-active={active === stop.id}

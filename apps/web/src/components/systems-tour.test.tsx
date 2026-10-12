@@ -96,6 +96,19 @@ describe('SystemsTour', () => {
     expect(within(tmPost).getByText('design parameter')).toBeInTheDocument();
   });
 
+  it('opens with an index that jumps to each stop of the tour', () => {
+    render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
+    const index = screen.getByRole('navigation', { name: 'Projects' });
+    const links = within(index).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['#matchium', '#tm-post']);
+    expect(links[1]).toHaveTextContent('TM PostKeeps working offline');
+    for (const link of links) {
+      const stop = document.getElementById(link.getAttribute('href')!.slice(1));
+      expect(stop).toHaveAttribute('data-stop', stop?.id);
+      expect(within(stop!).getByRole('article')).toBeInTheDocument();
+    }
+  });
+
   it('starts on the overview before anything is scrolled into view', () => {
     render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
     expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'overview');
