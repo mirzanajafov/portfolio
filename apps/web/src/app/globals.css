@@ -146,9 +146,16 @@ h3 {
 }
 
 .tour-step {
+  position: relative;
   min-height: 90vh;
   display: flex;
   align-items: center;
+}
+
+.tour-scene-zone {
+  position: absolute;
+  inset: 50% 0 0;
+  pointer-events: none;
 }
 
 .tour-card {
@@ -216,7 +223,6 @@ h3 {
 .tour-demo[data-shown='true'] {
   opacity: 1;
   pointer-events: auto;
-  transition-delay: 300ms;
 }
 
 .tour-caption {

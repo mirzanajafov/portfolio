@@ -19,7 +19,7 @@ export type TourStop = {
   demo?: { scene: SceneName; caption: string };
 };
 
-const settleMs = 900;
+const settleMs = 500;
 
 export function SystemsTour({
   intro,
@@ -32,24 +32,37 @@ export function SystemsTour({
 }) {
   const [active, setActive] = useState<string | null>(null);
   const [near, setNear] = useState<ReadonlySet<string>>(new Set());
+  const [scene, setScene] = useState<string | null>(null);
   const [settled, setSettled] = useState<string | null>(null);
   const stepsRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
     const steps = stepsRef.current?.querySelectorAll<HTMLElement>('[data-stop]');
-    if (!steps || typeof IntersectionObserver === 'undefined') {
+    const zones = stepsRef.current?.querySelectorAll<HTMLElement>('[data-scene]');
+    if (!steps || !zones || typeof IntersectionObserver === 'undefined') {
       return;
     }
     const idOf = (entry: IntersectionObserverEntry) =>
       (entry.target as HTMLElement).dataset.stop ?? '';
+    const inBand = new Set<string>();
+    let current: string | null = null;
     const center = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const id = idOf(entry);
-            setActive(id === 'overview' ? null : id);
+          const zone = (entry.target as HTMLElement).dataset.scene;
+          if (zone) {
+            setScene((shown) => (entry.isIntersecting ? zone : shown === zone ? null : shown));
+          } else if (entry.isIntersecting) {
+            inBand.add(idOf(entry));
+            current = idOf(entry);
+          } else {
+            inBand.delete(idOf(entry));
           }
         }
+        if (current !== null && !inBand.has(current)) {
+          current = inBand.values().next().value ?? current;
+        }
+        setActive(current === 'overview' ? null : current);
       },
       { rootMargin: '-45% 0px -45% 0px' },
     );
@@ -68,21 +81,24 @@ export function SystemsTour({
       center.observe(step);
       ahead.observe(step);
     });
+    zones.forEach((zone) => center.observe(zone));
     return () => {
       center.disconnect();
       ahead.disconnect();
     };
   }, []);
 
+  const showing = scene !== null && scene === active ? scene : null;
+
   useEffect(() => {
-    if (!active) {
+    if (!showing) {
       return;
     }
-    const timer = window.setTimeout(() => setSettled(active), settleMs);
+    const timer = window.setTimeout(() => setSettled(showing), settleMs);
     return () => window.clearTimeout(timer);
-  }, [active]);
+  }, [showing]);
 
-  const covered = settled === active && stops.some((stop) => stop.id === active && stop.demo);
+  const covered = showing !== null && settled === showing;
 
   return (
     <section aria-labelledby="built" className="tour">
@@ -103,14 +119,14 @@ export function SystemsTour({
                 key={stop.id}
                 className="tour-demo"
                 data-stop={stop.id}
-                data-shown={active === stop.id}
-                aria-hidden={active !== stop.id}
-                inert={active !== stop.id}
+                data-shown={showing === stop.id}
+                aria-hidden={showing !== stop.id}
+                inert={showing !== stop.id}
               >
                 <ScenePlayer
                   name={stop.demo.scene}
                   description={stop.demo.caption}
-                  shown={active === stop.id}
+                  shown={showing === stop.id}
                 />
                 <p className="tour-caption" aria-hidden="true">
                   {stop.demo.caption}
@@ -154,6 +170,9 @@ export function SystemsTour({
             className="tour-step"
             data-active={active === stop.id}
           >
+            {stop.demo && (
+              <div aria-hidden="true" className="tour-scene-zone" data-scene={stop.id} />
+            )}
             <article aria-labelledby={`stop-${stop.id}`} className="tour-card">
               <ViewTransition name={`project-${stop.id}`} share="morph" default="none">
                 <h3
