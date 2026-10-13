@@ -1,13 +1,13 @@
 {
   "engine": "keyword",
-  "questions": 41,
-  "hits": 35,
+  "questions": 42,
+  "hits": 36,
   "refusals": 0,
-  "hitRate": 0.854,
+  "hitRate": 0.857,
   "byProject": {
     "portalgun": {
-      "questions": 7,
-      "hits": 7
+      "questions": 8,
+      "hits": 8
     },
     "matchium": {
       "questions": 6,
@@ -191,6 +191,18 @@
       ],
       "cited": [
         "portalgun/panic-threshold"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "What can a visitor break on the PortalGun demo?",
+      "expected": [
+        "portalgun/bounded-chaos"
+      ],
+      "cited": [
+        "portalgun/bounded-chaos"
       ],
       "hit": true,
       "refused": false

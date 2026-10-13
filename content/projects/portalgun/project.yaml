@@ -70,7 +70,7 @@ facts:
     kind: design
     source: { file: README.md, section: How the pieces fit }
   - id: bounded-chaos
-    text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, reverted automatically, and the controller never touches the Docker socket.
+    text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, and start a canary rollout, three an hour per address; the controller never touches the Docker socket.
     kind: design
     source: { file: README.md, section: How the pieces fit }
 health: https://portalgun.najafov.dev/

@@ -5,6 +5,13 @@ problem: >-
   little added latency, one quota across several instances, traffic off a dead upstream before many
   requests fail, and a bad release caught without rolling back good ones. I built one around those
   four numbers and measured each against something real.
+demo: failover
+demoCaption: >-
+  PortalGun's crash test, replayed from the run's 100 ms bins: 2,000 requests a second over three
+  dimensions, and a starts refusing connections at 0 s. With probes only, a refused connection looks
+  like the cheapest dimension, so a kept about half the traffic until the probes caught it 1.5 s
+  later: 1,560 lost. With passive ejection and retries too, a was out within milliseconds and
+  nothing was lost.
 decisions:
   - title: Build on the standard library, measure what it costs
     body: >-
@@ -45,8 +52,9 @@ decisions:
       so a downstream blip that hits both versions cancels out, and looking every second doesn't
       inflate false rollbacks. A simulator calling the controller's own package checked it. The
       price is small regressions on thin traffic, where a test that waits for the whole step does
-      better.
-    facts: [canary-sprt]
+      better. On the live demo anyone can start a rollout and break the new version. I first kept
+      rollouts for the admin, and that left the canary invisible to anyone looking.
+    facts: [canary-sprt, bounded-chaos]
 proof: >-
   Every number comes from a harness in the repo: an open-loop load generator checked against vegeta
   and wrk2, medians of three runs or more, every proxy on its own CPU set with the same limits.
