@@ -1,0 +1,60 @@
+problem: >-
+  Rick's portal gun opens a door to whichever dimension he points it at, and when that dimension is
+  on fire, he points it somewhere else. An API gateway does the same job thousands of times a
+  second, with a fraction of a millisecond to decide. Everything a gateway promises is a number:
+  little added latency, one quota across several instances, traffic off a dead upstream before many
+  requests fail, and a bad release caught without rolling back good ones. I built one around those
+  four numbers and measured each against something real.
+decisions:
+  - title: Build on the standard library, measure what it costs
+    body: >-
+      The proxy is Go's httputil.ReverseProxy with my own Transport, which picks the dimension per
+      attempt, so a retry moves to another dimension without ReverseProxy knowing. Hop-by-hop
+      headers, streaming and upgrades are where subtle bugs live, and the standard library has had
+      years of them fixed. Against nginx, HAProxy, Envoy and Caddy on one vCPU each, my own code
+      costs a few percent over the bare ReverseProxy, and nginx and HAProxy hold about twice the
+      rate, which is roughly what C event loops without a garbage collector should do. Past their
+      maximum the Go proxies queued in memory until they swapped, so the gateway now refuses work
+      past 256 requests in flight. I had to measure that number: I guessed 20-40 KB per request in
+      flight, and it was about 145.
+    facts: [proxy-overhead, own-code-cost, admission-cap, in-flight-memory]
+  - title: One quota, four designs, one referee
+    body: >-
+      Several gateways have to agree on one bucket without asking anyone on every request. I built
+      a static split, an exact limiter with one Redis call per request, a local budget synced with
+      Redis on a timer, and leases, all behind one interface, and judged them by replaying every
+      decision through one perfect token bucket. The local budget synced every 100 ms is the
+      default: nothing measurable on the request and within 1.3% everywhere. The exact limiter
+      taught me the most. Its 2 ms timeout never applied, and its first breaker let too many
+      through; with the debt charged back it is the one I'd use for a limit that's a contract.
+    facts: [local-sync, static-split, breaker-rebuild, limiter-bugs]
+  - title: Three kinds of health, because each misses something
+    body: >-
+      Active probes find a dead dimension that gets no traffic, passive ejection reacts to real
+      failures within milliseconds, and a panic threshold stops one shared failure from ejecting
+      the whole pool. Power of two choices does part of the job before any of them: a hung
+      dimension collects requests in flight and stops being picked. With all three and a retry
+      budget, six kinds of injected faults cost no requests. On a crash, probes on their own were
+      worse than slow, because a refused connection fails in microseconds and looks like the
+      cheapest dimension.
+    facts: [no-lost-requests, panic-threshold, p2c-blackhole, retry-budget]
+  - title: A canary that can look every second
+    body: >-
+      The canary decides with Wald's sequential test on who the errors came from. If the new
+      version is no worse, an error lands on it with the same probability as its share of traffic,
+      so a downstream blip that hits both versions cancels out, and looking every second doesn't
+      inflate false rollbacks. A simulator calling the controller's own package checked it. The
+      price is small regressions on thin traffic, where a test that waits for the whole step does
+      better.
+    facts: [canary-sprt]
+proof: >-
+  Every number comes from a harness in the repo: an open-loop load generator checked against vegeta
+  and wrk2, medians of three runs or more, every proxy on its own CPU set with the same limits.
+  It ran on my laptop, so I only compare numbers from the same session. Limiter accuracy comes from
+  replaying each gateway's decisions through one perfect bucket, failover from real TCP faults
+  through Toxiproxy, and the canary from 72 simulated cells. Race tests, integration tests against
+  Redis and Postgres and a Docker e2e suite run in CI on every push.
+next: >-
+  An adaptive concurrency limit in place of the fixed 256, following the latency of accepted
+  requests. Then find where the Redis stalls and the extra tail near the knee come from, and run
+  the proxy comparison on a machine that isn't a laptop.
