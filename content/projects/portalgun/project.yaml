@@ -1,0 +1,78 @@
+name: PortalGun
+order: 1
+hook: A Go API gateway, measured against nginx, HAProxy, Envoy and Caddy
+summary: >-
+  A reverse proxy in Go that picks where each request goes from health, latency, rate limits and
+  rollout rules, and changes that choice when something breaks. I built it around four numbers
+  instead of a feature list: what it adds to a request, whether several gateways keep one quota, how
+  many requests a broken upstream costs, and whether a canary catches a bad release.
+visibility: public
+links:
+  live: https://portalgun.najafov.dev
+  repo: https://github.com/mirzanajafov/portalgun-router
+stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy]
+headline: no-lost-requests
+facts:
+  - id: no-lost-requests
+    text: With probes, passive ejection and retries together, no request was lost in any of six injected faults at 2,000 requests a second, and p99 during the fault stayed at 5.8-6.0 ms.
+    kind: measured
+    source: { file: README.md, section: When a dimension breaks }
+  - id: proxy-overhead
+    text: At 1,000 requests a second on one vCPU it adds 155 µs at p50, 16 µs over Go's bare ReverseProxy; nginx adds 107 µs, HAProxy 108, Caddy 201 and Envoy 207.
+    kind: measured
+    source: { file: README.md, section: What a proxy in the path costs }
+  - id: own-code-cost
+    text: Its own code costs 1.03-1.09x the bare ReverseProxy's CPU per request at every rate up to 8,000 a second, while nginx and HAProxy held about twice the rate on one core.
+    kind: measured
+    source: { file: README.md, section: What a proxy in the path costs }
+  - id: admission-cap
+    text: Without a cap on requests in flight, a cold start at 8,000 requests a second took down both Go proxies; with a cap of 128 or 256 nothing collapsed in 30 runs, and 256 is the default.
+    kind: measured
+    source: { file: README.md, section: Turning work away }
+  - id: in-flight-memory
+    text: A request in flight costs about 145 KB of heap and goroutine stack, not the 20-40 KB I guessed, so a cap of 1,024 would take half of a 256 MB container.
+    kind: measured
+    source: { file: README.md, section: Turning work away }
+  - id: local-sync
+    text: Gateways share one rate limit through local budgets synced with a Redis bucket every 100 ms, which stayed within 1.3% of a perfect token bucket in every traffic pattern and added nothing measurable.
+    kind: measured
+    source: { file: README.md, section: One limit across several gateways }
+  - id: static-split
+    text: Splitting a limit evenly between gateways turned away a third of what a client was allowed once traffic shifted 90/10, and 60% over four gateways.
+    kind: measured
+    source: { file: README.md, section: One limit across several gateways }
+  - id: breaker-rebuild
+    text: Rebuilding the exact limiter's Redis breaker, with what a gateway admitted on its own charged back later, took it from 11.6% too many requests to 0.2% too few at an even split.
+    kind: measured
+    source: { file: README.md, section: One limit across several gateways }
+  - id: limiter-bugs
+    text: The first full limiter run found two bugs in my own code, a 2 ms Redis timeout that never applied and a bucket cap that cut the limit to two thirds at a 500 ms sync.
+    kind: measured
+    source: { file: README.md, section: One limit across several gateways }
+  - id: panic-threshold
+    text: When all three dimensions failed 20% of requests at once, the panic threshold kept losses at 4% instead of 59% by spreading over the whole pool rather than ejecting it.
+    kind: measured
+    source: { file: README.md, section: When a dimension breaks }
+  - id: p2c-blackhole
+    text: A dimension that stopped answering lost 11-18 requests at every timeout tried, because power of two choices stops picking it as requests pile up in flight, before any check fires.
+    kind: measured
+    source: { file: README.md, section: When a dimension breaks }
+  - id: canary-sprt
+    text: The canary uses a sequential test on who the errors came from; in 36 simulated cells with a good canary it rolled back 0.1-0.7%, against 22-52% for a z-test checked every second.
+    kind: measured
+    source: { file: README.md, section: Catching a bad release }
+  - id: retry-budget
+    text: A retry goes to a different dimension, and retries are capped at 20% of requests over 10 seconds, so a dead pool can't triple the load.
+    kind: parameter
+    source: { file: README.md, section: How a request goes through it }
+  - id: no-shared-path
+    text: Gateways keep routing on the last config they had; losing the controller freezes config, losing Redis switches limiters to a static split, and each case is a Docker e2e test.
+    kind: design
+    source: { file: README.md, section: How the pieces fit }
+  - id: bounded-chaos
+    text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, reverted automatically, and the controller never touches the Docker socket.
+    kind: design
+    source: { file: README.md, section: How the pieces fit }
+health: https://portalgun.najafov.dev/
+knowledge:
+  - README.md

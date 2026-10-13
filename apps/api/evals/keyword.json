@@ -1,13 +1,17 @@
 {
   "engine": "keyword",
-  "questions": 34,
-  "hits": 29,
+  "questions": 41,
+  "hits": 35,
   "refusals": 0,
-  "hitRate": 0.853,
+  "hitRate": 0.854,
   "byProject": {
+    "portalgun": {
+      "questions": 7,
+      "hits": 7
+    },
     "matchium": {
       "questions": 6,
-      "hits": 5
+      "hits": 4
     },
     "poof": {
       "questions": 7,
@@ -100,6 +104,98 @@
   },
   "results": [
     {
+      "project": "portalgun",
+      "question": "How much latency does PortalGun add compared to nginx and Envoy?",
+      "expected": [
+        "portalgun/proxy-overhead"
+      ],
+      "cited": [
+        "portalgun/proxy-overhead",
+        "portalgun/case-study/next"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "How does PortalGun keep one rate limit across several gateways?",
+      "expected": [
+        "portalgun/local-sync",
+        "portalgun/static-split"
+      ],
+      "cited": [
+        "portalgun/local-sync",
+        "portalgun/own-code-cost"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "What happens to requests in PortalGun when a dimension breaks?",
+      "expected": [
+        "portalgun/no-lost-requests",
+        "portalgun/p2c-blackhole"
+      ],
+      "cited": [
+        "portalgun/p2c-blackhole",
+        "portalgun/retry-budget"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "How does PortalGun's canary decide to roll back a release?",
+      "expected": [
+        "portalgun/canary-sprt"
+      ],
+      "cited": [
+        "portalgun/canary-sprt"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "Why does PortalGun refuse requests past 256 in flight?",
+      "expected": [
+        "portalgun/admission-cap",
+        "portalgun/in-flight-memory"
+      ],
+      "cited": [
+        "portalgun/admission-cap"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "What bugs did the limiter benchmark find in PortalGun?",
+      "expected": [
+        "portalgun/limiter-bugs",
+        "portalgun/breaker-rebuild"
+      ],
+      "cited": [
+        "portalgun/limiter-bugs",
+        "portalgun/breaker-rebuild"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "What is the panic threshold in PortalGun for?",
+      "expected": [
+        "portalgun/panic-threshold"
+      ],
+      "cited": [
+        "portalgun/panic-threshold"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
       "project": "matchium",
       "question": "How does Matchium decide which questions to ask each user?",
       "expected": [
@@ -121,9 +217,9 @@
       ],
       "cited": [
         "matchium/per-city-scoring",
-        "matchium/oracle-share"
+        "matchium/kalman-beliefs"
       ],
-      "hit": true,
+      "hit": false,
       "refused": false
     },
     {
@@ -158,7 +254,8 @@
         "matchium/per-city-scoring"
       ],
       "cited": [
-        "matchium/case-study/decision-4"
+        "matchium/case-study/decision-4",
+        "matchium/case-study/why"
       ],
       "hit": false,
       "refused": false
@@ -235,7 +332,8 @@
         "poof/admission"
       ],
       "cited": [
-        "poof/case-study/decision-4"
+        "poof/case-study/decision-4",
+        "poof/admission"
       ],
       "hit": true,
       "refused": false

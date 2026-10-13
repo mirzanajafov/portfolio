@@ -1,0 +1,14 @@
+- question: How much latency does PortalGun add compared to nginx and Envoy?
+  expects: [proxy-overhead]
+- question: How does PortalGun keep one rate limit across several gateways?
+  expects: [local-sync, static-split]
+- question: What happens to requests in PortalGun when a dimension breaks?
+  expects: [no-lost-requests, p2c-blackhole]
+- question: How does PortalGun's canary decide to roll back a release?
+  expects: [canary-sprt]
+- question: Why does PortalGun refuse requests past 256 in flight?
+  expects: [admission-cap, in-flight-memory]
+- question: What bugs did the limiter benchmark find in PortalGun?
+  expects: [limiter-bugs, breaker-rebuild]
+- question: What is the panic threshold in PortalGun for?
+  expects: [panic-threshold]
