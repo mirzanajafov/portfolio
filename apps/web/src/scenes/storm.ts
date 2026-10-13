@@ -191,7 +191,7 @@ export const createStormScene: SceneFactory = (hooks) => {
       if (stacked) {
         const far = Math.max(1, 0.62 / camera.aspect);
         camera.position.set(Math.sin(swing) * 24 * far, 64 * far, Math.cos(swing) * 40 * far);
-        camera.lookAt(0, 0, 1);
+        camera.lookAt(0, 0, narrow ? 1 : -1.3);
       } else {
         const far = Math.max(1, 1.55 / camera.aspect);
         camera.position.set(Math.sin(swing) * 46 * far, 34 * far, Math.cos(swing) * 50 * far);

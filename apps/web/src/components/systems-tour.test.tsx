@@ -126,6 +126,32 @@ describe('SystemsTour', () => {
     expect(screen.getByTestId('scene-systems')).toHaveAttribute('data-focus', 'overview');
   });
 
+  it('fits the scene of a stop into the space its own card leaves free on a phone', () => {
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    let measure: ResizeObserverCallback = () => undefined;
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          measure = callback;
+        }
+        observe(target: Element) {
+          observed.push(target);
+        }
+        disconnect() {}
+      },
+    );
+    render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
+    expect(observed).toEqual([screen.getByRole('article', { name: 'Matchium' })]);
+    arriveAt('matchium');
+    const card = observed[0]!;
+    card.getBoundingClientRect = () => ({ height: 401.4 }) as DOMRect;
+    act(() => measure([{ target: card } as unknown as ResizeObserverEntry], {} as ResizeObserver));
+    const layer = screen.getByTestId('scene-population').parentElement!;
+    expect(layer.style.getPropertyValue('--card-height')).toBe('401px');
+  });
+
   it("shows the map close-up for the first half of a stop and the project's own scene for the rest", () => {
     vi.stubGlobal('IntersectionObserver', FakeObserver);
     vi.useFakeTimers();

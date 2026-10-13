@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ViewTransition, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, ViewTransition, useEffect, useRef, useState } from 'react';
 import type { SceneName } from '@portfolio/content';
 import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
@@ -34,7 +34,34 @@ export function SystemsTour({
   const [near, setNear] = useState<ReadonlySet<string>>(new Set());
   const [scene, setScene] = useState<string | null>(null);
   const [settled, setSettled] = useState<string | null>(null);
+  const [cards, setCards] = useState<Readonly<Record<string, number>>>({});
   const stepsRef = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const zones = stepsRef.current?.querySelectorAll<HTMLElement>('[data-scene]');
+    if (!zones || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      setCards((previous) => {
+        const measured = entries.map(
+          (entry) =>
+            [
+              (entry.target.parentElement as HTMLElement).dataset.stop ?? '',
+              Math.round(entry.target.getBoundingClientRect().height),
+            ] as const,
+        );
+        return measured.every(([id, height]) => previous[id] === height)
+          ? previous
+          : { ...previous, ...Object.fromEntries(measured) };
+      });
+    });
+    zones.forEach((zone) => {
+      const card = zone.parentElement?.querySelector(':scope > .tour-card');
+      if (card) observer.observe(card);
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const steps = stepsRef.current?.querySelectorAll<HTMLElement>('[data-stop]');
@@ -122,6 +149,11 @@ export function SystemsTour({
                 data-shown={showing === stop.id}
                 aria-hidden={showing !== stop.id}
                 inert={showing !== stop.id}
+                style={
+                  cards[stop.id]
+                    ? ({ '--card-height': `${cards[stop.id]}px` } as CSSProperties)
+                    : undefined
+                }
               >
                 <ScenePlayer
                   name={stop.demo.scene}

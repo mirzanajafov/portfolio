@@ -214,6 +214,8 @@ h3 {
   position: absolute;
   inset: 0;
   z-index: 4;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   opacity: 0;
   pointer-events: none;
@@ -225,11 +227,16 @@ h3 {
   pointer-events: auto;
 }
 
+.tour-demo .scene {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
 .tour-caption {
-  position: absolute;
-  inset: auto 14px 14px;
+  position: relative;
   z-index: 3;
-  margin: 0;
+  margin: 0 14px 14px;
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.5;
@@ -308,8 +315,9 @@ h3 {
     animation: none;
   }
   .tour-demo .scene {
+    position: absolute;
     top: 52px;
-    bottom: calc(8svh + 352px);
+    bottom: calc(8svh + var(--card-height, 345px) + 7px);
   }
   .tour-demo .scene-hud {
     top: -38px;

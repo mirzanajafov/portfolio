@@ -10,6 +10,7 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   floor: () => import('./floor').then((m) => m.createFloorScene),
   population: () => import('./population').then((m) => m.createPopulationScene),
   storm: () => import('./storm').then((m) => m.createStormScene),
+  failover: () => import('./failover').then((m) => m.createFailoverScene),
 };
 
 export type PlayerOptions = {
@@ -54,15 +55,15 @@ export async function play(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const projected = new Vector3();
   const host = canvas.parentElement ?? canvas;
-  const labelWidths = new WeakMap<HTMLElement, number>();
+  const labelWidths = new WeakMap<HTMLElement, { text: string | null; half: number }>();
   const labelHalfWidth = (element: HTMLElement) => {
     const known = labelWidths.get(element);
-    if (known !== undefined) {
-      return known;
+    if (known !== undefined && known.text === element.textContent) {
+      return known.half;
     }
     const half = element.offsetWidth / 2;
     if (half > 0) {
-      labelWidths.set(element, half);
+      labelWidths.set(element, { text: element.textContent, half });
     }
     return half;
   };

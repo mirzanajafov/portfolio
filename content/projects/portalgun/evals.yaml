@@ -12,3 +12,5 @@
   expects: [limiter-bugs, breaker-rebuild]
 - question: What is the panic threshold in PortalGun for?
   expects: [panic-threshold]
+- question: What can a visitor break on the PortalGun demo?
+  expects: [bounded-chaos]
