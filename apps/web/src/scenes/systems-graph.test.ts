@@ -1,6 +1,7 @@
 import { content } from '@portfolio/content';
+import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { buildGraph, focusPose } from './systems-graph';
+import { buildGraph, focusPose, pullBack } from './systems-graph';
 
 const apps = content.projects.map((project) => ({
   id: project.slug,
@@ -40,5 +41,40 @@ describe('the systems graph', () => {
       distance(overview.position, marauder!.position),
     );
     expect(focusPose(graph, 'no-such-app')).toEqual(overview);
+  });
+
+  it('spreads each close-up so no two labels land on each other, even on a phone', () => {
+    const [width, height] = [390, 844];
+    for (const app of apps) {
+      const pose = focusPose(graph, app.id);
+      const camera = new PerspectiveCamera(36, width / height, 0.1, 500);
+      const target = new Vector3(...pose.target);
+      const offset = new Vector3(...pose.position).sub(target);
+      camera.position.copy(target).addScaledVector(offset, pullBack(camera.aspect, true));
+      camera.lookAt(target);
+      camera.setViewOffset(width, height, 0, height * 0.16, width, height);
+      camera.updateMatrixWorld();
+      const boxes = graph.nodes
+        .filter((node) => node.app === app.id)
+        .map((node) => {
+          const point = new Vector3(...node.position).project(camera);
+          const x = ((point.x + 1) / 2) * width;
+          const y = ((1 - point.y) / 2) * height;
+          const app = node.kind === 'app';
+          const w = node.label.length * (app ? 7.2 : 6.6) + 12;
+          const h = app ? 20 : 19;
+          const top = app ? y + 0.7 * h : y - 1.4 * h;
+          return { label: node.label, left: x - w / 2, right: x + w / 2, top, bottom: top + h };
+        });
+      const touching = boxes.flatMap((a, i) =>
+        boxes
+          .slice(i + 1)
+          .filter(
+            (b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom,
+          )
+          .map((b) => `${a.label}/${b.label}`),
+      );
+      expect(touching, app.name).toEqual([]);
+    }
   });
 });

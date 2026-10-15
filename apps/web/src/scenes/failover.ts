@@ -387,7 +387,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         hooks.place(
           lane.title,
           x + (laneBox.minX + laneBox.maxX) / 2,
-          0,
+          above ? 1.8 : 0,
           z + (above ? laneBox.minZ : laneBox.maxZ),
         );
         lane.names.forEach((label, index) => {
@@ -482,7 +482,7 @@ function corners(wide: boolean): Vector3[] {
     const captionAbove = !wide && index === 0;
     for (const x of [laneBox.minX, laneBox.maxX]) {
       points.push(
-        new Vector3(x + offset.x, captionAbove ? 2.6 : 1.5, laneBox.minZ + offset.z),
+        new Vector3(x + offset.x, captionAbove ? 3.8 : 1.5, laneBox.minZ + offset.z),
         new Vector3(x + offset.x, laneBox.height, laneBox.maxZ + offset.z),
       );
       if (!captionAbove) points.push(new Vector3(x + offset.x, 0, laneBox.maxZ + 2 + offset.z));

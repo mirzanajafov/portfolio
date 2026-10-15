@@ -13,7 +13,7 @@ import {
   Vector3,
 } from 'three';
 import { seeded } from './random';
-import { buildGraph, focusPose, type GraphApp, type GraphNode } from './systems-graph';
+import { buildGraph, focusPose, pullBack, type GraphApp, type GraphNode } from './systems-graph';
 import type { Palette, SceneFactory } from './types';
 
 type NodeView = { node: GraphNode; mesh: Mesh; ring?: Mesh; label: HTMLElement };
@@ -185,7 +185,7 @@ export const createSystemsScene: SceneFactory = (hooks, data) => {
       cameraPosition.lerp(wantedPosition, ease);
       cameraTarget.lerp(wantedTarget, ease);
       const covered = cardsOverStage?.matches ?? false;
-      const far = Math.max(1, (focus ? 1.15 : 1.2) / camera.aspect);
+      const far = pullBack(camera.aspect, focus !== null);
       offset.copy(cameraPosition).sub(cameraTarget);
       if (!focus) offset.applyAxisAngle(up, time * 0.05);
       camera.position.copy(cameraTarget).addScaledVector(offset, far);
