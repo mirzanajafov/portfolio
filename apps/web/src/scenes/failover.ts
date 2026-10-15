@@ -18,6 +18,7 @@ import {
   Vector3,
 } from 'three';
 import data from './failover-data.json';
+import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import type { Palette, SceneFactory } from './types';
 
@@ -494,79 +495,22 @@ function corners(wide: boolean): Vector3[] {
 const wideCorners = corners(true);
 const tallCorners = corners(false);
 const center = new Vector3(0, 1.2, 0);
-const side = 0.92;
-const bottom = 0.92;
 
-function frame(
-  points: Vector3[],
-  direction: Vector3,
-  aspect: number,
-  fov: number,
-  top: number,
-): { distance: number; shift: number } {
-  const right = new Vector3(0, 1, 0).cross(direction).normalize();
-  const up = direction.clone().cross(right).normalize();
-  const tan = Math.tan((fov * Math.PI) / 360);
-  const relative = new Vector3();
-  const measured = points.map((point) => {
-    relative.subVectors(point, center);
-    return {
-      along: relative.dot(direction),
-      across: Math.abs(relative.dot(right)),
-      height: relative.dot(up),
-    };
-  });
-  const shiftAt = (distance: number): number | null => {
-    let low = -Infinity;
-    let high = Infinity;
-    for (const { along, across, height } of measured) {
-      const reach = (distance - along) * tan;
-      if (reach <= 0 || across > reach * aspect * side) return null;
-      low = Math.max(low, height - reach * top);
-      high = Math.min(high, height + reach * bottom);
-    }
-    return low <= high ? (low + high) / 2 : null;
-  };
-  let near = 1;
-  let far = 1000;
-  for (let i = 0; i < 40; i += 1) {
-    const middle = (near + far) / 2;
-    if (shiftAt(middle) === null) near = middle;
-    else far = middle;
-  }
-  return { distance: far, shift: shiftAt(far) ?? 0 };
+function margins(top: number) {
+  return { top, side: 0.92, bottom: 0.92 };
 }
 
 function directionFor(wide: boolean, swing: number): Vector3 {
-  const tilt = wide ? wideTilt : tallTilt;
-  return new Vector3(
-    Math.sin(swing) * Math.cos(tilt),
-    Math.sin(tilt),
-    Math.cos(swing) * Math.cos(tilt),
-  );
+  return viewFrom(wide ? wideTilt : tallTilt, swing);
 }
 
 export function layoutIsWide(aspect: number, top = 0.7): boolean {
   return (
-    frame(wideCorners, directionFor(true, 0), aspect, 34, top).distance <
-    frame(tallCorners, directionFor(false, 0), aspect, 34, top).distance * 0.85
+    frame(wideCorners, directionFor(true, 0), aspect, 34, margins(top), center).distance <
+    frame(tallCorners, directionFor(false, 0), aspect, 34, margins(top), center).distance * 0.85
   );
 }
 
-const target = new Vector3();
-
 function fitCamera(camera: PerspectiveCamera, wide: boolean, swing: number, top: number) {
-  const direction = directionFor(wide, swing);
-  const { distance, shift } = frame(
-    wide ? wideCorners : tallCorners,
-    direction,
-    camera.aspect,
-    camera.fov,
-    top,
-  );
-  const right = new Vector3(0, 1, 0).cross(direction).normalize();
-  const up = direction.clone().cross(right).normalize();
-  target.copy(center).addScaledVector(up, shift);
-  camera.position.copy(target).addScaledVector(direction, distance);
-  camera.lookAt(target);
+  aim(camera, wide ? wideCorners : tallCorners, directionFor(wide, swing), margins(top), center);
 }
