@@ -116,7 +116,14 @@ export const projectSchema = z
     }
   });
 
-export const sceneNames = ['systems', 'floor', 'population', 'storm', 'failover'] as const;
+export const sceneNames = [
+  'systems',
+  'floor',
+  'population',
+  'storm',
+  'failover',
+  'campaign',
+] as const;
 
 export const caseStudySchema = z.strictObject({
   problem: z.string().min(1).max(600),

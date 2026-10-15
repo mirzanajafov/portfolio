@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "storm-data": "node scripts/storm-data.mjs",
-    "failover-data": "node scripts/failover-data.mjs"
+    "failover-data": "node scripts/failover-data.mjs",
+    "campaign-data": "node scripts/campaign-data.mjs"
   },
   "dependencies": {
     "@portfolio/content": "workspace:*",

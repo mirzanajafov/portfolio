@@ -5,6 +5,12 @@ problem: >-
   once, the books must always balance, and anyone editing history behind the ledger's back must be
   caught. Most of my working life has been payment pipelines, Stripe and Kafka, and none of it is
   public, so this takes the hardest part of that work and proves it with numbers.
+demo: campaign
+demoCaption: >-
+  The long chaos campaign, replayed from Car Wash Ledger's result files: 200 runs on the deployed
+  code over one night, each column a run as tall as the process kills it took, with sparks for the
+  kills and rings for Postgres and Kafka crashes. The checker found no violation in any of them. In
+  front, one guard removed at a time: 12 of 14 mutants caught, and the two that survive are meant to.
 decisions:
   - title: Let the database refuse bad books
     body: >-
