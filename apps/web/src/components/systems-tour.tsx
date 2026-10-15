@@ -214,9 +214,9 @@ export function SystemsTour({
                   {stop.name}
                 </h3>
               </ViewTransition>
-              <p className="text-lg text-[var(--soft)]">{stop.hook}</p>
+              <p className="tour-hook text-lg text-[var(--soft)]">{stop.hook}</p>
               {stop.fact && (
-                <p className="leading-relaxed">
+                <p className="tour-fact leading-relaxed">
                   {stop.fact.text}
                   {stop.fact.kind === 'parameter' && (
                     <span className="ml-2 rounded-full border border-[var(--line)] px-2 py-0.5 align-middle font-mono text-[11px] whitespace-nowrap text-[var(--muted)]">
@@ -227,7 +227,7 @@ export function SystemsTour({
               )}
               <ul
                 aria-label="Built with"
-                className="flex flex-wrap gap-2 font-mono text-xs text-[var(--muted)]"
+                className="tour-stack flex flex-wrap gap-2 font-mono text-xs text-[var(--muted)]"
               >
                 {stop.stack.map((tool) => (
                   <li key={tool} className="rounded-full border border-[var(--line)] px-3 py-1">

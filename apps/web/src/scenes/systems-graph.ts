@@ -64,8 +64,14 @@ export function focusPose(
   const [x, y, z] = app.position;
   const length = Math.hypot(x, z) || 1;
   const out: [number, number] = [x / length, z / length];
+  const side: [number, number] = [-out[1], out[0]];
+  const target: [number, number, number] = [x + out[0] * 1.6, y - 0.3, z + out[1] * 1.6];
   return {
-    position: [x + out[0] * 12, y + 7, z + out[1] * 12],
-    target: [x + out[0] * 1.2, y - 0.5, z + out[1] * 1.2],
+    position: [target[0] + side[0] * 7.5, target[1] + 12, target[2] + side[1] * 7.5],
+    target,
   };
+}
+
+export function pullBack(aspect: number, focused: boolean): number {
+  return focused ? Math.max(1.2, 0.8 / aspect) : Math.max(1, 1.2 / aspect);
 }

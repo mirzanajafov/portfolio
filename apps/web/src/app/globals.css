@@ -327,6 +327,24 @@ h3 {
   }
 }
 
+@media (max-width: 860px) and (max-height: 760px) {
+  .tour-step .tour-card {
+    padding: 16px;
+    gap: 10px;
+  }
+  .tour-hook {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  .tour-fact {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .tour-stack {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .intro-word > span {
     animation: rise 900ms cubic-bezier(0.2, 0.7, 0, 1) both;
