@@ -6,6 +6,7 @@ import { buildCvPdf } from './cv-pdf';
 
 let pdf: Buffer;
 let text = '';
+let pageCount = 0;
 
 function unicodeMaps(file: Buffer): string[] {
   const raw = file.toString('latin1');
@@ -29,6 +30,7 @@ function unicodeMaps(file: Buffer): string[] {
 beforeAll(async () => {
   pdf = await buildCvPdf(content);
   const document = await getDocument({ data: new Uint8Array(pdf), useSystemFonts: false }).promise;
+  pageCount = document.numPages;
   const pages: string[] = [];
   for (let number = 1; number <= document.numPages; number += 1) {
     const page = await document.getPage(number);
@@ -42,6 +44,7 @@ describe('the CV as a PDF', () => {
   it('is a real PDF that fits on two pages', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(text.length).toBeGreaterThan(500);
+    expect(pageCount).toBeLessThanOrEqual(2);
   });
 
   it('extracts as text in reading order, which is what an applicant tracking system sees', () => {

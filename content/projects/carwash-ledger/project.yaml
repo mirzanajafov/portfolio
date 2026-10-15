@@ -1,0 +1,98 @@
+name: Car Wash Ledger
+order: 1
+hook: Every cent moves exactly once, through crashes and a lying bank
+summary: >-
+  A double-entry ledger for a chain of car washes: an idempotent payments API against a simulated
+  bank, an outbox to Kafka, reconciliation of settlement files and an audit log that a witness signs
+  outside the database. Correctness is the product, so an independent checker reads the books after
+  chaos runs that kill processes and crash Postgres and Kafka in the middle of payments.
+visibility: public
+links:
+  live: https://carwash.najafov.dev
+  repo: https://github.com/mirzanajafov/carwash-ledger
+stack: [NestJS, PostgreSQL, Kafka, Prisma, Next.js]
+headline: chaos-campaign
+facts:
+  - id: chaos-campaign
+    text: In 200 chaos runs, 135,048 payment journeys went through 8,792 process kills, 876 Postgres and Kafka crashes, 2,253 network faults and 9,108 forged webhooks without breaking an invariant.
+    kind: measured
+    source: { file: README.md, section: Does it hold? }
+  - id: mutants
+    text: Each guard has a mutant with only that guard removed, and every one is caught, most in the first run, except two meant to survive, a guard another one covers and a control.
+    kind: measured
+    source: { file: README.md, section: Does it hold? }
+  - id: hot-account
+    text: At 32 connections the hot account sustained 149 journals a second on one locked row, 132 with SERIALIZABLE and retries, 915 derived from entries, and 803 split into 16 rows, which I chose.
+    kind: measured
+    source: { file: README.md, section: The hot account }
+  - id: paging-stall
+    text: On a host that pages, about 0.1% of commits stalled for around 100 ms, which behind a locked hot row becomes everyone's p99, so the benchmarks only start on a quiet machine.
+    kind: measured
+    source: { file: README.md, section: The hot account }
+  - id: plain-pg
+    text: Posting a journal is one round trip of locks plus one CTE on plain pg; Prisma's query API took twice the round trips and 1.7 times the latency for the same journal.
+    kind: measured
+    source: { file: README.md, section: The hot account }
+  - id: db-enforced
+    text: A deferred constraint trigger rejects an unbalanced journal at commit, and the app's role has no UPDATE or DELETE on entries, so the books balance even if the code is wrong.
+    kind: design
+    source: { file: README.md, section: The books }
+  - id: independent-checker
+    text: The invariant checker is separate code with its own SQL, running as a read-only role, so a bug in posting can't hide behind the same bug in the check; it has eight safety and five liveness checks.
+    kind: design
+    source: { file: README.md, section: The books }
+  - id: idempotency-fence
+    text: Idempotency keys follow Stripe's rules and are held by a lease that every write checks; the first chaos runs showed that without it a slow request could create a second payment for its key.
+    kind: design
+    source: { file: README.md, section: Payments }
+  - id: exactly-once-effect
+    text: In a chaos run with three Postgres crashes, the relay published 3,368 events as 3,744 Kafka messages, and both consumers still applied each event once.
+    kind: measured
+    source: { file: README.md, section: Events }
+  - id: outbox-lag
+    text: An event reaches Kafka in about 20 ms at the median and 36-46 ms at p99 from 100 to 2,000 events a second, most of it the relay's 50 ms poll.
+    kind: measured
+    source: { file: README.md, section: Events }
+  - id: broker-outage
+    text: With Kafka killed for 30 s at 500 events a second, about 25,000 events piled up in the outbox and drained in under 2 s once the relay reconnected.
+    kind: measured
+    source: { file: README.md, section: Events }
+  - id: recon-reference
+    text: Matching the bank's settlement lines by the ledger's own reference found every injected fault with no false breaks at 50, 500 and 2,000 payments a day.
+    kind: measured
+    source: { file: README.md, section: Reconciliation }
+  - id: recon-ambiguous
+    text: For settlement lines that lost their reference, matching the oldest open payment misplaced 13-77% of them, so the matcher only places a line when exactly one payment fits, 11-78% of them.
+    kind: measured
+    source: { file: README.md, section: Reconciliation }
+  - id: witness-catch
+    text: Of 900 tampers that rewrote the ledger's history so the database agreed with itself, the witness's signed roots caught all 900 and the database alone caught none.
+    kind: measured
+    source: { file: README.md, section: The audit log }
+  - id: tamper-signed
+    text: Every tamper that touched a journal the witness had signed was caught and the right journal named, 2,704 of 2,704; the same rewrite above the last checkpoint was caught 0 of 100 times.
+    kind: measured
+    source: { file: README.md, section: The audit log }
+  - id: audit-scale
+    text: At a million journals an inclusion proof is 15-20 hashes, at most 640 bytes, a checkpoint takes about 12 ms, and verifying every journal from scratch takes 31 s.
+    kind: measured
+    source: { file: README.md, section: The audit log }
+  - id: browser-verify
+    text: The browser checks a journal on its own, recomputing its leaf from the rows, following the server's proof to the root and verifying the witness's Ed25519 signature with WebCrypto.
+    kind: design
+    source: { file: README.md, section: The audit log }
+  - id: online-migration
+    text: Changing a table of 20 million entries under 200 payments a second, a naive ALTER plus UPDATE failed 99.7% of payments for 8.2 minutes; four separate steps refused none, at a p99 of 34.5 ms.
+    kind: measured
+    source: { file: README.md, section: Changing a big table while it takes payments }
+  - id: simulated-bank
+    text: The payment provider and the bank are a simulator I wrote and the money is fake; the ledger, its rules, the invariant checker and the audit log are the real thing.
+    kind: design
+    source: { file: README.md }
+  - id: witness-same-server
+    text: The witness that signs the audit log runs on the same server as the ledger, so the demo shows the mechanism, not a real separation of trust.
+    kind: design
+    source: { file: README.md, section: Limits and next }
+health: https://carwash.najafov.dev/
+knowledge:
+  - README.md

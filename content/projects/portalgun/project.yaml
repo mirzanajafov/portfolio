@@ -1,5 +1,5 @@
 name: PortalGun
-order: 1
+order: 2
 hook: A Go API gateway, measured against nginx, HAProxy, Envoy and Caddy
 summary: >-
   A reverse proxy in Go that picks where each request goes from health, latency, rate limits and
