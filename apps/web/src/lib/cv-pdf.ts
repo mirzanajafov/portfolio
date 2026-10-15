@@ -136,7 +136,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
 
   heading('Projects');
   projects.forEach((project, index) => {
-    if (index > 0) doc.moveDown(0.4);
+    if (index > 0) doc.moveDown(0.15);
     const href = project.caseStudy ? `${siteUrl}/projects/${project.slug}` : project.links.live;
     doc
       .font('semibold')

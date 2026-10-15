@@ -1,0 +1,59 @@
+problem: >-
+  Money pushed through a car wash has to add up on paper when somebody looks. I wanted the honest
+  version: a ledger for a chain of car washes where correctness is the whole product. A payment that
+  is retried, cut off by a crash or reported twice by the bank must still move each cent exactly
+  once, the books must always balance, and anyone editing history behind the ledger's back must be
+  caught. Most of my working life has been payment pipelines, Stripe and Kafka, and none of it is
+  public, so this takes the hardest part of that work and proves it with numbers.
+decisions:
+  - title: Let the database refuse bad books
+    body: >-
+      Every movement is a journal of entries that sum to zero per currency, in integer cents, and a
+      mistake is fixed with a reversing journal, never an edit. I didn't want that to depend on the
+      code being right. A deferred constraint trigger checks every journal at commit, the app's role
+      can't update or delete entries, and every entry copies its account's currency through a
+      trigger. The invariant checker that judges all of it is separate code with its own SQL, so a
+      bug in posting can't hide behind the same bug in the check.
+    facts: [db-enforced, independent-checker]
+  - title: Measure the hot account before picking a design
+    body: >-
+      Every payment touches what the provider owes the platform and the platform's fee, so a plain
+      balance row there is a lock every payment waits on. I measured four ways around it with an
+      open-loop generator checked against pgbench. SERIALIZABLE with retries, the textbook answer,
+      was the worst. Derived balances carried the most, but one long transaction makes every read
+      sum a longer tail; 16 split rows carry nearly as much with cheap reads, so I chose those.
+      Posting is one round trip of locks and one CTE on plain pg, because Prisma's query API took
+      twice the round trips.
+    facts: [hot-account, paging-stall, plain-pg]
+  - title: Exactly-once effects, at-least-once delivery
+    body: >-
+      The API takes payments with Stripe's idempotency rules, and a key is held by a lease that
+      every write checks; without it, the first chaos runs charged one key twice. A payment is a
+      state machine of conditional updates, and the bank's word is checked, not trusted: a webhook
+      only makes the API ask the provider what happened. Events go to an outbox in the same
+      transaction, a relay publishes them to Kafka at least once, and the consumers record every
+      event id they apply, so a repeat does nothing.
+    facts: [idempotency-fence, exactly-once-effect, outbox-lag, broker-outage]
+  - title: A witness the database can't fool
+    body: >-
+      Every journal becomes a leaf in an RFC 9162 Merkle tree, the construction Certificate
+      Transparency uses, and a separate witness signs the root every 10 seconds, only for a tree
+      that provably extends the last one it signed. A rewrite that makes the database agree with
+      itself passes every balance check; only the signed roots catch it. The browser can check a
+      journal on its own. What none of it catches is a rewrite in the seconds before the next
+      checkpoint, and I measured that too.
+    facts: [witness-catch, tamper-signed, audit-scale, browser-verify]
+proof: >-
+  The evidence is a chaos harness. One container runs Postgres, Kafka, Toxiproxy, the simulated
+  provider, two API processes, the worker and the witness, and clients drive payment journeys with
+  real retries while the harness kills processes at random and at 15 named points in the code,
+  crashes Postgres and Kafka, breaks the network, and has the bank time out, misstate amounts and
+  send forged webhooks. An independent checker reads everything after each run, and every guard has
+  a mutant to show that a violation would be seen. The runs found real bugs first: a dead pooled
+  connection that crashed Node, the unfenced lease, a deadlock with an exhausted pool, consumers
+  holding their partitions for 45 s after a crash. CI runs a three-run chaos smoke on every push.
+next: >-
+  One Postgres without a replica, one Kafka broker and backups on the same disk are fine for a demo
+  and not for money. The witness should sign somewhere I don't control, like a public transparency
+  log. The online migration's check step should catch up in batches, which the 20-million-row run
+  showed. FX, chargebacks and card network disputes aren't there yet.

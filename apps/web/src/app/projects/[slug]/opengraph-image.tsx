@@ -23,7 +23,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   return renderCard({
     eyebrow: `Case study · ${content.profile.name}`,
     title: project.name,
-    subtitle: truncate(project.hook, 52),
+    subtitle: truncate(project.hook, 72),
     footer: truncate(headlineFact(project).text, 110),
   });
 }

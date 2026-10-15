@@ -1,0 +1,16 @@
+- question: How do you know the car wash ledger survives crashes in the middle of a payment?
+  expects: [chaos-campaign, mutants]
+- question: How does the ledger keep the books balanced if the code has a bug?
+  expects: [db-enforced, independent-checker]
+- question: Why did the car wash ledger split the hot account into 16 rows?
+  expects: [hot-account]
+- question: What happens when the same payment request is sent twice?
+  expects: [idempotency-fence]
+- question: Do the Kafka consumers in the ledger apply an event twice when it is delivered twice?
+  expects: [exactly-once-effect]
+- question: How would someone who edits the ledger's history get caught?
+  expects: [witness-catch, tamper-signed, browser-verify]
+- question: How does reconciliation handle settlement lines without a reference?
+  expects: [recon-ambiguous, recon-reference]
+- question: How did you change a big table of the ledger while it was taking payments?
+  expects: [online-migration]

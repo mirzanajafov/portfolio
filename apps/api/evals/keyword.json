@@ -1,10 +1,14 @@
 {
   "engine": "keyword",
-  "questions": 42,
-  "hits": 36,
+  "questions": 50,
+  "hits": 44,
   "refusals": 0,
-  "hitRate": 0.857,
+  "hitRate": 0.88,
   "byProject": {
+    "carwash-ledger": {
+      "questions": 8,
+      "hits": 8
+    },
     "portalgun": {
       "questions": 8,
       "hits": 8
@@ -103,6 +107,112 @@
     ]
   },
   "results": [
+    {
+      "project": "carwash-ledger",
+      "question": "How do you know the car wash ledger survives crashes in the middle of a payment?",
+      "expected": [
+        "carwash-ledger/chaos-campaign",
+        "carwash-ledger/mutants"
+      ],
+      "cited": [
+        "carwash-ledger/mutants",
+        "carwash-ledger/simulated-bank"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "How does the ledger keep the books balanced if the code has a bug?",
+      "expected": [
+        "carwash-ledger/db-enforced",
+        "carwash-ledger/independent-checker"
+      ],
+      "cited": [
+        "carwash-ledger/independent-checker"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "Why did the car wash ledger split the hot account into 16 rows?",
+      "expected": [
+        "carwash-ledger/hot-account"
+      ],
+      "cited": [
+        "carwash-ledger/hot-account"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "What happens when the same payment request is sent twice?",
+      "expected": [
+        "carwash-ledger/idempotency-fence"
+      ],
+      "cited": [
+        "carwash-ledger/case-study/decision-3",
+        "carwash-ledger/idempotency-fence"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "Do the Kafka consumers in the ledger apply an event twice when it is delivered twice?",
+      "expected": [
+        "carwash-ledger/exactly-once-effect"
+      ],
+      "cited": [
+        "carwash-ledger/case-study/decision-3",
+        "carwash-ledger/exactly-once-effect"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "How would someone who edits the ledger's history get caught?",
+      "expected": [
+        "carwash-ledger/witness-catch",
+        "carwash-ledger/tamper-signed",
+        "carwash-ledger/browser-verify"
+      ],
+      "cited": [
+        "carwash-ledger/witness-catch"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "How does reconciliation handle settlement lines without a reference?",
+      "expected": [
+        "carwash-ledger/recon-ambiguous",
+        "carwash-ledger/recon-reference"
+      ],
+      "cited": [
+        "carwash-ledger/recon-ambiguous",
+        "carwash-ledger/recon-reference"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "carwash-ledger",
+      "question": "How did you change a big table of the ledger while it was taking payments?",
+      "expected": [
+        "carwash-ledger/online-migration"
+      ],
+      "cited": [
+        "carwash-ledger/online-migration",
+        "carwash-ledger/simulated-bank"
+      ],
+      "hit": true,
+      "refused": false
+    },
     {
       "project": "portalgun",
       "question": "How much latency does PortalGun add compared to nginx and Envoy?",
@@ -266,8 +376,7 @@
         "matchium/per-city-scoring"
       ],
       "cited": [
-        "matchium/case-study/decision-4",
-        "matchium/case-study/why"
+        "matchium/case-study/decision-4"
       ],
       "hit": false,
       "refused": false
@@ -306,7 +415,7 @@
       ],
       "cited": [
         "poof/no-budget-storm",
-        "poof/case-study/decision-2"
+        "poof/sim-vs-reality"
       ],
       "hit": true,
       "refused": false
@@ -357,7 +466,8 @@
         "poof/crash-isolation"
       ],
       "cited": [
-        "poof/crash-isolation"
+        "poof/crash-isolation",
+        "poof/case-study/decision-4"
       ],
       "hit": true,
       "refused": false
