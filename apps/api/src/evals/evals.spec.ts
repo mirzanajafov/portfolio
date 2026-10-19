@@ -32,14 +32,14 @@ describe('the keyword baseline on the real eval set', () => {
     expect(report).toEqual(published);
   });
 
-  it('is quoted with the same numbers in the README and on the site', () => {
-    const answered = `${report.hits} of ${report.questions}`;
-    const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
+  it('is quoted with the published numbers in the README and on the site', () => {
+    const answered = `${published.hits} of ${published.questions}`;
+    const refused = `${published.adversarial.refused} of ${published.adversarial.questions}`;
     const readme = readFileSync(
       join(import.meta.dirname, '..', '..', '..', '..', 'README.md'),
       'utf8',
     );
-    expect(readme).toContain(`plus ${report.adversarial.questions} attacks`);
+    expect(readme).toContain(`plus ${published.adversarial.questions} attacks`);
     expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
     expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
     const fact = content.projects
