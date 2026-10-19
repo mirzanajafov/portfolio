@@ -88,11 +88,11 @@ docker compose --profile app up -d --build   # site on http://localhost:3202
 
 One Dockerfile builds everything once and has three targets: `api`, `web`, and `migrate`, a one-shot container that applies migrations before the API is allowed to start. The API image is a `pnpm deploy` of just the API and its production dependencies; the web image is Next's standalone output.
 
-On the server it runs with `docker-compose.prod.yml` on top, which publishes no ports, puts the site on the reverse proxy's network and takes every secret from `.env` (see `.env.example`). `deploy/deploy.sh` does nothing if `main` hasn't moved; otherwise it takes a backup, fast-forwards, rebuilds, waits for both containers to report healthy and goes back to the previous commit if they don't. A rollback can't undo a migration that already ran, which is why the backup comes first.
+On the server it runs with `docker-compose.prod.yml` on top, which publishes no ports, puts the site on the reverse proxy's network and takes every secret from `.env` (see `.env.example`). `deploy/deploy.sh` does nothing if `main` hasn't moved. Otherwise it fast-forwards, rebuilds, waits for both containers to report healthy and goes back to the previous commit if they don't. A rollback can't undo a migration that already ran.
 
 The site reaches the API by its container name, `portfolio-api`, not the compose service name. Another project of mine joined the shared proxy network with a service called `api`, the bare name started resolving to that container, and the Ask box was down for about an hour before I noticed. Both containers were healthy the whole time, which is why the deploy now also checks that the site can actually reach the API.
 
-The backup container dumps the database every day, checks the dump with `pg_restore --list` before it counts, and keeps 14 days. It leaves out the question log and the rate-limit counters on purpose: the page promises questions are gone after 30 days, and a 14-day-old backup would otherwise keep some of them for 44.
+There is no backup. The database holds two tables: the rate-limit counters, which nothing needs after a day, and the question log, which the page promises to delete after 30 days. I started with a daily backup that left both out for those reasons, which meant it saved nothing the migrations in git can't rebuild, so I removed it. The price is that a bad migration can lose the questions logged so far.
 
 ## Layout
 

@@ -6,6 +6,5 @@
 **/.env
 .*
 *.md
-backups
 content/src/.generated
 apps/api/src/generated

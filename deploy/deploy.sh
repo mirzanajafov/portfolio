@@ -40,9 +40,6 @@ if [ "$previous" = "$target" ] && [ "$force" = false ]; then
   exit 0
 fi
 
-say "Backing up before the deploy"
-"${compose[@]}" run --rm backup once
-
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
 release
@@ -58,8 +55,7 @@ say "Not healthy, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
 release
 if healthy; then
-  echo "Rolled back. Migrations from the failed release stay applied;"
-  echo "the dump taken above is in backups/db if a schema change has to be undone."
+  echo "Rolled back. Migrations from the failed release stay applied."
 else
   echo "The rollback is not healthy either. Check: ${compose[*]} logs api web" >&2
 fi
