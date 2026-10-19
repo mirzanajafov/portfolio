@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { content } from '@portfolio/content';
 import { describe, expect, it } from 'vitest';
 import published from '../../evals/keyword.json' with { type: 'json' };
@@ -8,27 +10,38 @@ import { adversarial } from './adversarial.js';
 import { runEvals } from './evals.js';
 
 const knowledge = buildKnowledge(content);
+const report = await runEvals(
+  new KeywordAnswerEngine(knowledge),
+  knowledge,
+  content.projects,
+  adversarial,
+);
 
 describe('the keyword baseline on the real eval set', () => {
-  it('does not fall below the baseline it was merged with', async () => {
-    const report = await runEvals(
-      new KeywordAnswerEngine(knowledge),
-      knowledge,
-      content.projects,
-      adversarial,
-    );
+  it('does not fall below the baseline it was merged with', () => {
     expect(report.questions).toBeGreaterThanOrEqual(20);
     expect(report.hitRate).toBeGreaterThanOrEqual(0.75);
     expect(report.adversarial.refused / report.adversarial.questions).toBeGreaterThanOrEqual(0.9);
   });
 
-  it('is quoted on the site with the numbers of the published report', () => {
-    const fact = content.projects
-      .find((project) => project.slug === 'najafov-dev')
-      ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
-    expect(fact?.text).toContain(`${published.hits} of ${published.questions} eval questions`);
-    expect(fact?.text).toContain(
-      `${published.adversarial.refused} of ${published.adversarial.questions} attacks`,
+  it('is the report published in evals/keyword.json', () => {
+    expect(report).toEqual(published);
+  });
+
+  it('is quoted with the same numbers in the README and on the site', () => {
+    const answered = `${report.hits} of ${report.questions}`;
+    const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
+    const readme = readFileSync(join(import.meta.dirname, '../../../../README.md'), 'utf8');
+    expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
+    expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
+    const site = content.projects.find((project) => project.slug === 'najafov-dev');
+    expect(site?.facts).toContainEqual(
+      expect.objectContaining({
+        id: 'keyword-baseline',
+        text: expect.stringMatching(
+          new RegExp(`\\b${answered} eval questions\\b.*\\b${refused} attacks\\b`),
+        ),
+      }),
     );
   });
 });
