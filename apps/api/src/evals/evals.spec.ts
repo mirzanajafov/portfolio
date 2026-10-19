@@ -1,24 +1,52 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { content } from '@portfolio/content';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import published from '../../evals/keyword.json' with { type: 'json' };
 import type { AnswerEngine } from '../ask/answer-engine.js';
 import { KeywordAnswerEngine } from '../ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../ask/knowledge.js';
 import { adversarial } from './adversarial.js';
-import { runEvals } from './evals.js';
+import { runEvals, type EvalReport } from './evals.js';
 
 const knowledge = buildKnowledge(content);
 
 describe('the keyword baseline on the real eval set', () => {
-  it('does not fall below the baseline it was merged with', async () => {
-    const report = await runEvals(
+  let report: EvalReport;
+  beforeAll(async () => {
+    report = await runEvals(
       new KeywordAnswerEngine(knowledge),
       knowledge,
       content.projects,
       adversarial,
     );
+  });
+
+  it('does not fall below the baseline it was merged with', () => {
     expect(report.questions).toBeGreaterThanOrEqual(20);
     expect(report.hitRate).toBeGreaterThanOrEqual(0.75);
     expect(report.adversarial.refused / report.adversarial.questions).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('is the report published in evals/keyword.json', () => {
+    expect(report).toEqual(published);
+  });
+
+  it('is quoted with the published numbers in the README and on the site', () => {
+    const answered = `${published.hits} of ${published.questions}`;
+    const refused = `${published.adversarial.refused} of ${published.adversarial.questions}`;
+    const readme = readFileSync(
+      join(import.meta.dirname, '..', '..', '..', '..', 'README.md'),
+      'utf8',
+    );
+    expect(readme).toContain(`plus ${published.adversarial.questions} attacks`);
+    expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
+    expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
+    const fact = content.projects
+      .find((project) => project.slug === 'najafov-dev')
+      ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
+    expect(fact?.text).toContain(`answers ${answered} eval questions`);
+    expect(fact?.text).toContain(`nothing for ${refused} attacks`);
   });
 });
 
