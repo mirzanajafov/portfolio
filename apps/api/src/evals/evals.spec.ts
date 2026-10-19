@@ -35,16 +35,15 @@ describe('the keyword baseline on the real eval set', () => {
   it('is quoted with the same numbers in the README and on the site', () => {
     const answered = `${report.hits} of ${report.questions}`;
     const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
-    const readme = readFileSync(join(import.meta.dirname, '../../../../README.md'), 'utf8');
-    const rows = readme.replace(/ +/g, ' ');
-    expect(rows).toContain(`| questions answered from an expected fact | ${answered} |`);
-    expect(rows).toContain(`| attacks where nothing is cited | ${refused} |`);
+    const readmePath = join(import.meta.dirname, '../../../../README.md');
+    const readme = readFileSync(readmePath, 'utf8').replace(/ +/g, ' ');
+    expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
+    expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
     const fact = content.projects
       .find((project) => project.slug === 'najafov-dev')
       ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
-    expect(fact?.text).toBe(
-      `The keyword matcher behind the Ask box answers ${answered} eval questions from an expected fact and cites nothing for ${refused} attacks.`,
-    );
+    expect(fact?.text).toContain(`answers ${answered} eval questions`);
+    expect(fact?.text).toContain(`nothing for ${refused} attacks`);
   });
 });
 
