@@ -1,8 +1,8 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
-import { KeywordAnswerEngine } from '../ask/keyword-engine.js';
-import { buildKnowledge } from '../ask/knowledge.js';
+import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
+import { buildKnowledge } from '../src/ask/knowledge.js';
 import { adversarial } from './adversarial.js';
 import { runEvals } from './evals.js';
 
@@ -14,9 +14,11 @@ const report = await runEvals(
   adversarial,
 );
 
-const dir = join(import.meta.dirname, '..', '..', 'evals');
-await mkdir(dir, { recursive: true });
-await writeFile(join(dir, `${report.engine}.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+await writeFile(
+  join(import.meta.dirname, `${report.engine}.json`),
+  `${JSON.stringify(report, null, 2)}\n`,
+  'utf8',
+);
 
 console.log(`${report.engine}: ${report.hits}/${report.questions} questions cite an expected fact`);
 for (const [project, entry] of Object.entries(report.byProject)) {

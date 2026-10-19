@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
 import { beforeAll, describe, expect, it } from 'vitest';
-import published from '../../evals/keyword.json' with { type: 'json' };
-import type { AnswerEngine } from '../ask/answer-engine.js';
-import { KeywordAnswerEngine } from '../ask/keyword-engine.js';
-import { Knowledge, buildKnowledge } from '../ask/knowledge.js';
+import type { AnswerEngine } from '../src/ask/answer-engine.js';
+import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
+import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
 import { adversarial } from './adversarial.js';
 import { runEvals, type EvalReport } from './evals.js';
+import published from './keyword.json' with { type: 'json' };
 
 const knowledge = buildKnowledge(content);
 
@@ -35,10 +35,7 @@ describe('the keyword baseline on the real eval set', () => {
   it('is quoted with the published numbers in the README and on the site', () => {
     const answered = `${published.hits} of ${published.questions}`;
     const refused = `${published.adversarial.refused} of ${published.adversarial.questions}`;
-    const readme = readFileSync(
-      join(import.meta.dirname, '..', '..', '..', '..', 'README.md'),
-      'utf8',
-    );
+    const readme = readFileSync(join(import.meta.dirname, '..', '..', '..', 'README.md'), 'utf8');
     expect(readme).toContain(`plus ${published.adversarial.questions} attacks`);
     expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
     expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);

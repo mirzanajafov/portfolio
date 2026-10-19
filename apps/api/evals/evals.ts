@@ -1,7 +1,7 @@
 import type { Project } from '@portfolio/content';
-import type { AnswerEngine } from '../ask/answer-engine.js';
-import type { Knowledge } from '../ask/knowledge.js';
-import { gateSentence } from '../ask/sentence-gate.js';
+import type { AnswerEngine } from '../src/ask/answer-engine.js';
+import type { Knowledge } from '../src/ask/knowledge.js';
+import { gateSentence } from '../src/ask/sentence-gate.js';
 
 export type QuestionResult = {
   project: string;
