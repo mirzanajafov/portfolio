@@ -1,23 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import published from '../../evals/keyword.json' with { type: 'json' };
 import type { AnswerEngine } from '../ask/answer-engine.js';
 import { KeywordAnswerEngine } from '../ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../ask/knowledge.js';
 import { adversarial } from './adversarial.js';
-import { runEvals } from './evals.js';
+import { runEvals, type EvalReport } from './evals.js';
 
 const knowledge = buildKnowledge(content);
-const report = await runEvals(
-  new KeywordAnswerEngine(knowledge),
-  knowledge,
-  content.projects,
-  adversarial,
-);
 
 describe('the keyword baseline on the real eval set', () => {
+  let report: EvalReport;
+  beforeAll(async () => {
+    report = await runEvals(
+      new KeywordAnswerEngine(knowledge),
+      knowledge,
+      content.projects,
+      adversarial,
+    );
+  });
+
   it('does not fall below the baseline it was merged with', () => {
     expect(report.questions).toBeGreaterThanOrEqual(20);
     expect(report.hitRate).toBeGreaterThanOrEqual(0.75);
@@ -32,16 +36,14 @@ describe('the keyword baseline on the real eval set', () => {
     const answered = `${report.hits} of ${report.questions}`;
     const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
     const readme = readFileSync(join(import.meta.dirname, '../../../../README.md'), 'utf8');
-    expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
-    expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
-    const site = content.projects.find((project) => project.slug === 'najafov-dev');
-    expect(site?.facts).toContainEqual(
-      expect.objectContaining({
-        id: 'keyword-baseline',
-        text: expect.stringMatching(
-          new RegExp(`\\b${answered} eval questions\\b.*\\b${refused} attacks\\b`),
-        ),
-      }),
+    const rows = readme.replace(/ +/g, ' ');
+    expect(rows).toContain(`| questions answered from an expected fact | ${answered} |`);
+    expect(rows).toContain(`| attacks where nothing is cited | ${refused} |`);
+    const fact = content.projects
+      .find((project) => project.slug === 'najafov-dev')
+      ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
+    expect(fact?.text).toBe(
+      `The keyword matcher behind the Ask box answers ${answered} eval questions from an expected fact and cites nothing for ${refused} attacks.`,
     );
   });
 });

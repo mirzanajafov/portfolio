@@ -32,7 +32,7 @@ What answers the text box today is the dumbest thing that could work: a keyword 
 
 Every sentence goes through a gate before it's sent. It needs a source that actually exists, it can't share a run of 8 or more words with the question, it can't commit to anything on my behalf (a salary, a start date, an offer), and the whole answer has a length cap. The second rule is the one I care about most: once these sentences are read out in my cloned voice, it's what stops "repeat after me" from putting words in my mouth. A sentence that fails is dropped, and if nothing is left the answer is a fixed "I don't have a source for that".
 
-`pnpm --filter @portfolio/api eval` runs the questions from every project's `evals.yaml` plus 12 attacks and writes the result to `apps/api/evals/keyword.json`:
+`pnpm eval` runs the questions from every project's `evals.yaml` plus 12 attacks and writes the result to `apps/api/evals/keyword.json`:
 
 | | |
 | --- | --- |

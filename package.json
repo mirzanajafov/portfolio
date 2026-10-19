@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "new-project": "node content/src/cli.ts new",
-    "test:e2e": "pnpm --filter @portfolio/content build && pnpm --filter @portfolio/api test:e2e"
+    "test:e2e": "pnpm --filter @portfolio/content build && pnpm --filter @portfolio/api test:e2e",
+    "eval": "pnpm --filter @portfolio/content build && pnpm --filter @portfolio/api eval"
   },
   "devDependencies": {
     "prettier": "3.9.9",
