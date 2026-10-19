@@ -35,8 +35,10 @@ describe('the keyword baseline on the real eval set', () => {
   it('is quoted with the same numbers in the README and on the site', () => {
     const answered = `${report.hits} of ${report.questions}`;
     const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
-    const readmePath = join(import.meta.dirname, '../../../../README.md');
-    const readme = readFileSync(readmePath, 'utf8').replace(/ +/g, ' ');
+    const readme = readFileSync(
+      join(import.meta.dirname, '..', '..', '..', '..', 'README.md'),
+      'utf8',
+    );
     expect(readme).toContain(`plus ${report.adversarial.questions} attacks`);
     expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
     expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
