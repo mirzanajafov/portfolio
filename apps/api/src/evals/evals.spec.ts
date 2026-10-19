@@ -1,5 +1,6 @@
 import { content } from '@portfolio/content';
 import { describe, expect, it } from 'vitest';
+import published from '../../evals/keyword.json' with { type: 'json' };
 import type { AnswerEngine } from '../ask/answer-engine.js';
 import { KeywordAnswerEngine } from '../ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../ask/knowledge.js';
@@ -19,6 +20,16 @@ describe('the keyword baseline on the real eval set', () => {
     expect(report.questions).toBeGreaterThanOrEqual(20);
     expect(report.hitRate).toBeGreaterThanOrEqual(0.75);
     expect(report.adversarial.refused / report.adversarial.questions).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('is quoted on the site with the numbers of the published report', () => {
+    const fact = content.projects
+      .find((project) => project.slug === 'najafov-dev')
+      ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
+    expect(fact?.text).toContain(`${published.hits} of ${published.questions} eval questions`);
+    expect(fact?.text).toContain(
+      `${published.adversarial.refused} of ${published.adversarial.questions} attacks`,
+    );
   });
 });
 

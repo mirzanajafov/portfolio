@@ -17,7 +17,7 @@ facts:
     kind: measured
     source: { file: README.md, section: The first screen and the tour }
   - id: keyword-baseline
-    text: The keyword matcher behind the Ask box answers 20 of 24 eval questions from an expected fact and cites nothing for 11 of 12 attacks.
+    text: The keyword matcher behind the Ask box answers 44 of 50 eval questions from an expected fact and cites nothing for 11 of 12 attacks.
     kind: measured
     source: { file: README.md, section: Asking it things }
   - id: sentence-gate
