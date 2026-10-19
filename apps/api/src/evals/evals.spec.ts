@@ -37,6 +37,7 @@ describe('the keyword baseline on the real eval set', () => {
     const refused = `${report.adversarial.refused} of ${report.adversarial.questions}`;
     const readmePath = join(import.meta.dirname, '../../../../README.md');
     const readme = readFileSync(readmePath, 'utf8').replace(/ +/g, ' ');
+    expect(readme).toContain(`plus ${report.adversarial.questions} attacks`);
     expect(readme).toContain(`| questions answered from an expected fact | ${answered} |`);
     expect(readme).toContain(`| attacks where nothing is cited | ${refused} |`);
     const fact = content.projects
