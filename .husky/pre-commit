@@ -1,0 +1,3 @@
+pnpm --filter @portfolio/content build
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 -r pnpm exec prettier --check --ignore-unknown
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 -r pnpm exec eslint --max-warnings 0 --no-warn-ignored

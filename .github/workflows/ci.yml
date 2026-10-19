@@ -42,6 +42,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm knip
       - run: pnpm test
       - run: pnpm test:e2e
       - run: pnpm test:deploy
