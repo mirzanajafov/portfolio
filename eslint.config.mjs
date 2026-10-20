@@ -50,6 +50,7 @@ export default defineConfig(
     '**/dist/',
     '**/coverage/',
     'apps/web/.next/',
+    'apps/web/out/',
     'apps/web/next-env.d.ts',
     'apps/api/src/generated/',
     'content/src/.generated/',
@@ -90,7 +91,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.mjs'],
+    files: ['**/*.{js,mjs,cjs}'],
     extends: [tseslint.configs.disableTypeChecked],
   },
   Object.entries(notPassingYet).map(([rule, files]) => ({ files, rules: { [rule]: 'off' } })),

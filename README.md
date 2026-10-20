@@ -75,13 +75,13 @@ pnpm test:deploy                          # deploy.sh against a fake docker
 pnpm eval                                 # after a content change, see Asking it things
 pnpm typecheck
 pnpm lint
-pnpm knip                                 # unused files and dependencies
+pnpm knip                                 # unused files, dependencies and exports
 pnpm build
 ```
 
 `pnpm --filter @portfolio/content validate` checks the content without building anything.
 
-Lint is one ESLint config at the root for all three packages: typescript-eslint's strict and stylistic type-checked sets, plus Next's rules for the site. Some rules don't pass yet, mostly non-null assertions and braceless `if`s in the scenes, and those are off only for the files that still break them. A pre-commit hook runs Prettier and ESLint on the staged files.
+Lint is one ESLint config at the root for all three packages: typescript-eslint's strict and stylistic type-checked sets, plus Next's rules for the site. Some rules don't pass yet, mostly non-null assertions and braceless `if`s in the scenes, and those are off only for the files that still break them. A pre-commit hook typechecks everything and runs Prettier and ESLint on the files staged for the commit, as they are on disk, so a partly staged file is checked whole.
 
 To see the whole thing the way the server runs it, Docker alone is enough:
 
