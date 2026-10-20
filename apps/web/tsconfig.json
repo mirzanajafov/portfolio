@@ -1,16 +1,10 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2023",
     "lib": ["dom", "dom.iterable", "ES2023"],
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
     "noEmit": true,
-    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
     "jsx": "react-jsx",
     "incremental": true,
     "types": ["vitest/globals", "@testing-library/jest-dom", "react/canary"],
@@ -21,13 +15,13 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "allowJs": true
+    }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
