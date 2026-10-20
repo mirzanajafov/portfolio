@@ -15,6 +15,7 @@ web_reaches_api() {
 }
 
 healthy() {
+  say "Waiting for the API and the site"
   for _ in $(seq 1 60); do
     api=$(docker inspect -f '{{.State.Health.Status}}' portfolio-api 2>/dev/null || true)
     web=$(docker inspect -f '{{.State.Health.Status}}' portfolio-web 2>/dev/null || true)
@@ -27,8 +28,7 @@ healthy() {
 }
 
 release() {
-  "${compose[@]}" build
-  "${compose[@]}" up -d --remove-orphans
+  "${compose[@]}" build && "${compose[@]}" up -d --remove-orphans
 }
 
 previous=$(git rev-parse HEAD)
@@ -40,23 +40,22 @@ if [ "$previous" = "$target" ] && [ "$force" = false ]; then
   exit 0
 fi
 
+say "Checking the database"
+"${compose[@]}" up -d --wait postgres
+
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
-release
-
-say "Waiting for the API and the site"
-if healthy; then
+if release && healthy; then
   docker image prune -f --filter "label=com.docker.compose.project=portfolio" > /dev/null
   say "Live: $(git log --oneline -1)"
   exit 0
 fi
 
-say "Not healthy, rolling back to $(git log --oneline -1 "$previous")"
+say "The release failed, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
-release
-if healthy; then
+if release && healthy; then
   echo "Rolled back. Migrations from the failed release stay applied."
 else
-  echo "The rollback is not healthy either. Check: ${compose[*]} logs api web" >&2
+  echo "The rollback is not healthy either. Check: ${compose[*]} logs migrate api web" >&2
 fi
 exit 1

@@ -88,7 +88,7 @@ docker compose --profile app up -d --build   # site on http://localhost:3202
 
 One Dockerfile builds everything once and has three targets: `api`, `web`, and `migrate`, a one-shot container that applies migrations before the API is allowed to start. The API image is a `pnpm deploy` of just the API and its production dependencies; the web image is Next's standalone output.
 
-On the server it runs with `docker-compose.prod.yml` on top, which publishes no ports, puts the site on the reverse proxy's network and takes every secret from `.env` (see `.env.example`). `deploy/deploy.sh` does nothing if `main` hasn't moved. Otherwise it fast-forwards, rebuilds, waits for both containers to report healthy and goes back to the previous commit if they don't. A rollback can't undo a migration that already ran.
+On the server it runs with `docker-compose.prod.yml` on top, which publishes no ports, puts the site on the reverse proxy's network and takes every secret from `.env` (see `.env.example`). `deploy/deploy.sh` does nothing if `main` hasn't moved. Otherwise it checks that Postgres is up, fast-forwards, rebuilds, waits for both containers to report healthy and goes back to the previous commit if the build, the start or the health check fails. A rollback can't undo a migration that already ran.
 
 The site reaches the API by its container name, `portfolio-api`, not the compose service name. Another project of mine joined the shared proxy network with a service called `api`, the bare name started resolving to that container, and the Ask box was down for about an hour before I noticed. Both containers were healthy the whole time, which is why the deploy now also checks that the site can actually reach the API.
 
