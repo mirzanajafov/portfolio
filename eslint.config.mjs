@@ -1,7 +1,6 @@
 import js from '@eslint/js';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import { defineConfig, globalIgnores } from 'eslint/config';
-import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const scenes = 'apps/web/src/scenes';
@@ -40,6 +39,10 @@ const notPassingYet = {
     'apps/web/src/components/scene-player.test.tsx',
   ],
   '@typescript-eslint/prefer-optional-chain': [`${scenes}/player.ts`],
+  '@typescript-eslint/restrict-template-expressions': [
+    'apps/web/src/components/systems-tour.tsx',
+    'content/src/scaffold.test.ts',
+  ],
 };
 
 export default defineConfig(
@@ -73,13 +76,22 @@ export default defineConfig(
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       '@typescript-eslint/non-nullable-type-assertion-style': 'off',
       '@typescript-eslint/require-await': 'off',
-      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowAny: false,
+          allowBoolean: false,
+          allowNever: false,
+          allowNullish: false,
+          allowNumber: true,
+          allowRegExp: false,
+        },
+      ],
     },
   },
   {
     files: ['**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
-    languageOptions: { globals: globals.node },
   },
   Object.entries(notPassingYet).map(([rule, files]) => ({ files, rules: { [rule]: 'off' } })),
 );
