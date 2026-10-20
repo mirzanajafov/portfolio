@@ -100,7 +100,7 @@ export default function Home() {
       <SystemsTour
         intro={{
           title: 'Things I built',
-          body: `${projects.length} apps, each with its own database, backups and a deploy script that rolls back, all on one server behind a shared proxy. Scroll and the camera flies from one to the next, or jump straight to one.`,
+          body: `${projects.length} apps, each with its own database and a deploy script that rolls back, all on one server behind a shared proxy. Scroll and the camera flies from one to the next, or jump straight to one.`,
         }}
         stops={projects.map(toStop)}
         apps={projects.map((project) => ({
