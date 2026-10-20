@@ -54,7 +54,7 @@ fi
 say "The release failed, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
 if release && healthy; then
-  echo "Rolled back. Migrations from the failed release stay applied."
+  echo "Rolled back. Any migration the failed release ran stays applied."
 else
   echo "The rollback failed too. Check: ${compose[*]} logs migrate api web" >&2
 fi
