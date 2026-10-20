@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const scenes = 'apps/web/src/scenes';
@@ -15,7 +16,7 @@ const notPassingYet = {
   ],
   'no-nested-ternary': [
     `${scenes}/{failover,storm,systems}.ts`,
-    'apps/web/src/app/projects/*/page.tsx',
+    'apps/web/src/app/projects/\\[slug\\]/page.tsx',
     'apps/web/src/components/systems-tour.tsx',
   ],
   '@typescript-eslint/consistent-type-definitions': ['apps/api/src/ask/answer-engine.ts'],
@@ -37,6 +38,11 @@ const notPassingYet = {
   '@typescript-eslint/no-unsafe-return': [
     'apps/web/src/app/palette.node.test.ts',
     'apps/web/src/components/scene-player.test.tsx',
+  ],
+  '@typescript-eslint/non-nullable-type-assertion-style': [
+    'apps/web/src/app/page.test.tsx',
+    'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',
+    'apps/web/src/components/systems-tour.tsx',
   ],
   '@typescript-eslint/prefer-optional-chain': [`${scenes}/player.ts`],
   '@typescript-eslint/restrict-template-expressions': [
@@ -75,7 +81,6 @@ export default defineConfig(
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
-      '@typescript-eslint/non-nullable-type-assertion-style': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -93,6 +98,7 @@ export default defineConfig(
   {
     files: ['**/*.{js,mjs,cjs}'],
     extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
   },
   Object.entries(notPassingYet).map(([rule, files]) => ({ files, rules: { [rule]: 'off' } })),
 );
