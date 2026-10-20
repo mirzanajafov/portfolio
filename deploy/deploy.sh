@@ -41,7 +41,7 @@ if [ "$previous" = "$target" ] && [ "$force" = false ]; then
 fi
 
 say "Waiting for the database"
-"${compose[@]}" up -d --wait postgres
+"${compose[@]}" up -d --wait --wait-timeout 120 postgres
 
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
