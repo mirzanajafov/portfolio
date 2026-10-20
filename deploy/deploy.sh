@@ -28,7 +28,7 @@ healthy() {
 }
 
 release() {
-  "${compose[@]}" build && "${compose[@]}" up -d --remove-orphans
+  "${compose[@]}" up -d --build --remove-orphans
 }
 
 previous=$(git rev-parse HEAD)
@@ -40,7 +40,7 @@ if [ "$previous" = "$target" ] && [ "$force" = false ]; then
   exit 0
 fi
 
-say "Checking the database"
+say "Waiting for the database"
 "${compose[@]}" up -d --wait postgres
 
 say "Deploying $(git log --oneline -1 "$target")"
@@ -56,6 +56,6 @@ git reset --hard --quiet "$previous"
 if release && healthy; then
   echo "Rolled back. Migrations from the failed release stay applied."
 else
-  echo "The rollback is not healthy either. Check: ${compose[*]} logs migrate api web" >&2
+  echo "The rollback failed too. Check: ${compose[*]} logs migrate api web" >&2
 fi
 exit 1
