@@ -92,7 +92,7 @@ On the server it runs with `docker-compose.prod.yml` on top, which publishes no 
 
 The site reaches the API by its container name, `portfolio-api`, not the compose service name. Another project of mine joined the shared proxy network with a service called `api`, the bare name started resolving to that container, and the Ask box was down for about an hour before I noticed. Both containers were healthy the whole time, which is why the deploy now also checks that the site can actually reach the API.
 
-There is no backup. The database holds two tables: the rate-limit counters, which nothing needs after a day, and the question log, which the page promises to delete after 30 days. I started with a daily backup that left both out for those reasons, which meant it saved nothing the migrations in git can't rebuild, so I removed it. The price is that losing the database, to a bad migration or a lost volume, loses the questions logged so far.
+There is no backup. Apart from Prisma's migration history, the database holds two tables: the rate-limit counters, which nothing needs after a day, and the question log, which the page promises to delete after 30 days. I started with a daily backup that left both out for those reasons, which meant it saved nothing the migrations in git can't rebuild, so I removed it. The price is that losing the database, to a bad migration or a lost volume, loses the questions logged so far.
 
 ## Layout
 
