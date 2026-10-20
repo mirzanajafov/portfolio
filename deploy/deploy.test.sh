@@ -13,7 +13,9 @@ cat > "$work/bin/docker" <<'EOF'
 on_old() { [ "$(git rev-parse HEAD)" = "$OLD" ]; }
 case "$*" in
   *"--wait"*) [ -z "${POSTGRES_DOWN:-}" ] ;;
-  *"--build"*) git rev-parse HEAD >> "$RELEASES"; [ -z "${RELEASE_FAILS:-}" ] || on_old ;;
+  *"--build"*)
+    git rev-parse HEAD >> "$RELEASES"
+    case "${RELEASE_FAILS:-}" in all) false ;; new) on_old ;; esac ;;
   inspect*) if [ "${*: -1}" = "${UNHEALTHY:-}" ] && ! on_old; then echo starting; else echo healthy; fi ;;
   exec*) [ -z "${API_UNREACHABLE:-}" ] || on_old ;;
   "image prune"*) ;;
@@ -52,31 +54,33 @@ deploy() {
     OLD="$old" RELEASES="$dir/releases" "$@" bash deploy/deploy.sh > "$out" 2>&1 || status=$?
   head=$(git rev-parse HEAD)
   moves=$(($(git reflog | wc -l) - moves_before))
-  running=$(tail -n 1 "$dir/releases")
+  last_release=$(tail -n 1 "$dir/releases")
   cd - > /dev/null
 }
 
 expect() {
-  if [ "$status $head $moves ${running:-none}" = "$1 $2 $3 ${4:-none}" ]; then
-    echo "ok    $5"
+  if [ "$status $head $moves ${last_release:-none}" = "$1 $2 $3 $4" ] && grep -qF "$5" "$out"; then
+    echo "ok    $6"
   else
-    echo "FAIL  $5: exit $status at $head after $moves moves, running ${running:-none}"
+    echo "FAIL  $6: exit $status at $head after $moves moves, last release ${last_release:-none}"
     sed 's/^/      /' "$out"
     failed=1
   fi
 }
 
 deploy
-expect 0 "$new" 1 "$new" "deploys a healthy release"
-deploy RELEASE_FAILS=1
-expect 1 "$old" 2 "$old" "brings the previous release back when the new one fails to build or start"
+expect 0 "$new" 1 "$new" "Live:" "deploys a healthy release"
+deploy RELEASE_FAILS=new
+expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the new one fails to build or start"
 deploy UNHEALTHY=portfolio-api
-expect 1 "$old" 2 "$old" "brings the previous release back when the API never gets healthy"
+expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the API never gets healthy"
 deploy UNHEALTHY=portfolio-web
-expect 1 "$old" 2 "$old" "brings the previous release back when the site never gets healthy"
+expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the site never gets healthy"
 deploy API_UNREACHABLE=1
-expect 1 "$old" 2 "$old" "brings the previous release back when the site can't reach the API"
+expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the site can't reach the API"
+deploy RELEASE_FAILS=all
+expect 1 "$old" 2 "$old" "The rollback failed too" "says so when the previous release can't come back either"
 deploy POSTGRES_DOWN=1
-expect 1 "$old" 0 "" "stops before the merge when Postgres is down"
+expect 1 "$old" 0 none "Waiting for the database" "stops before the merge when Postgres is down"
 
 exit "$failed"
