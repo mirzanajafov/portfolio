@@ -96,9 +96,9 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.{js,mjs,cjs}'],
+    files: ['**/*.{js,mjs}'],
     extends: [tseslint.configs.disableTypeChecked],
-    languageOptions: { globals: globals.node },
+    languageOptions: { globals: globals.nodeBuiltin },
   },
   Object.entries(notPassingYet).map(([rule, files]) => ({ files, rules: { [rule]: 'off' } })),
 );
