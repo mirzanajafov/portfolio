@@ -2,7 +2,7 @@
 set -euo pipefail
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
-script="$(cd "$(dirname "$0")" && pwd)/deploy.sh"
+script="$(realpath "$(dirname "$0")")/deploy.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 failed=0
@@ -16,6 +16,8 @@ case "$*" in
   *"--build"*) git rev-parse HEAD >> "$RELEASES"; [ -z "${RELEASE_FAILS:-}" ] || on_old ;;
   inspect*) if [ "${*: -1}" = "${UNHEALTHY:-}" ] && ! on_old; then echo starting; else echo healthy; fi ;;
   exec*) [ -z "${API_UNREACHABLE:-}" ] || on_old ;;
+  "image prune"*) ;;
+  *) echo "unexpected: docker $*" >&2; exit 2 ;;
 esac
 EOF
 printf '#!/bin/sh\n' > "$work/bin/sleep"
@@ -75,6 +77,6 @@ expect 1 "$old" 2 "$old" "brings the previous release back when the site never g
 deploy API_UNREACHABLE=1
 expect 1 "$old" 2 "$old" "brings the previous release back when the site can't reach the API"
 deploy POSTGRES_DOWN=1
-expect 1 "$old" 0 "" "never touches the checkout or the containers when Postgres is down"
+expect 1 "$old" 0 "" "stops before the merge when Postgres is down"
 
 exit "$failed"
