@@ -197,15 +197,13 @@ describe('loadContent', () => {
     ]);
   });
 
-  it('refuses a link to itself, to a project that does not exist, or to one project twice', async () => {
+  it('refuses a link to itself or to a project that does not exist', async () => {
     await putProject(
       'alpha',
       project(2, {
         uses: [
           { project: 'gamma', for: 'its registry' },
           { project: 'alpha', for: 'itself' },
-          { project: 'beta', for: 'its registry' },
-          { project: 'beta', for: 'its leases' },
         ],
       }),
     );
@@ -220,10 +218,24 @@ describe('loadContent', () => {
         path: 'uses.1.project',
         message: '"alpha" is not another project',
       },
+    ]);
+  });
+
+  it('refuses one project used twice', async () => {
+    await putProject(
+      'alpha',
+      project(2, {
+        uses: [
+          { project: 'beta', for: 'its registry' },
+          { project: 'beta', for: 'its leases' },
+        ],
+      }),
+    );
+    expect(await issues()).toEqual([
       {
         file: 'projects/alpha/project.yaml',
-        path: 'uses.3.project',
-        message: '"beta" is used twice',
+        path: 'uses.1.project',
+        message: 'project is used twice',
       },
     ]);
   });

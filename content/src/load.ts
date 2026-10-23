@@ -154,19 +154,18 @@ function resolveUses(
   names: Map<string, string>,
   issues: ContentIssue[],
 ): UsedProject[] {
-  const used: UsedProject[] = [];
-  project.uses.forEach((use, index) => {
-    const at = { file: `projects/${project.slug}/project.yaml`, path: `uses.${index}.project` };
-    const name = names.get(use.project);
+  return project.uses.flatMap((use, index) => {
     if (use.project === project.slug || !folders.includes(use.project)) {
-      issues.push({ ...at, message: `"${use.project}" is not another project` });
-    } else if (used.some((entry) => entry.slug === use.project)) {
-      issues.push({ ...at, message: `"${use.project}" is used twice` });
-    } else if (name) {
-      used.push({ slug: use.project, name, for: use.for });
+      issues.push({
+        file: `projects/${project.slug}/project.yaml`,
+        path: `uses.${index}.project`,
+        message: `"${use.project}" is not another project`,
+      });
+      return [];
     }
+    const name = names.get(use.project);
+    return name ? [{ slug: use.project, name, for: use.for }] : [];
   });
-  return used;
 }
 
 async function loadProjects(root: string, issues: ContentIssue[]): Promise<Project[]> {

@@ -108,7 +108,7 @@ describe('SystemsTour', () => {
     );
     expect(within(tmPost).getByRole('link', { name: 'Matchium' })).toHaveAttribute(
       'href',
-      '#matchium',
+      '/#matchium',
     );
     const matchium = screen.getByRole('article', { name: 'Matchium' });
     expect(within(matchium).queryByText(/^Uses/)).toBeNull();

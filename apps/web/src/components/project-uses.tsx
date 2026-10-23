@@ -1,20 +1,13 @@
+import Link from 'next/link';
 import type { UsedProject } from '@portfolio/content';
 
-export function ProjectUses({
-  uses,
-  tourPath,
-  className,
-}: {
-  uses: UsedProject[];
-  tourPath: '' | '/';
-  className: string;
-}) {
+export function ProjectUses({ uses, className = '' }: { uses: UsedProject[]; className?: string }) {
   return uses.map((used) => (
-    <p key={used.slug} className={className}>
+    <p key={used.slug} className={`${className} text-sm text-[var(--muted)]`}>
       Uses{' '}
-      <a className="underline underline-offset-4" href={`${tourPath}#${used.slug}`}>
+      <Link className="underline underline-offset-4" href={`/#${used.slug}`}>
         {used.name}
-      </a>{' '}
+      </Link>{' '}
       for {used.for}
     </p>
   ));

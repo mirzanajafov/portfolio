@@ -89,6 +89,17 @@ export const projectSchema = z
       }
       ids.add(fact.id);
     });
+    const used = new Set<string>();
+    project.uses.forEach((use, index) => {
+      if (used.has(use.project)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'project is used twice',
+          path: ['uses', index, 'project'],
+        });
+      }
+      used.add(use.project);
+    });
     if (!ids.has(project.headline)) {
       ctx.addIssue({
         code: 'custom',

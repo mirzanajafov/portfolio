@@ -237,11 +237,7 @@ export function SystemsTour({
                   </li>
                 ))}
               </ul>
-              <ProjectUses
-                uses={stop.uses}
-                tourPath=""
-                className="tour-uses text-sm text-[var(--muted)]"
-              />
+              <ProjectUses uses={stop.uses} className="tour-uses" />
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 {stop.caseStudy && (
                   <Link
