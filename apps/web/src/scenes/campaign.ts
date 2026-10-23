@@ -19,7 +19,7 @@ import {
 import data from './campaign-data.json';
 import { aim, viewFrom } from './framing';
 import { seeded } from './random';
-import { formatNumber, plural } from './readout';
+import { formatClock, formatNumber, plural } from './readout';
 import type { Palette, SceneFactory } from './types';
 
 export const campaignParameters = {
@@ -124,11 +124,6 @@ const maxRings = 80;
 function ease(value: number) {
   const clamped = Math.min(1, Math.max(0, value));
   return 1 - (1 - clamped) ** 3;
-}
-
-function clock(minute: number) {
-  const hours = Math.floor(minute / 60);
-  return `${hours}:${String(Math.floor(minute % 60)).padStart(2, '0')}`;
 }
 
 export const createCampaignScene: SceneFactory = (hooks) => {
@@ -358,7 +353,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         const run = data.runs[Math.max(0, now.runs - 1)]!;
         return [
           `run ${now.runs} of ${runCount} · ${formatNumber(now.kills)} process kills so far · ${now.violations} violations`,
-          `${clock(run.minute)} into the night · seed ${run.seed} · ${run.journeys} journeys · ${run.kills} kills · ${plural(run.postgres + run.kafka, 'crash', 'crashes')}`,
+          `${formatClock(run.minute)} into the night · seed ${run.seed} · ${run.journeys} journeys · ${run.kills} kills · ${plural(run.postgres + run.kafka, 'crash', 'crashes')}`,
           `so far: ${formatNumber(now.journeys)} journeys · ${formatNumber(now.crashes)} Postgres and Kafka crashes`,
         ];
       }
