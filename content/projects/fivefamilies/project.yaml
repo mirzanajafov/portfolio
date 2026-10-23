@@ -15,7 +15,7 @@ stack: [Go, gRPC, Porcupine, Next.js]
 headline: lab-runs
 facts:
   - id: lab-runs
-    text: In six three-minute runs of five nodes in Docker, through 187 faults from SIGKILL and freezes to partitions and membership changes, the histories of 287,516 client operations were linearizable and every node ended at the same state.
+    text: Client histories stayed linearizable through 187 faults, from SIGKILL and freezes to partitions and membership changes, in six three-minute runs of five nodes in Docker, 287,516 operations, with every node at the same state.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: planted-bugs
@@ -31,7 +31,7 @@ facts:
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: deterministic-core
-    text: The Raft core is a plain struct with no goroutines, clock, sockets or files and takes its randomness from a seed, so a seed replays a run exactly. An import test guards that, and CI compares trace hashes of two runs of the same seeds.
+    text: The Raft core is a plain struct with no goroutines, clock, sockets or files and gets its randomness from a seed, so a run replays exactly. An import test guards that, and CI runs the same seeds twice and checks the trace hashes match.
     kind: design
     source: { file: README.md, section: How it's built }
   - id: wal-cut
@@ -39,7 +39,7 @@ facts:
     kind: design
     source: { file: README.md, section: How it's built }
   - id: failover-timeout
-    text: Killing the leader under 200 writes a second, clients waited a median of 194 ms at a 150 ms election timeout and 1,206 ms at 1 s, so the timeout is nearly the whole failover.
+    text: When the leader is killed under 200 writes a second, failover keeps clients waiting a median of 194 ms at a 150 ms election timeout and 1,206 ms at 1 s, so the timeout is nearly all of it.
     kind: measured
     source: { file: README.md, section: Failover }
   - id: cold-client
@@ -59,7 +59,7 @@ facts:
     kind: measured
     source: { file: README.md, section: Reads }
   - id: batching-loop
-    text: Taking the server loop's whole queue before asking the core for work halved the messages per write, 8.4 against 15.5 at 4,000 a second, and lifted ReadIndex's knee from 8,000 to 14,000 that night.
+    text: Batching the server loop's whole queue before asking the core for work halved the messages per write, 8.4 against 15.5 at 4,000 a second, and lifted ReadIndex's knee from 8,000 to 14,000 that night.
     kind: measured
     source: { file: README.md, section: 'Throughput, and the batching I was throwing away' }
   - id: one-processor
@@ -67,7 +67,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'Throughput, and the batching I was throwing away' }
   - id: etcd-writes
-    text: Next to etcd 3.6.15 on the same laptop, a write is faster at low load, 11-13 ms at the median against 23-36 ms, but under load etcd takes at least 16,000 writes a second on five nodes to my 6,000.
+    text: Against etcd 3.6.15 on the same laptop, a write is faster at low load, 11-13 ms at the median against 23-36 ms, but under load etcd takes at least 16,000 writes a second on five nodes to my 6,000.
     kind: measured
     source: { file: README.md, section: Next to etcd }
   - id: registry-ttl

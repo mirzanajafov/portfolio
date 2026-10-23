@@ -330,8 +330,7 @@
         "fivefamilies/seeds-clean"
       ],
       "cited": [
-        "fivefamilies/lab-runs",
-        "fivefamilies/own-vote"
+        "fivefamilies/lab-runs"
       ],
       "hit": true,
       "refused": false
@@ -369,8 +368,7 @@
         "fivefamilies/disk-stalls"
       ],
       "cited": [
-        "fivefamilies/disk-stalls",
-        "fivefamilies/bounded-chaos"
+        "fivefamilies/case-study/decision-3"
       ],
       "hit": true,
       "refused": false
@@ -382,8 +380,7 @@
         "fivefamilies/etcd-writes"
       ],
       "cited": [
-        "fivefamilies/etcd-writes",
-        "fivefamilies/deterministic-core"
+        "fivefamilies/etcd-writes"
       ],
       "hit": true,
       "refused": false
