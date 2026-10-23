@@ -25,7 +25,9 @@ const details = {
     String.raw`^netem delay (?<delay>\d+)ms (?<jitter>\d+)ms loss (?<loss>\d+)% on node ${node('a')}$`,
   ),
   member: new RegExp(`^remove node ${node('a')}, then add it back as a learner and promote it$`),
-  transfer: new RegExp(`^hand leadership from node ${node('a')} to ${node('b')}$`),
+  transfer: new RegExp(
+    String.raw`^hand leadership from node ${node('a')} to ${node('b')}(?: \(node ${node('after')} leads after it\))?$`,
+  ),
 };
 
 const seconds = (ns) => Math.round(ns / 1e7) / 100;
@@ -36,11 +38,16 @@ function parse(fault) {
   if (fault.error) {
     throw new Error(`${at} failed: ${fault.error}`);
   }
-  const fields = details[fault.kind]?.exec(fault.detail)?.groups;
+  const fields = Object.hasOwn(details, fault.kind)
+    ? details[fault.kind].exec(fault.detail)?.groups
+    : undefined;
   if (!fields) {
     throw new Error(`${at} has a detail the scene can't read: ${fault.detail}`);
   }
-  const { a, b, left, right, delay, jitter, loss } = fields;
+  const { a, b, left, right, delay, jitter, loss, after } = fields;
+  if (after && after !== b) {
+    throw new Error(`${at} handed over to node ${b}, but node ${after} led after it`);
+  }
   return {
     start: seconds(fault.start_ns),
     end: seconds(fault.end_ns),
@@ -52,13 +59,10 @@ function parse(fault) {
 }
 
 const reportOf = (dir) => JSON.parse(readFileSync(join(labDir, dir, 'report.json'), 'utf8'));
+const passed = (report) => report.linearizable === 'Ok' && !report.problems?.length;
 const run = reportOf(replayed);
-if (
-  run.linearizable !== 'Ok' ||
-  !run.states_equal ||
-  run.hashes.length !== nodes ||
-  new Set(run.hashes).size !== 1
-) {
+const hashes = run.hashes ?? [];
+if (!passed(run) || !run.states_equal || hashes.length !== nodes || new Set(hashes).size !== 1) {
   throw new Error(`${replayed} did not end linearizable with all ${nodes} nodes at one state`);
 }
 const lab = readdirSync(labDir, { withFileTypes: true })
@@ -69,19 +73,19 @@ const lab = readdirSync(labDir, { withFileTypes: true })
 const replay = {
   seconds: seconds(run.options.duration_ns),
   ops: run.ops,
-  hash: run.hashes[0].slice(0, 8),
+  hash: hashes[0].slice(0, 8),
   stateIndex: run.state_index,
-  leaders: run.leaders.map((entry) => ({
+  leaders: (run.leaders ?? []).map((entry) => ({
     at: seconds(entry.at_ns),
     node: entry.leader,
     term: entry.term,
   })),
-  faults: run.faults.map(parse),
+  faults: (run.faults ?? []).map(parse),
   lab: {
     runs: lab.length,
-    faults: lab.reduce((total, report) => total + report.faults.length, 0),
+    faults: lab.reduce((total, report) => total + (report.faults ?? []).length, 0),
     ops: lab.reduce((total, report) => total + report.ops, 0),
-    linearizable: lab.filter((report) => report.linearizable === 'Ok').length,
+    linearizable: lab.filter(passed).length,
     sameState: lab.filter((report) => report.states_equal).length,
   },
 };

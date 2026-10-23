@@ -143,7 +143,11 @@ export function commissionOf(replay: Replay) {
     const elected = reignAt(at);
     const current = elected.at(-1);
     const leader = current?.node ?? 0;
-    const don = leader > 0 && seat(leader) !== 'down' ? leader : 0;
+    const seen = current?.at ?? 0;
+    const killedSince = timeline.some(
+      (fault) => fault.down.includes(leader) && seen < fault.start && fault.start <= at,
+    );
+    const don = leader > 0 && !killedSince ? leader : 0;
     const speaker = don > 0 && seat(don) === 'up' ? don : 0;
     return {
       at,

@@ -115,6 +115,19 @@ describe('the replay', () => {
     expect([1, 2, 3, 4, 5].map((node) => end.seat(node))).toEqual(['up', 'up', 'up', 'up', 'up']);
   });
 
+  it('does not crown a killed leader again when it restarts before a new one is seen', () => {
+    const restarted = commissionOf({
+      ...replayWith({ kind: 'kill-leader', nodes: [1], start: 10, end: 12 }),
+      leaders: [
+        { at: 0, node: 1, term: 1 },
+        { at: 14, node: 2, term: 2 },
+      ],
+    });
+    expect(restarted(11)).toMatchObject({ don: 0 });
+    expect(restarted(13)).toMatchObject({ don: 0, speaker: 0 });
+    expect(restarted(15)).toMatchObject({ don: 2, term: 2 });
+  });
+
   it('keeps a frozen Don as the Don, though nobody hears from it', () => {
     const frozen = commissionOf(replayWith({ kind: 'pause', nodes: [1] }))(15);
     expect(frozen).toMatchObject({ don: 1, speaker: 0 });

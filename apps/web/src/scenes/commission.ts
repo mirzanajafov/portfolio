@@ -47,6 +47,12 @@ const beat = 0.6;
 const tilt = 1.02;
 const swing = 0.08;
 
+const linkTones: Record<Exclude<LinkState, 'cut'>, keyof Palette> = {
+  open: 'muted',
+  slow: 'signal',
+  'one-way': 'line',
+};
+
 const looks: Record<Seat, { radius: number; lift: number; size: number; word: string }> = {
   up: { radius: seatRadius, lift: 0.45, size: 1, word: '' },
   down: { radius: seatRadius, lift: 0.12, size: 0.5, word: 'killed' },
@@ -65,7 +71,7 @@ function readoutOf(state: Commission): string[] {
     return [
       `after the heal: ${formatNumber(replay.ops)} operations, linearizable`,
       `all five families at state ${replay.hash}, entry ${formatNumber(replay.stateIndex)}`,
-      `${replay.lab.runs} three-minute runs: ${replay.lab.faults} faults · ${formatNumber(replay.lab.ops)} operations · ${replay.lab.linearizable} of ${replay.lab.runs} linearizable`,
+      `${replay.lab.runs} three-minute runs: ${formatNumber(replay.lab.faults)} faults · ${formatNumber(replay.lab.ops)} operations · ${replay.lab.linearizable} of ${replay.lab.runs} linearizable`,
     ];
   }
   const reign = state.don
@@ -154,17 +160,6 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   const matrix = new Matrix4();
   const spot = new Vector3();
 
-  const linkShade = (link: Exclude<LinkState, 'cut'>, shades: Palette) => {
-    switch (link) {
-      case 'open':
-        return shades.muted;
-      case 'slow':
-        return shades.signal;
-      case 'one-way':
-        return shades.line;
-    }
-  };
-
   const write = (label: HTMLElement, text: string) => {
     if (label.textContent !== text) {
       label.textContent = text;
@@ -233,7 +228,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
           end.mesh.position.z,
         );
         if (link !== 'cut') {
-          const shade = linkShade(link, palette);
+          const shade = palette[linkTones[link]];
           colors.setXYZ(index * 2, shade.r, shade.g, shade.b);
           colors.setXYZ(index * 2 + 1, shade.r, shade.g, shade.b);
         }
