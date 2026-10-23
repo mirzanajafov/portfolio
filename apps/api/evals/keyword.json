@@ -1,17 +1,17 @@
 {
   "engine": "keyword",
-  "questions": 58,
-  "hits": 52,
+  "questions": 59,
+  "hits": 53,
   "refusals": 0,
-  "hitRate": 0.897,
+  "hitRate": 0.898,
   "byProject": {
     "carwash-ledger": {
       "questions": 8,
       "hits": 8
     },
     "portalgun": {
-      "questions": 8,
-      "hits": 8
+      "questions": 9,
+      "hits": 9
     },
     "fivefamilies": {
       "questions": 8,
@@ -317,7 +317,21 @@
         "portalgun/bounded-chaos"
       ],
       "cited": [
-        "portalgun/bounded-chaos"
+        "portalgun/bounded-chaos",
+        "portalgun/fivefamilies-registry"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "portalgun",
+      "question": "How does PortalGun find its upstreams on the live demo?",
+      "expected": [
+        "portalgun/fivefamilies-registry",
+        "portalgun/registry-runs"
+      ],
+      "cited": [
+        "portalgun/fivefamilies-registry"
       ],
       "hit": true,
       "refused": false
@@ -406,7 +420,7 @@
       ],
       "cited": [
         "fivefamilies/registry-ttl",
-        "fivefamilies/portalgun-registry"
+        "fivefamilies/slow-registration"
       ],
       "hit": true,
       "refused": false

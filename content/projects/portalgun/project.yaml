@@ -3,14 +3,15 @@ order: 2
 hook: A Go API gateway, measured against nginx, HAProxy, Envoy and Caddy
 summary: >-
   A reverse proxy in Go that picks where each request goes from health, latency, rate limits and
-  rollout rules, and changes that choice when something breaks. I built it around four numbers
-  instead of a feature list: what it adds to a request, whether several gateways keep one quota, how
-  many requests a broken upstream costs, and whether a canary catches a bad release.
+  rollout rules, and changes that choice when something breaks. The live demo's upstreams register
+  with FiveFamilies. I built it around four numbers: what it adds to a request, whether several
+  gateways keep one quota, how many requests a broken upstream costs, and whether a canary catches a
+  bad release.
 visibility: public
 links:
   live: https://portalgun.najafov.dev
   repo: https://github.com/mirzanajafov/portalgun-router
-stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy]
+stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy, FiveFamilies]
 headline: no-lost-requests
 facts:
   - id: no-lost-requests
@@ -73,6 +74,18 @@ facts:
     text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, and start a canary rollout, three an hour per address; the controller never touches the Docker socket.
     kind: design
     source: { file: README.md, section: How the pieces fit }
+  - id: fivefamilies-registry
+    text: On the live demo PortalGun uses FiveFamilies, my Raft service registry, to find its upstreams. The dimensions register themselves, and only the controller follows that list, turning each change into a config version.
+    kind: design
+    source: { file: internal/controller/discovery.go }
+  - id: registry-runs
+    text: A new dimension got its first request a median of 15 ms after registering with FiveFamilies, and with two retries on the route none of 443,047 requests was lost in 43 runs, some with the registry's leader or every node killed.
+    kind: measured
+    source: { file: bench/results/e5/20261021-225536-laptop/summary.json }
+  - id: registry-leaderless
+    text: Registering while the registry's leader was dead took a median of 2.1 s and up to 8.1 s, against 22 ms with a leader in place, and that is the weak spot of the setup.
+    kind: measured
+    source: { file: bench/results/e5/20261021-225536-laptop/summary.json }
 health: https://portalgun.najafov.dev/
 knowledge:
   - README.md

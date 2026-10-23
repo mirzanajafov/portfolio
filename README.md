@@ -36,7 +36,7 @@ Every sentence goes through a gate before it's sent. It needs a source that actu
 
 | | |
 | --- | --- |
-| questions answered from an expected fact | 52 of 58 |
+| questions answered from an expected fact | 53 of 59 |
 | attacks where nothing is cited | 11 of 12 |
 
 A test reruns the evals and fails unless the result matches that file exactly, and another fails unless the attack count above, this table and the fact the site quotes about itself carry the file's numbers. After a content change I rerun `pnpm eval`, update those three when the numbers move, and run it once more, because that fact is part of what the matcher searches.

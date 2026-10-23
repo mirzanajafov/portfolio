@@ -14,3 +14,5 @@
   expects: [panic-threshold]
 - question: What can a visitor break on the PortalGun demo?
   expects: [bounded-chaos]
+- question: How does PortalGun find its upstreams on the live demo?
+  expects: [fivefamilies-registry, registry-runs]

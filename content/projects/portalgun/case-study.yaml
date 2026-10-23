@@ -38,13 +38,14 @@ decisions:
   - title: Three kinds of health, because each misses something
     body: >-
       Active probes find a dead dimension that gets no traffic, passive ejection reacts to real
-      failures within milliseconds, and a panic threshold stops one shared failure from ejecting
-      the whole pool. Power of two choices does part of the job before any of them: a hung
-      dimension collects requests in flight and stops being picked. With all three and a retry
-      budget, six kinds of injected faults cost no requests. On a crash, probes on their own were
-      worse than slow, because a refused connection fails in microseconds and looks like the
-      cheapest dimension.
-    facts: [no-lost-requests, panic-threshold, p2c-blackhole, retry-budget]
+      failures within milliseconds, and a panic threshold stops one shared failure from ejecting the
+      whole pool. Power of two choices does part of the job before any of them: a hung dimension
+      collects requests in flight and stops being picked. With all three and a retry budget, six
+      kinds of injected faults cost no requests. On a crash, probes on their own were worse than
+      slow, because a refused connection fails in microseconds and looks like the cheapest
+      dimension. The live demo's pool comes from FiveFamilies, my Raft registry, which no request
+      ever waits on.
+    facts: [no-lost-requests, panic-threshold, p2c-blackhole, retry-budget, registry-runs]
   - title: A canary that can look every second
     body: >-
       The canary decides with Wald's sequential test on who the errors came from. If the new
