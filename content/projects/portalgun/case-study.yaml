@@ -45,7 +45,15 @@ decisions:
       slow, because a refused connection fails in microseconds and looks like the cheapest
       dimension. The live demo's pool comes from FiveFamilies, my Raft registry, which no request
       ever waits on.
-    facts: [no-lost-requests, panic-threshold, p2c-blackhole, retry-budget, registry-runs]
+    facts:
+      [
+        no-lost-requests,
+        panic-threshold,
+        p2c-blackhole,
+        retry-budget,
+        fivefamilies-registry,
+        registry-runs,
+      ]
   - title: A canary that can look every second
     body: >-
       The canary decides with Wald's sequential test on who the errors came from. If the new

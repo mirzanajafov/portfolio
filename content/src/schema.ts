@@ -69,6 +69,9 @@ export const projectSchema = z
       repo: z.url().optional(),
     }),
     stack: z.array(z.string().min(1)).min(1),
+    uses: z
+      .array(z.strictObject({ project: slugSchema, for: z.string().min(1).max(60) }))
+      .default([]),
     headline: slugSchema,
     facts: z.array(factSchema).min(1),
     health: z.url().optional(),

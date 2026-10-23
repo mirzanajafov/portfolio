@@ -60,6 +60,7 @@ const stops: TourStop[] = [
     hook: 'Matches that show their work',
     fact: { text: 'Half the questions.', kind: 'measured' },
     stack: ['Python'],
+    uses: [],
     live: 'https://matchium.example',
     code: 'https://github.com/x/matchium',
     caseStudy: '/projects/matchium',
@@ -71,6 +72,7 @@ const stops: TourStop[] = [
     hook: 'Keeps working offline',
     fact: { text: 'Flushes every 150 ms.', kind: 'parameter' },
     stack: ['Electron'],
+    uses: [{ slug: 'matchium', name: 'Matchium', for: 'its sync server' }],
     live: 'https://tmpost.example',
     privateSource: true,
   },
@@ -96,6 +98,20 @@ describe('SystemsTour', () => {
     expect(within(tmPost).queryByRole('link', { name: 'Code' })).toBeNull();
     expect(within(tmPost).getByText('Source available on request')).toBeInTheDocument();
     expect(within(tmPost).getByText('design parameter')).toBeInTheDocument();
+  });
+
+  it('links a project to the stop of a project it uses, and says what for', () => {
+    render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
+    const tmPost = screen.getByRole('article', { name: 'TM Post' });
+    expect(within(tmPost).getByText(/^Uses/)).toHaveTextContent(
+      'Uses Matchium for its sync server',
+    );
+    expect(within(tmPost).getByRole('link', { name: 'Matchium' })).toHaveAttribute(
+      'href',
+      '#matchium',
+    );
+    const matchium = screen.getByRole('article', { name: 'Matchium' });
+    expect(within(matchium).queryByText(/^Uses/)).toBeNull();
   });
 
   it('opens with an index that jumps to each stop of the tour', () => {

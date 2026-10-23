@@ -177,6 +177,18 @@ async function loadProjects(root: string, issues: ContentIssue[]): Promise<Proje
     }
     byOrder.set(project.order, project.slug);
   }
+  const known = new Set(projects.map((project) => project.slug));
+  for (const project of projects) {
+    project.uses.forEach((use, index) => {
+      if (use.project === project.slug || !known.has(use.project)) {
+        issues.push({
+          file: `projects/${project.slug}/project.yaml`,
+          path: `uses.${index}.project`,
+          message: `"${use.project}" is not another project`,
+        });
+      }
+    });
+  }
   return projects.sort((a, b) => a.order - b.order);
 }
 

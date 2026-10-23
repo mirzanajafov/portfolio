@@ -31,6 +31,18 @@ export function roleKey(role: Pick<Role, 'company' | 'role' | 'from'>): string {
   return `${role.company ?? role.role}-${role.from}`;
 }
 
+export type UsedProject = { slug: string; name: string; for: string };
+
+export function usedProjects(project: Project, projects: Project[]): UsedProject[] {
+  return project.uses.map((use) => {
+    const used = projects.find((candidate) => candidate.slug === use.project);
+    if (!used) {
+      throw new Error(`${project.slug} uses ${use.project}, which is not a project`);
+    }
+    return { slug: used.slug, name: used.name, for: use.for };
+  });
+}
+
 export function headlineFact(project: Project): Fact {
   const fact = project.facts.find((candidate) => candidate.id === project.headline);
   if (!fact) {

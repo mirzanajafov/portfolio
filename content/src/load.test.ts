@@ -189,6 +189,34 @@ describe('loadContent', () => {
     ]);
   });
 
+  it('links a project only to another project that exists', async () => {
+    const uses = [{ project: 'beta', for: 'its registry' }];
+    await putProject('alpha', project(2, { uses }));
+    const content = await loadContent(root);
+    expect(content.projects.find((p) => p.slug === 'alpha')?.uses).toEqual(uses);
+    await putProject(
+      'alpha',
+      project(2, {
+        uses: [
+          { project: 'gamma', for: 'its registry' },
+          { project: 'alpha', for: 'itself' },
+        ],
+      }),
+    );
+    expect(await issues()).toEqual([
+      {
+        file: 'projects/alpha/project.yaml',
+        path: 'uses.0.project',
+        message: '"gamma" is not another project',
+      },
+      {
+        file: 'projects/alpha/project.yaml',
+        path: 'uses.1.project',
+        message: '"alpha" is not another project',
+      },
+    ]);
+  });
+
   it('rejects a fact id used twice', async () => {
     const facts = project(2).facts;
     await putProject('alpha', project(2, { facts: [...facts, facts[0]] }));

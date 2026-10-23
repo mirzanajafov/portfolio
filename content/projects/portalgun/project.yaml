@@ -11,7 +11,9 @@ visibility: public
 links:
   live: https://portalgun.najafov.dev
   repo: https://github.com/mirzanajafov/portalgun-router
-stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy, FiveFamilies]
+stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy]
+uses:
+  - { project: fivefamilies, for: service discovery on its live demo }
 headline: no-lost-requests
 facts:
   - id: no-lost-requests
@@ -75,15 +77,15 @@ facts:
     kind: design
     source: { file: README.md, section: How the pieces fit }
   - id: fivefamilies-registry
-    text: On the live demo PortalGun uses FiveFamilies, my Raft service registry, to find its upstreams. The dimensions register themselves, and only the controller follows that list, turning each change into a config version.
+    text: On the live demo PortalGun uses FiveFamilies, my Raft service registry, to find its upstreams. The dimensions register themselves, and only the controller follows the registry, never the gateways.
     kind: design
-    source: { file: internal/controller/discovery.go }
+    source: { file: docker-compose.registry.yml }
   - id: registry-runs
-    text: A new dimension got its first request a median of 15 ms after registering with FiveFamilies, and with two retries on the route none of 443,047 requests was lost in 43 runs, some with the registry's leader or every node killed.
+    text: In laptop runs a new dimension got its first request a median of 15 ms after registering, and with two retries on the route none of 443,047 requests was lost in 43 runs, some with the registry's leader or every node killed.
     kind: measured
     source: { file: bench/results/e5/20261021-225536-laptop/summary.json }
   - id: registry-leaderless
-    text: Registering while the registry's leader was dead took a median of 2.1 s and up to 8.1 s, against 22 ms with a leader in place, and that is the weak spot of the setup.
+    text: In the same runs, registering while the registry's leader was dead took a median of 2.1 s and up to 8.1 s, against 22 ms with a leader in place.
     kind: measured
     source: { file: bench/results/e5/20261021-225536-laptop/summary.json }
 health: https://portalgun.najafov.dev/
