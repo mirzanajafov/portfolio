@@ -6,6 +6,13 @@ problem: >-
   wasn't synced, and a number for what each guarantee costs. PortalGun's live demo discovers its
   servers through the registry on top, and in the dashboard the five nodes are the five families and
   the leader is the Don.
+demo: commission
+demoCaption: >-
+  A three-minute lab run, replayed from its report at six times the speed: five nodes in Docker
+  through 32 faults, from SIGKILL and freezes to splits and membership changes. A ring marks the
+  Don, who leads, and pulses stand for its heartbeats, lost on a cut link or at a dead node. After
+  the heal the history of its 51,012 operations was linearizable and all five families held one
+  state.
 decisions:
   - title: A Raft core that can't touch the world
     body: >-

@@ -137,6 +137,7 @@ export const sceneNames = [
   'storm',
   'failover',
   'campaign',
+  'commission',
 ] as const;
 
 export const caseStudySchema = z.strictObject({

@@ -12,6 +12,7 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   storm: () => import('./storm').then((m) => m.createStormScene),
   failover: () => import('./failover').then((m) => m.createFailoverScene),
   campaign: () => import('./campaign').then((m) => m.createCampaignScene),
+  commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
 
 export type PlayerOptions = {
