@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ViewTransition } from 'react';
 import { content, type Fact, type Project } from '@portfolio/content';
+import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
-import { usedProjects } from '@/lib/format';
 
 type Params = { slug: string };
 
@@ -98,15 +98,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             </li>
           ))}
         </ul>
-        {usedProjects(project, content.projects).map((used) => (
-          <p key={used.slug} className="text-sm text-[var(--muted)]">
-            Uses{' '}
-            <Link className="underline underline-offset-4" href={`/#${used.slug}`}>
-              {used.name}
-            </Link>{' '}
-            for {used.for}
-          </p>
-        ))}
+        <ProjectUses uses={project.uses} tourPath="/" className="text-sm text-[var(--muted)]" />
         <div className="flex flex-wrap gap-4">
           <a
             className="font-medium text-[var(--accent)] underline underline-offset-4"

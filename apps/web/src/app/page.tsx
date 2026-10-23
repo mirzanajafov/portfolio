@@ -3,7 +3,7 @@ import { content, type Project } from '@portfolio/content';
 import { Ask } from '@/components/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
-import { headlineFact, usedProjects } from '@/lib/format';
+import { headlineFact } from '@/lib/format';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
 
 function toStop(project: Project): TourStop {
@@ -15,7 +15,7 @@ function toStop(project: Project): TourStop {
     hook: project.hook,
     fact: { text: fact.text, kind: fact.kind },
     stack: project.stack,
-    uses: usedProjects(project, content.projects),
+    uses: project.uses,
     live: project.links.live,
     code: project.links.repo,
     caseStudy: project.caseStudy ? `/projects/${project.slug}` : undefined,

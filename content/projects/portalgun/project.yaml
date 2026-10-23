@@ -77,7 +77,7 @@ facts:
     kind: design
     source: { file: README.md, section: How the pieces fit }
   - id: fivefamilies-registry
-    text: On the live demo PortalGun uses FiveFamilies, my Raft service registry, to find its upstreams. The dimensions register themselves, and only the controller follows the registry, never the gateways.
+    text: The live demo uses FiveFamilies, my Raft service registry, for its upstreams. The dimensions register themselves, and only the controller follows the registry, never the gateways.
     kind: design
     source: { file: docker-compose.registry.yml }
   - id: registry-runs

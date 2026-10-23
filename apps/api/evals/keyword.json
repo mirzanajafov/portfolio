@@ -293,7 +293,7 @@
       ],
       "cited": [
         "portalgun/limiter-bugs",
-        "portalgun/fivefamilies-registry"
+        "portalgun/breaker-rebuild"
       ],
       "hit": true,
       "refused": false
@@ -317,8 +317,7 @@
         "portalgun/bounded-chaos"
       ],
       "cited": [
-        "portalgun/bounded-chaos",
-        "portalgun/fivefamilies-registry"
+        "portalgun/bounded-chaos"
       ],
       "hit": true,
       "refused": false

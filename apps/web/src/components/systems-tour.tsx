@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { type CSSProperties, ViewTransition, useEffect, useRef, useState } from 'react';
-import type { SceneName } from '@portfolio/content';
+import type { SceneName, UsedProject } from '@portfolio/content';
+import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
-import type { UsedProject } from '@/lib/format';
 import type { GraphApp } from '@/scenes/systems-graph';
 
 export type TourStop = {
@@ -237,15 +237,11 @@ export function SystemsTour({
                   </li>
                 ))}
               </ul>
-              {stop.uses.map((used) => (
-                <p key={used.slug} className="tour-uses text-sm text-[var(--muted)]">
-                  Uses{' '}
-                  <a className="underline underline-offset-4" href={`#${used.slug}`}>
-                    {used.name}
-                  </a>{' '}
-                  for {used.for}
-                </p>
-              ))}
+              <ProjectUses
+                uses={stop.uses}
+                tourPath=""
+                className="tour-uses text-sm text-[var(--muted)]"
+              />
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 {stop.caseStudy && (
                   <Link

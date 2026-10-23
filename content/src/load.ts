@@ -12,7 +12,9 @@ import {
   type Content,
   type Cv,
   type Project,
+  type ProjectFile,
   type Role,
+  type UsedProject,
 } from './schema.ts';
 
 export type ContentIssue = {
@@ -85,7 +87,7 @@ async function loadProject(
   root: string,
   slug: string,
   issues: ContentIssue[],
-): Promise<Project | undefined> {
+): Promise<ProjectFile | undefined> {
   const dir = `projects/${slug}`;
   if (!slugSchema.safeParse(slug).success) {
     issues.push({ file: dir, path: '', message: 'folder name must be a slug' });
@@ -146,6 +148,27 @@ async function loadProject(
   return caseStudy ? { ...project, slug, evals, caseStudy } : { ...project, slug, evals };
 }
 
+function resolveUses(
+  project: ProjectFile,
+  folders: string[],
+  names: Map<string, string>,
+  issues: ContentIssue[],
+): UsedProject[] {
+  const used: UsedProject[] = [];
+  project.uses.forEach((use, index) => {
+    const at = { file: `projects/${project.slug}/project.yaml`, path: `uses.${index}.project` };
+    const name = names.get(use.project);
+    if (use.project === project.slug || !folders.includes(use.project)) {
+      issues.push({ ...at, message: `"${use.project}" is not another project` });
+    } else if (used.some((entry) => entry.slug === use.project)) {
+      issues.push({ ...at, message: `"${use.project}" is used twice` });
+    } else if (name) {
+      used.push({ slug: use.project, name, for: use.for });
+    }
+  });
+  return used;
+}
+
 async function loadProjects(root: string, issues: ContentIssue[]): Promise<Project[]> {
   let entries;
   try {
@@ -158,7 +181,7 @@ async function loadProjects(root: string, issues: ContentIssue[]): Promise<Proje
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  const projects: Project[] = [];
+  const projects: ProjectFile[] = [];
   for (const slug of slugs) {
     const project = await loadProject(root, slug, issues);
     if (project) {
@@ -177,19 +200,10 @@ async function loadProjects(root: string, issues: ContentIssue[]): Promise<Proje
     }
     byOrder.set(project.order, project.slug);
   }
-  const known = new Set(projects.map((project) => project.slug));
-  for (const project of projects) {
-    project.uses.forEach((use, index) => {
-      if (use.project === project.slug || !known.has(use.project)) {
-        issues.push({
-          file: `projects/${project.slug}/project.yaml`,
-          path: `uses.${index}.project`,
-          message: `"${use.project}" is not another project`,
-        });
-      }
-    });
-  }
-  return projects.sort((a, b) => a.order - b.order);
+  const names = new Map(projects.map((project) => [project.slug, project.name]));
+  return projects
+    .sort((a, b) => a.order - b.order)
+    .map((project) => ({ ...project, uses: resolveUses(project, slugs, names, issues) }));
 }
 
 export async function loadContent(root: string): Promise<Content> {
