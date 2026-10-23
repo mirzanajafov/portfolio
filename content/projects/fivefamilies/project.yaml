@@ -19,7 +19,7 @@ facts:
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: planted-bugs
-    text: The simulator catches each of the ten bugs I planted on purpose (one only with PreVote off), seven of them within 42 seeds, and CI replays a seed that catches each one on every pull request.
+    text: The simulator catches each of the ten bugs I planted on purpose, two of them only with a setting changed and seven within 42 seeds, and CI replays a seed that catches each one on every pull request.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: seeds-clean
