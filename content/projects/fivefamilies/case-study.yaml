@@ -1,0 +1,67 @@
+problem: >-
+  I'd never built distributed consensus, and none of my other projects touch it. Raft is a
+  university assignment and Go already has two good implementations, so having Raft wasn't the
+  point. I wanted the rare part: evidence that it stays correct when the network splits, processes
+  crash or freeze and disks lose what wasn't synced, and a number for what each guarantee costs,
+  measured next to etcd. In the dashboard the cluster is the Commission, a node is a family and the
+  leader is the Don.
+decisions:
+  - title: A Raft core that can't touch the world
+    body: >-
+      The core is a deterministic state machine, the shape etcd/raft has. Messages, ticks and "this
+      write is durable" go in, and a batch of work comes out: what to persist, what to send now,
+      what to send only once the write is on disk, and what to apply. Randomness comes from a seed
+      and peers live in a sorted slice, because one loop over a Go map is enough to break replay.
+      So every failure the simulator finds replays exactly, under a debugger, as often as I want.
+      The price is more code than the paper's pseudocode and a contract (persist this, then send
+      that) that tests of the core alone can't see, so the driver and the WAL's logic run inside
+      the simulator unchanged too.
+    facts: [deterministic-core, seeds-clean]
+  - title: Plant bugs to prove the nets catch them
+    body: >-
+      Two nets check it. The simulator runs the whole cluster on one seed with a simulated network,
+      disk and clock, turns on a random mix of faults, checks Raft's invariants after every step
+      and checks the client history with Porcupine at the end. A clean run proves nothing if the
+      net has holes, so I planted ten bugs behind switches the production image can't turn on, and
+      each one is caught. The nets caught my own bugs too, like a leader elected before its own
+      vote was on its disk. The second net is five real processes in Docker that a nemesis kills,
+      freezes and partitions with iptables, and there only the client history and the final state
+      count.
+    facts: [planted-bugs, own-vote, lab-runs]
+  - title: Heartbeats don't wait for the disk
+    body: >-
+      The leader sends its appends before its own write finishes and counts itself toward the
+      quorum only once its fsync is done. One goroutine owns the WAL and syncs everything that
+      queued up during the last flush, so under load many writes share one, with no artificial
+      delay. A short election timeout should pay for fast failover in elections nobody wanted. It
+      didn't pay with the disk: a one-second stall on the leader caused nothing at a 150 ms
+      timeout, and with the loop made to wait on every fsync, the same stall at 300 ms caused an
+      election every time. Pauses are what limit it, and production runs at 1 s anyway, because a
+      node on a quarter of a CPU on a shared server can stall for longer than 150 ms.
+    facts: [failover-timeout, disk-stalls, group-commit, cold-client]
+  - title: Measured next to etcd, including where it loses
+    body: >-
+      ReadIndex is the default read, because a lease saves a heartbeat round only while the clocks
+      behave, an assumption clients can't see. The numbers that taught me most were the ones that
+      went wrong. My server loop asked the core for work after every event, so nothing was ever
+      batched, and fixing that halved the messages per write. Then the write knee wouldn't move,
+      and a trace showed the event loop waiting for the node's single Go processor. Next to etcd
+      3.6.15 with the same pinning, generator and timeouts, a write is faster at low load, but
+      under load etcd carries at least twice as many and doesn't collapse past its knee. I haven't
+      run etcd with two processors yet, so I can't say how much of the gap that closes.
+    facts: [read-paths, batching-loop, one-processor, etcd-writes]
+proof: >-
+  The measurements come from the lab in the repo, on my laptop: each node pinned to its own CPU, an
+  open-loop generator that measures from each request's scheduled time so a stall can't hide in the
+  tail, and the curves that matter run three times, interleaved. Every refactor of code the
+  simulator runs has to give identical totals for 1,000 seeds in five configurations before it's
+  merged. Halfway through I stopped adding features and audited the code. The first round fixed
+  nine bugs, one of them live in production, where cleaning up old snapshots could delete the one
+  the WAL still pointed to. CI runs the race tests, a fixed set of seeds and a seed for every
+  planted bug.
+next: >-
+  Everything runs on one machine, so real distance between nodes and clocks that really drift are
+  only simulated. First I'd fix how the client leaves a leader that stopped answering, which should
+  bring a registration during a failover down to about the election. Then the measurements with
+  two Go processors on a quiet evening, etcd included, recovery numbers, mTLS between nodes, and
+  later joint consensus and Jepsen as an outside check.

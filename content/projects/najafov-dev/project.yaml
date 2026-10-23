@@ -1,5 +1,5 @@
 name: najafov.dev
-order: 8
+order: 9
 hook: This site, which answers questions about me from sourced facts
 summary: >-
   The site you are on. Next.js and NestJS, content that is checked before anything builds, an Ask
@@ -17,7 +17,7 @@ facts:
     kind: measured
     source: { file: README.md, section: The first screen and the tour }
   - id: keyword-baseline
-    text: The keyword matcher behind the Ask box answers 44 of 50 eval questions from an expected fact and cites nothing for 11 of 12 attacks.
+    text: The keyword matcher behind the Ask box answers 52 of 58 eval questions from an expected fact and cites nothing for 11 of 12 attacks.
     kind: measured
     source: { file: README.md, section: Asking it things }
   - id: sentence-gate
