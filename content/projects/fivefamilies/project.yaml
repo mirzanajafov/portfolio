@@ -15,7 +15,7 @@ stack: [Go, gRPC, Porcupine, Next.js]
 headline: lab-runs
 facts:
   - id: lab-runs
-    text: Through 187 faults in six three-minute runs, client histories of 287,516 operations stayed linearizable. Faults ranged from SIGKILL and freezes to partitions and membership changes on five nodes in Docker, and every node ended at one state.
+    text: Client histories of 287,516 operations stayed linearizable through 187 faults across six three-minute runs, from SIGKILL and freezes to partitions and membership changes on five nodes in Docker, every node ending at one state.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: planted-bugs
@@ -75,7 +75,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun's live demo discovers its servers through the registry's HTTP API. No request was lost in 43 runs, 443,047 requests, even with the registry's leader killed or every node stopped for 30 s, since none waits on the registry.
+    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's own lab runs no request was lost, 443,047 over 43 runs, with the registry's leader killed or every node down for 30 s, since none waits on it.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration

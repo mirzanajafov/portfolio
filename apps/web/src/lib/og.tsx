@@ -99,6 +99,5 @@ export function truncate(text: string, length: number): string {
     return text;
   }
   const cut = text.slice(0, length);
-  const kept = cut.slice(0, cut.lastIndexOf(' '));
-  return kept.endsWith('.') ? kept : `${kept}…`;
+  return `${cut.slice(0, cut.lastIndexOf(' '))}…`;
 }

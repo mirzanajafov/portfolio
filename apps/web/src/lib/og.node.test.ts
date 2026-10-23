@@ -21,8 +21,4 @@ describe('truncate', () => {
     expect(truncate('one two three four', 11)).toBe('one two…');
     expect(truncate('short', 11)).toBe('short');
   });
-
-  it('ends on a full sentence without marking a cut', () => {
-    expect(truncate('One two. Three four.', 12)).toBe('One two.');
-  });
 });

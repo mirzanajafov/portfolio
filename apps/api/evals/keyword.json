@@ -405,7 +405,7 @@
       ],
       "cited": [
         "fivefamilies/registry-ttl",
-        "fivefamilies/portalgun-registry"
+        "fivefamilies/slow-registration"
       ],
       "hit": true,
       "refused": false
