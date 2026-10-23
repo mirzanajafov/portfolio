@@ -1,15 +1,19 @@
 {
   "engine": "keyword",
-  "questions": 50,
-  "hits": 44,
+  "questions": 58,
+  "hits": 52,
   "refusals": 0,
-  "hitRate": 0.88,
+  "hitRate": 0.897,
   "byProject": {
     "carwash-ledger": {
       "questions": 8,
       "hits": 8
     },
     "portalgun": {
+      "questions": 8,
+      "hits": 8
+    },
+    "fivefamilies": {
       "questions": 8,
       "hits": 8
     },
@@ -129,6 +133,7 @@
         "carwash-ledger/independent-checker"
       ],
       "cited": [
+        "carwash-ledger/db-enforced",
         "carwash-ledger/independent-checker"
       ],
       "hit": true,
@@ -318,6 +323,107 @@
       "refused": false
     },
     {
+      "project": "fivefamilies",
+      "question": "Does FiveFamilies stay linearizable when nodes are killed and partitioned?",
+      "expected": [
+        "fivefamilies/lab-runs",
+        "fivefamilies/seeds-clean"
+      ],
+      "cited": [
+        "fivefamilies/lab-runs",
+        "fivefamilies/known-bugs"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "How do you know the FiveFamilies simulator would catch a real Raft bug?",
+      "expected": [
+        "fivefamilies/planted-bugs",
+        "fivefamilies/own-vote"
+      ],
+      "cited": [
+        "fivefamilies/planted-bugs"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "How long do clients wait when the FiveFamilies leader dies?",
+      "expected": [
+        "fivefamilies/failover-timeout"
+      ],
+      "cited": [
+        "fivefamilies/failover-timeout",
+        "fivefamilies/known-bugs"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "Why doesn't a slow disk on the leader cause an election?",
+      "expected": [
+        "fivefamilies/disk-stalls"
+      ],
+      "cited": [
+        "fivefamilies/case-study/decision-3"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "How does FiveFamilies compare to etcd?",
+      "expected": [
+        "fivefamilies/etcd-writes"
+      ],
+      "cited": [
+        "fivefamilies/etcd-writes"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "Why are ReadIndex reads the default in FiveFamilies?",
+      "expected": [
+        "fivefamilies/read-paths"
+      ],
+      "cited": [
+        "fivefamilies/read-paths"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "How long does a dead instance stay in the FiveFamilies registry?",
+      "expected": [
+        "fivefamilies/registry-ttl"
+      ],
+      "cited": [
+        "fivefamilies/registry-ttl",
+        "fivefamilies/portalgun-registry"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
+      "project": "fivefamilies",
+      "question": "Why does the Raft core have no clock or goroutines?",
+      "expected": [
+        "fivefamilies/deterministic-core"
+      ],
+      "cited": [
+        "fivefamilies/deterministic-core"
+      ],
+      "hit": true,
+      "refused": false
+    },
+    {
       "project": "matchium",
       "question": "How does Matchium decide which questions to ask each user?",
       "expected": [
@@ -402,7 +508,8 @@
         "poof/preemption"
       ],
       "cited": [
-        "poof/pool-beats-splitting"
+        "poof/pool-beats-splitting",
+        "poof/case-study/decision-2"
       ],
       "hit": true,
       "refused": false
@@ -453,8 +560,7 @@
         "poof/admission"
       ],
       "cited": [
-        "poof/case-study/decision-4",
-        "poof/admission"
+        "poof/case-study/decision-4"
       ],
       "hit": true,
       "refused": false

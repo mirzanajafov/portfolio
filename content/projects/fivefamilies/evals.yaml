@@ -1,0 +1,16 @@
+- question: Does FiveFamilies stay linearizable when nodes are killed and partitioned?
+  expects: [lab-runs, seeds-clean]
+- question: How do you know the FiveFamilies simulator would catch a real Raft bug?
+  expects: [planted-bugs, own-vote]
+- question: How long do clients wait when the FiveFamilies leader dies?
+  expects: [failover-timeout]
+- question: Why doesn't a slow disk on the leader cause an election?
+  expects: [disk-stalls]
+- question: How does FiveFamilies compare to etcd?
+  expects: [etcd-writes]
+- question: Why are ReadIndex reads the default in FiveFamilies?
+  expects: [read-paths]
+- question: How long does a dead instance stay in the FiveFamilies registry?
+  expects: [registry-ttl]
+- question: Why does the Raft core have no clock or goroutines?
+  expects: [deterministic-core]

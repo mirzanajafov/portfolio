@@ -1,0 +1,99 @@
+name: FiveFamilies
+order: 3
+hook: Raft from scratch in Go, checked under partitions, crashes and pauses
+summary: >-
+  Raft written from scratch in Go, with a write-ahead log, snapshots, membership changes and three
+  ways to read, under a key-value store with sessions, TTL leases, watches and the service registry
+  PortalGun's demo discovers its servers through. A deterministic simulator with planted bugs and a
+  linearizability checker test it, and I measured what the main guarantees cost, with etcd as a
+  reference.
+visibility: public
+links:
+  live: https://fivefamilies.najafov.dev
+  repo: https://github.com/mirzanajafov/fivefamilies
+stack: [Go, gRPC, Porcupine, Next.js]
+headline: lab-runs
+facts:
+  - id: lab-runs
+    text: Client histories of 287,516 operations stayed linearizable through 187 faults across six three-minute runs, from SIGKILL and freezes to partitions and membership changes on five nodes in Docker, every node ending at one state.
+    kind: measured
+    source: { file: README.md, section: Is it correct? }
+  - id: planted-bugs
+    text: The simulator catches each of the ten bugs I planted on purpose (one only with PreVote off), seven of them within 42 seeds, and CI replays a seed that catches each one on every pull request.
+    kind: measured
+    source: { file: README.md, section: Is it correct? }
+  - id: seeds-clean
+    text: On 2026-10-17 I ran 100,000 simulator seeds with random faults on the code as it was then, half of them modelling the server loop's batching, and none failed.
+    kind: measured
+    source: { file: README.md, section: Is it correct? }
+  - id: own-vote
+    text: In seed 2888 a node won an election before its own vote was on its disk, was killed, and won the same term again with a shorter log. The durability invariant and Log Matching caught it.
+    kind: measured
+    source: { file: README.md, section: Is it correct? }
+  - id: deterministic-core
+    text: The Raft core is a plain struct with no goroutines, clock, sockets or files and gets its randomness from a seed, so a run replays exactly. An import test guards that, and CI runs the same seeds twice and checks the trace hashes match.
+    kind: design
+    source: { file: README.md, section: How it's built }
+  - id: wal-cut
+    text: After a crash the WAL cuts only a tail that looks like a lost write and refuses to start on any other damage, because cutting there could drop entries the node already acknowledged.
+    kind: design
+    source: { file: README.md, section: How it's built }
+  - id: failover-timeout
+    text: When the leader is killed under 200 writes a second, the others elect a new leader and clients wait a median of 194 ms at a 150 ms election timeout and 1,206 ms at 1 s, so the timeout is nearly all of the failover.
+    kind: measured
+    source: { file: README.md, section: Failover }
+  - id: cold-client
+    text: My first failover sweep was slower because of the client. With cold connections its own part of the gap was 35-150 ms against 24-29 ms, so it now connects to every node when it's created.
+    kind: measured
+    source: { file: README.md, section: Failover }
+  - id: disk-stalls
+    text: Injected leader disk stalls of up to 1 s caused no election at a 150 ms timeout, 0 of 15, because heartbeats never wait for the disk. With the loop waiting for every fsync, a 1 s stall forced one every time at 300 ms.
+    kind: measured
+    source: { file: README.md, section: The price of a short timeout }
+  - id: group-commit
+    text: One fsync per write caps five nodes at 110 writes a second. Group commit packs about 50 entries into one fsync near the knee and carries 5,000.
+    kind: measured
+    source: { file: README.md, section: fsync }
+  - id: read-paths
+    text: At 2,000 operations a second, 95% of them reads, a lease read takes 0.3 ms at the median and ReadIndex 0.7 ms, against 13.4 ms through the log. ReadIndex is the default because a lease is only safe while clocks drift less than its margin.
+    kind: measured
+    source: { file: README.md, section: Reads }
+  - id: batching-loop
+    text: Batching the server loop's whole queue before asking the core for work halved the messages per write, 8.4 against 15.5 at 4,000 a second, and lifted ReadIndex's knee from 8,000 to 14,000 that night, 12,000 in three rounds a day later.
+    kind: measured
+    source: { file: README.md, section: 'Throughput, and the batching I was throwing away' }
+  - id: one-processor
+    text: Near the write knee the leader was only 39-54% busy. A trace showed the event loop waiting for the node's one Go processor, so every node now runs with at least two.
+    kind: measured
+    source: { file: README.md, section: 'Throughput, and the batching I was throwing away' }
+  - id: etcd-writes
+    text: Against etcd 3.6.15 on the same laptop, a write is faster at low load, 11-13 ms at the median against 23-36 ms, but under load etcd takes at least 16,000 writes a second on five nodes to my 6,000.
+    kind: measured
+    source: { file: README.md, section: Next to etcd }
+  - id: registry-ttl
+    text: With a 2 s TTL, a killed instance left the registry for its consumers after a median of 1.75 s, and 3.18 s when the leader died too, because a new leader gives every lease a full TTL again.
+    kind: measured
+    source: { file: README.md, section: 'The registry, and PortalGun' }
+  - id: portalgun-registry
+    text: PortalGun's live demo finds its servers through the registry's HTTP API. Its lab runs lost none of 443,047 requests in 43 runs, with the leader killed or every node down in some, since nothing on its request path reads the registry.
+    kind: measured
+    source: { file: README.md, section: 'The registry, and PortalGun' }
+  - id: slow-registration
+    text: Registering while the leader is dead took a median of 2.1 s and up to 8.1 s, because the node's HTTP API keeps trying the dead leader for 2 s at a time. It's the first fix on my list.
+    kind: measured
+    source: { file: README.md, section: 'The registry, and PortalGun' }
+  - id: known-bugs
+    text: Three bugs are open. A client waits out a dead leader for a whole 2 s attempt (a keepalive can even get stuck), a restore killed halfway starts the node empty, and a node stopped while the others run waits for Docker to kill it.
+    kind: design
+    source: { file: README.md, section: What isn't done }
+  - id: bounded-chaos
+    text: Visitors can kill the leader, freeze a node, cut one off, slow its disk or ask the leader to step down, one fault at a time for at most 15 s, while the demo clients' history is checked every 10 s.
+    kind: design
+    source: { file: README.md, section: How the pieces fit }
+  - id: one-host
+    text: All five nodes share one machine, so real network distance and clock drift exist only in the simulator, and on the public demo partitions and slow disks are injected inside the node.
+    kind: design
+    source: { file: README.md }
+health: https://fivefamilies.najafov.dev/
+knowledge:
+  - README.md

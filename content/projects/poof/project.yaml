@@ -1,5 +1,5 @@
 name: poof
-order: 4
+order: 5
 hook: A deadline scheduler that measured when helpers help
 summary: >-
   You send a batch of photos with a deadline, and poof either finishes it on one small server or says
