@@ -330,7 +330,8 @@
         "fivefamilies/seeds-clean"
       ],
       "cited": [
-        "fivefamilies/lab-runs"
+        "fivefamilies/lab-runs",
+        "fivefamilies/known-bugs"
       ],
       "hit": true,
       "refused": false
@@ -356,7 +357,7 @@
       ],
       "cited": [
         "fivefamilies/failover-timeout",
-        "fivefamilies/disk-stalls"
+        "fivefamilies/known-bugs"
       ],
       "hit": true,
       "refused": false

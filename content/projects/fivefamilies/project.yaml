@@ -39,7 +39,7 @@ facts:
     kind: design
     source: { file: README.md, section: How it's built }
   - id: failover-timeout
-    text: When the leader is killed under 200 writes a second, failover keeps clients waiting a median of 194 ms at a 150 ms election timeout and 1,206 ms at 1 s, so the timeout is nearly all of it.
+    text: When the leader is killed under 200 writes a second, the others elect a new leader and clients wait a median of 194 ms at a 150 ms election timeout and 1,206 ms at 1 s, so the timeout is nearly all of the failover.
     kind: measured
     source: { file: README.md, section: Failover }
   - id: cold-client
@@ -75,13 +75,17 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's own lab runs no request was lost, 443,047 over 43 runs, with the registry's leader killed or every node down for 30 s, since none waits on it.
+    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's own lab runs no request was lost, 443,047 over 43 runs, including runs with the registry's leader killed or every node down for 30 s.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration
     text: Registering while the leader is dead took a median of 2.1 s and up to 8.1 s, because the node's HTTP API keeps trying the dead leader for 2 s at a time. It's the first fix on my list.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
+  - id: known-bugs
+    text: Three bugs are still open. The client stays with a leader that stopped answering for a whole 2 s attempt, a restore killed halfway starts the node empty, and a stopped node waits for Docker to kill it.
+    kind: design
+    source: { file: README.md, section: What isn't done }
   - id: bounded-chaos
     text: Visitors can kill the leader, freeze a node, cut one off, slow its disk or ask the leader to step down, one fault at a time for at most 15 s, while the demo clients' history is checked every 10 s.
     kind: design
