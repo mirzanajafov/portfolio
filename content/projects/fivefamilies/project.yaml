@@ -4,7 +4,7 @@ hook: Raft from scratch in Go, checked under partitions, crashes and pauses
 summary: >-
   Raft written from scratch in Go, with a write-ahead log, snapshots, membership changes and three
   ways to read, under a key-value store with sessions, TTL leases, watches and the service registry
-  PortalGun gets its dimensions from. A deterministic simulator with planted bugs and a
+  PortalGun's demo discovers its servers through. A deterministic simulator with planted bugs and a
   linearizability checker test it, and I measured what the main guarantees cost, with etcd as a
   reference.
 visibility: public
@@ -75,7 +75,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun gets its dimensions from the registry's HTTP API. No request was lost in its 43 runs, 443,047 requests, even with the registry's leader killed or every node stopped for 30 s, because none of them waits on the registry.
+    text: PortalGun's live demo discovers its servers through the registry's HTTP API. No request was lost in 43 runs, 443,047 requests, even with the registry's leader killed or every node stopped for 30 s, since none waits on the registry.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration

@@ -3,9 +3,9 @@ problem: >-
   from scratch in Go. Raft is a university assignment and Go already has two good implementations,
   so having Raft wasn't the reason to build it. I wanted the rare part: evidence that it stays
   correct when the network splits, processes crash or freeze and disks lose what wasn't synced, and
-  a number for what each guarantee costs. PortalGun, my API gateway, gets its dimensions from the
-  registry on top, and in the dashboard the five nodes are the five families and the leader is the
-  Don.
+  a number for what each guarantee costs. PortalGun, my API gateway, discovers its servers through
+  the registry on top, and in the dashboard the five nodes are the five families and the leader is
+  the Don.
 decisions:
   - title: A Raft core that can't touch the world
     body: >-
