@@ -15,11 +15,11 @@ stack: [Go, gRPC, Porcupine, Next.js]
 headline: lab-runs
 facts:
   - id: lab-runs
-    text: Client histories stayed linearizable through 187 faults, from SIGKILL and freezes to partitions and membership changes, in six three-minute runs of five nodes in Docker, 287,516 operations, with every node at the same state.
+    text: Client histories of 287,516 operations stayed linearizable through 187 faults, from SIGKILL and freezes to partitions and membership changes, in six three-minute runs of five nodes in Docker, every node ending at the same state.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: planted-bugs
-    text: The simulator catches each of the ten bugs I planted on purpose, two of them only with a setting changed and seven within 42 seeds, and CI replays a seed that catches each one on every pull request.
+    text: The simulator catches each of the ten bugs I planted on purpose, eight of them with the default settings and six of those within 42 seeds, and CI replays a seed that catches each one on every pull request.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: seeds-clean
@@ -75,7 +75,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun finds its upstreams through the registry's HTTP API. No request was lost in its 43 runs (443,047), even with the registry's leader killed or every node stopped for 30 s, because nothing on its request path reads the registry.
+    text: PortalGun gets its dimensions from the registry's HTTP API. No request was lost in its 43 runs, 443,047 requests, even with the registry's leader killed or every node stopped for 30 s, because none of them waits on the registry.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration
