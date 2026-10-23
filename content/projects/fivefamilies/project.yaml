@@ -4,7 +4,7 @@ hook: Raft from scratch in Go, checked under partitions, crashes and pauses
 summary: >-
   Raft written from scratch in Go, with a write-ahead log, snapshots, membership changes and three
   ways to read, under a key-value store with sessions, TTL leases, watches and the service registry
-  PortalGun finds its upstreams through. A deterministic simulator with planted bugs and a
+  PortalGun gets its dimensions from. A deterministic simulator with planted bugs and a
   linearizability checker test it, and I measured what the main guarantees cost, with etcd as a
   reference.
 visibility: public
@@ -15,11 +15,11 @@ stack: [Go, gRPC, Porcupine, Next.js]
 headline: lab-runs
 facts:
   - id: lab-runs
-    text: Client histories of 287,516 operations stayed linearizable through 187 faults, from SIGKILL and freezes to partitions and membership changes, in six three-minute runs of five nodes in Docker, every node ending at the same state.
+    text: Through 187 faults in six three-minute runs, client histories of 287,516 operations stayed linearizable. Faults ranged from SIGKILL and freezes to partitions and membership changes on five nodes in Docker, and every node ended at one state.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: planted-bugs
-    text: The simulator catches each of the ten bugs I planted on purpose, eight of them with the default settings and six of those within 42 seeds, and CI replays a seed that catches each one on every pull request.
+    text: The simulator catches each of the ten bugs I planted on purpose (one only with PreVote off), seven of them within 42 seeds, and CI replays a seed that catches each one on every pull request.
     kind: measured
     source: { file: README.md, section: Is it correct? }
   - id: seeds-clean
