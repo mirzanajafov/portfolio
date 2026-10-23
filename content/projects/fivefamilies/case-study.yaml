@@ -52,13 +52,13 @@ decisions:
       are still to do.
     facts: [read-paths, batching-loop, one-processor, etcd-writes]
 proof: >-
-  I know it works and stays correct from the simulator, the lab and what they found in my code: a
-  leader elected before its own vote was durable, a lease that couldn't see a pause, leases that
-  expired a tick early and watches that waited forever. Every refactor of code the simulator runs
-  that wasn't meant to change behaviour has to give identical totals for 1,000 seeds in five
-  configurations before it's merged. An audit halfway through fixed nine more bugs, one of them live
-  in production: cleaning up old snapshots could delete the one the WAL still pointed to. The
-  numbers come from an open-loop generator that measures from each request's scheduled time.
+  I know it works, and where it wasn't correct, from the simulator, the lab and what they found in
+  my code: a leader elected before its own vote was durable, a lease that couldn't see a pause,
+  leases that expired a tick early and watches that waited forever. Every refactor of code the
+  simulator runs that wasn't meant to change behaviour has to give identical totals for 1,000 seeds
+  in five configurations before it's merged. An audit halfway through fixed nine more bugs, one of
+  them live in production: cleaning up old snapshots could delete the one the WAL still pointed to.
+  The numbers come from an open-loop generator that measures from each request's scheduled time.
 next: >-
   The biggest limit is that everything runs on one machine, so real distance between nodes and
   clocks that really drift are only simulated, and joint consensus and TLS between nodes aren't

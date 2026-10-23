@@ -406,7 +406,7 @@
       ],
       "cited": [
         "fivefamilies/registry-ttl",
-        "fivefamilies/slow-registration"
+        "fivefamilies/known-bugs"
       ],
       "hit": true,
       "refused": false

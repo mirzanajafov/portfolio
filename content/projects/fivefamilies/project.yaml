@@ -59,7 +59,7 @@ facts:
     kind: measured
     source: { file: README.md, section: Reads }
   - id: batching-loop
-    text: Batching the server loop's whole queue before asking the core for work halved the messages per write, 8.4 against 15.5 at 4,000 a second, and lifted ReadIndex's knee from 8,000 to 14,000 that night.
+    text: Batching the server loop's whole queue before asking the core for work halved the messages per write, 8.4 against 15.5 at 4,000 a second, and lifted ReadIndex's knee from 8,000 to 14,000 that night, 12,000 in three rounds a day later.
     kind: measured
     source: { file: README.md, section: 'Throughput, and the batching I was throwing away' }
   - id: one-processor
@@ -75,7 +75,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's own lab runs no request was lost, 443,047 over 43 runs, including runs with the registry's leader killed or every node down for 30 s.
+    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's lab runs no request was lost, 443,047 over 43, including runs with the leader killed or every node down, as no request reads the registry.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration
@@ -83,7 +83,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: known-bugs
-    text: Three bugs are still open. The client stays with a leader that stopped answering for a whole 2 s attempt, a restore killed halfway starts the node empty, and a stopped node waits for Docker to kill it.
+    text: Three bugs are open. The client stays with a dead leader for a 2 s attempt and a keepalive whose window ends first never moves on, a restore killed halfway starts a node empty, and a stopped node waits for Docker.
     kind: design
     source: { file: README.md, section: What isn't done }
   - id: bounded-chaos
