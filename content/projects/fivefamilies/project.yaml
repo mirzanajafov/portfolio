@@ -75,7 +75,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: portalgun-registry
-    text: PortalGun's live demo finds its servers through the registry's HTTP API. In PortalGun's lab runs no request was lost, 443,047 over 43, including runs with the leader killed or every node down, as no request reads the registry.
+    text: PortalGun's live demo finds its servers through the registry's HTTP API. Its lab runs lost none of 443,047 requests in 43 runs, with the leader killed or every node down in some, since nothing on its request path reads the registry.
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: slow-registration
@@ -83,7 +83,7 @@ facts:
     kind: measured
     source: { file: README.md, section: 'The registry, and PortalGun' }
   - id: known-bugs
-    text: Three bugs are open. The client stays with a dead leader for a 2 s attempt and a keepalive whose window ends first never moves on, a restore killed halfway starts a node empty, and a stopped node waits for Docker.
+    text: Three bugs are open. A client waits out a dead leader for a whole 2 s attempt (a keepalive can even get stuck), a restore killed halfway starts the node empty, and a node stopped while the others run waits for Docker to kill it.
     kind: design
     source: { file: README.md, section: What isn't done }
   - id: bounded-chaos
