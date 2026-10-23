@@ -327,7 +327,7 @@
       "question": "Does FiveFamilies stay linearizable when nodes are killed and partitioned?",
       "expected": [
         "fivefamilies/lab-runs",
-        "fivefamilies/planted-bugs"
+        "fivefamilies/seeds-clean"
       ],
       "cited": [
         "fivefamilies/lab-runs",
@@ -382,7 +382,8 @@
         "fivefamilies/etcd-writes"
       ],
       "cited": [
-        "fivefamilies/etcd-writes"
+        "fivefamilies/etcd-writes",
+        "fivefamilies/deterministic-core"
       ],
       "hit": true,
       "refused": false

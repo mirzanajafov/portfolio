@@ -1,5 +1,5 @@
 - question: Does FiveFamilies stay linearizable when nodes are killed and partitioned?
-  expects: [lab-runs, planted-bugs]
+  expects: [lab-runs, seeds-clean]
 - question: How do you know the FiveFamilies simulator would catch a real Raft bug?
   expects: [planted-bugs, own-vote]
 - question: How long do clients wait when the FiveFamilies leader dies?
