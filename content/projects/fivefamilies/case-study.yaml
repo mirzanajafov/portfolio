@@ -10,8 +10,9 @@ demo: commission
 demoCaption: >-
   A three-minute lab run, replayed from its report at six times the speed: five nodes in Docker
   through 32 faults, from SIGKILL and freezes to splits and membership changes. A ring marks the
-  Don, the leader, and the pulses are its heartbeats, lost on a cut link or a dead node. After the
-  heal the history of its 51,012 operations was linearizable and all five families held one state.
+  Don, who leads, and pulses stand for its heartbeats, lost on a cut link or at a dead node. After
+  the heal the history of its 51,012 operations was linearizable and all five families held one
+  state.
 decisions:
   - title: A Raft core that can't touch the world
     body: >-

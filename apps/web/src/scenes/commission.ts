@@ -20,16 +20,17 @@ import {
 } from 'three';
 import {
   type Commission,
+  type LinkState,
   type Seat,
   commissionAt,
-  commissionData as data,
   commissionLoop,
-  commissionParameters as p,
+  commissionParameters,
+  commissionReplay as replay,
   families,
   numeral,
-  reaches,
 } from './commission-model';
 import { aim, viewFrom } from './framing';
+import { formatNumber, plural } from './readout';
 import type { Palette, SceneFactory } from './types';
 
 const seatRadius = 3;
@@ -56,35 +57,33 @@ function clock(at: number) {
   return `${Math.floor(at / 60)}:${String(Math.floor(at % 60)).padStart(2, '0')}`;
 }
 
-const number = (value: number) => value.toLocaleString('en-US');
-
 function readoutOf(state: Commission): string[] {
   if (state.finished) {
     return [
-      `after the heal: ${number(data.ops)} operations, linearizable`,
-      `all five families at state ${data.hash}, entry ${number(data.stateIndex)}`,
-      `the ${data.lab.runs} three-minute runs: ${data.lab.faults} faults · ${number(data.lab.ops)} operations · all linearizable`,
+      `after the heal: ${formatNumber(replay.ops)} operations, linearizable`,
+      `all five families at state ${replay.hash}, entry ${formatNumber(replay.stateIndex)}`,
+      `${replay.lab.runs} three-minute runs: ${replay.lab.faults} faults · ${formatNumber(replay.lab.ops)} operations · ${replay.lab.linearizable} of ${replay.lab.runs} linearizable`,
     ];
   }
   const reign = state.don
     ? `reign ${state.term}, family ${numeral(state.don)} is the Don`
     : 'no Don, a succession';
   return [
-    `${clock(state.at)} of ${clock(data.seconds)} · ${reign}`,
+    `${clock(state.at)} of ${clock(replay.seconds)} · ${reign}`,
     state.fault?.text ?? 'no fault right now',
-    `fault ${state.faults} of ${data.faults.length} · ${state.successions} successions so far`,
+    `fault ${state.faultsSoFar} of ${replay.faults.length} · ${plural(state.successions, 'succession', 'successions')} so far`,
   ];
 }
 
 function seatText(state: Commission, node: number, narrow: boolean): string {
   if (state.finished) {
-    return narrow ? numeral(node) : `${numeral(node)} · ${data.hash}`;
+    return narrow ? numeral(node) : `${numeral(node)} · ${replay.hash}`;
   }
   const seat = state.seat(node);
   let word = looks[seat].word;
   if (seat === 'up' && node === state.don) {
     word = 'Don';
-  } else if (seat === 'up' && state.slow.includes(node)) {
+  } else if (seat === 'up' && state.slow(node)) {
     word = 'slow network';
   }
   return word ? `${numeral(node)} · ${word}` : numeral(node);
@@ -129,7 +128,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   linkGeometry.setAttribute('color', new Float32BufferAttribute(links.length * 6, 3));
 
   const donRing = new Mesh(donRingGeometry, donRingMaterial);
-  const pulses = new InstancedMesh(pulseGeometry, pulseMaterial, families.length * 2);
+  const pulses = new InstancedMesh(pulseGeometry, pulseMaterial, families.length - 1);
   pulses.instanceMatrix.setUsage(DynamicDrawUsage);
   pulses.frustumCulled = false;
   scene.add(
@@ -142,26 +141,26 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   );
   const reign = hooks.label('', 'node');
 
-  let palette: Palette | undefined;
-  let seconds = commissionLoop - p.holdSeconds - 2;
+  let palette: Palette | null = null;
+  let seconds = commissionLoop - commissionParameters.holdSeconds - 1;
   let donRingSize = 0;
   let settled = false;
   const donRingAt = new Vector3(0, 0, -seatRadius);
-  const colour = new Color();
+  const color = new Color();
   const matrix = new Matrix4();
   const spot = new Vector3();
 
-  const linkColour = (state: Commission, a: number, b: number, colours: Palette) => {
-    const gone = (node: number) => ['down', 'out'].includes(state.seat(node));
-    const ab = reaches(state, a, b);
-    const ba = reaches(state, b, a);
-    if (gone(a) || gone(b) || (!ab && !ba)) {
-      return colours.bg;
+  const linkShade = (link: LinkState, shades: Palette) => {
+    switch (link) {
+      case 'open':
+        return shades.muted;
+      case 'slow':
+        return shades.signal;
+      case 'one-way':
+        return shades.line;
+      case 'cut':
+        return shades.bg;
     }
-    if (!ab || !ba) {
-      return colours.line;
-    }
-    return state.slow.includes(a) || state.slow.includes(b) ? colours.signal : colours.muted;
   };
 
   const pulse = (from: Vector3, to: Vector3, along: number, size: number) => {
@@ -202,11 +201,11 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         seat.lift += (look.lift - seat.lift) * follow;
         seat.size += (look.size - seat.size) * follow;
         if (placed === 'up') {
-          colour.copy(seat.node === state.don ? palette.accent : palette.fg);
+          color.copy(seat.node === state.don ? palette.accent : palette.fg);
         } else {
-          colour.copy(placed === 'frozen' ? palette.signal : palette.muted);
+          color.copy(placed === 'frozen' ? palette.signal : palette.muted);
         }
-        seat.material.color.lerp(colour, follow);
+        seat.material.color.lerp(color, follow);
         seat.mesh.position.copy(seat.direction).multiplyScalar(seat.radius).setY(seat.lift);
         seat.mesh.scale.setScalar(seat.size);
         seat.label.textContent = seatText(state, seat.node, narrow);
@@ -214,46 +213,50 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       }
 
       const positions = linkGeometry.getAttribute('position');
-      const colours = linkGeometry.getAttribute('color');
+      const colors = linkGeometry.getAttribute('color');
       for (const [index, { a, b }] of links.entries()) {
-        const shade = linkColour(state, a.node, b.node, palette);
-        for (const [end, seat] of [a, b].entries()) {
-          const { x, y, z } = seat.mesh.position;
-          positions.setXYZ(index * 2 + end, x, y, z);
-          colours.setXYZ(index * 2 + end, shade.r, shade.g, shade.b);
-        }
+        const shade = linkShade(state.link(a.node, b.node), palette);
+        positions.setXYZ(index * 2, a.mesh.position.x, a.mesh.position.y, a.mesh.position.z);
+        positions.setXYZ(index * 2 + 1, b.mesh.position.x, b.mesh.position.y, b.mesh.position.z);
+        colors.setXYZ(index * 2, shade.r, shade.g, shade.b);
+        colors.setXYZ(index * 2 + 1, shade.r, shade.g, shade.b);
       }
       positions.needsUpdate = true;
-      colours.needsUpdate = true;
+      colors.needsUpdate = true;
 
-      const don = seats.find((seat) => seat.node === state.don && state.seat(seat.node) === 'up');
-      if (don) {
-        donRingAt.lerp(don.mesh.position, follow);
+      const speaker = seats.find((seat) => seat.node === state.speaker);
+      if (speaker) {
+        donRingAt.lerp(speaker.mesh.position, follow);
       }
-      donRingSize += ((don ? 1 : 0) - donRingSize) * follow;
+      donRingSize += ((speaker ? 1 : 0) - donRingSize) * follow;
       donRing.position.copy(donRingAt);
       donRing.scale.setScalar(Math.max(0.001, donRingSize));
 
       pulses.count = 0;
-      if (don) {
+      if (speaker) {
         const phase = (seconds % beat) / beat;
         for (const seat of seats) {
-          const placed = state.seat(seat.node);
-          if (seat === don || placed === 'out') {
+          const heartbeat = state.heartbeat(seat.node);
+          if (heartbeat === 'none') {
             continue;
           }
-          const delivered = placed !== 'down' && reaches(state, don.node, seat.node);
           if (phase < 0.45) {
             const along = phase / 0.45;
-            const size = delivered || along < 0.5 ? 1 : 2 - along * 2;
+            const lost = heartbeat === 'lost';
+            const size = !lost || along < 0.5 ? 1 : 2 - along * 2;
             pulse(
-              don.mesh.position,
+              speaker.mesh.position,
               seat.mesh.position,
-              delivered ? along : Math.min(along, 0.5),
+              lost ? Math.min(along, 0.5) : along,
               size,
             );
-          } else if (delivered && placed === 'up' && reaches(state, seat.node, don.node)) {
-            pulse(seat.mesh.position, don.mesh.position, Math.min(1, (phase - 0.5) / 0.45), 0.7);
+          } else if (phase >= 0.5 && heartbeat === 'answered') {
+            pulse(
+              seat.mesh.position,
+              speaker.mesh.position,
+              Math.min(1, (phase - 0.5) / 0.45),
+              0.7,
+            );
           }
         }
       }

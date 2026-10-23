@@ -1,25 +1,40 @@
+import { Color } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createCommissionScene } from './commission';
-import {
-  commissionAt,
-  commissionData,
-  commissionLoop,
-  commissionParameters,
-} from './commission-model';
-import type { SceneHooks } from './types';
+import { commissionAt, commissionParameters, commissionReplay } from './commission-model';
+import type { Palette, SceneHooks } from './types';
 
-const hooks = {
-  renderer: undefined,
-  label: () => document.createElement('span'),
-  place: () => undefined,
-  size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+function sceneHooks(width: number) {
+  const labels: HTMLElement[] = [];
+  const hooks = {
+    renderer: undefined,
+    label: (text: string) => {
+      const label = document.createElement('span');
+      label.textContent = text;
+      labels.push(label);
+      return label;
+    },
+    place: () => undefined,
+    size: () => ({ width, height: 800 }),
+  } as unknown as SceneHooks;
+  return { hooks, labels };
+}
+
+const palette: Palette = {
+  bg: new Color('#121110'),
+  fg: new Color('#ede9e2'),
+  muted: new Color('#a09a90'),
+  line: new Color('#3a3733'),
+  grid: new Color('#1e1d1b'),
+  accent: new Color('#e8794a'),
+  signal: new Color('#86b3d6'),
+};
 
 const atRun = (seconds: number) => commissionAt(seconds / commissionParameters.speed);
 
 describe("the lab run taken from FiveFamilies' results", () => {
   it('adds up to what its README says about the six three-minute runs', () => {
-    expect(commissionData.lab).toEqual({
+    expect(commissionReplay.lab).toEqual({
       runs: 6,
       faults: 187,
       ops: 287516,
@@ -28,69 +43,105 @@ describe("the lab run taken from FiveFamilies' results", () => {
     });
   });
 
-  it('replays a run with every kind of fault that ended linearizable at one state', () => {
-    expect(commissionData).toMatchObject({
-      seconds: 180,
-      ops: 51012,
-      linearizable: true,
-      sameState: true,
-    });
-    expect(commissionData.faults).toHaveLength(32);
-    expect(new Set(commissionData.faults.map((fault) => fault.kind)).size).toBe(10);
+  it('replays a run with every kind of fault', () => {
+    expect(commissionReplay).toMatchObject({ seconds: 180, ops: 51012, hash: '178dddfd' });
+    expect(commissionReplay.faults).toHaveLength(32);
+    expect(new Set(commissionReplay.faults.map((fault) => fault.kind)).size).toBe(10);
   });
 
   it('keeps faults and reigns in the order they happened', () => {
-    const starts = commissionData.faults.map((fault) => fault.start);
+    const starts = commissionReplay.faults.map((fault) => fault.start);
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
-    const terms = commissionData.leaders.map((entry) => entry.term).filter((term) => term > 0);
+    const terms = commissionReplay.leaders.map((entry) => entry.term).filter((term) => term > 0);
     expect(terms).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 });
 
 describe('the replay', () => {
-  it('has no Don between killing the leader and the next election', () => {
+  it('has no Don from the moment the leader is killed until the next one is seen', () => {
     expect(atRun(31)).toMatchObject({ don: 2, term: 3 });
-    expect(atRun(32.5)).toMatchObject({ don: 0 });
-    expect(atRun(32.5).seat(2)).toBe('down');
+    expect(atRun(31.9)).toMatchObject({ don: 0 });
+    expect(atRun(31.9).seat(2)).toBe('down');
     expect(atRun(34)).toMatchObject({ don: 1, term: 4 });
   });
 
   it('cuts a split both ways and a one-way fault in one direction', () => {
     const split = atRun(45);
     expect(split.fault?.text).toBe('split II | I III IV V');
-    expect(split.blocked).toHaveLength(8);
+    expect(split.link(1, 2)).toBe('cut');
+    expect(split.link(1, 3)).toBe('open');
     const oneWay = atRun(17);
-    expect(oneWay.blocked).toEqual([{ from: 2, to: 3 }]);
+    expect(oneWay.fault?.text).toBe("II can't reach III, III still reaches II");
+    expect(oneWay.link(2, 3)).toBe('one-way');
+  });
+
+  it('loses the heartbeat to a family that is down or cut off, and only one that is up answers', () => {
+    const split = atRun(45);
+    expect(split.speaker).toBe(1);
+    expect(split.heartbeat(2)).toBe('lost');
+    expect(split.heartbeat(3)).toBe('answered');
+    const frozen = atRun(4);
+    expect(frozen.seat(4)).toBe('frozen');
+    expect(frozen.heartbeat(4)).toBe('unanswered');
+    const killed = atRun(25);
+    expect(killed.speaker).toBe(5);
+    expect(killed.heartbeat(1)).toBe('lost');
+    expect(killed.heartbeat(5)).toBe('none');
+  });
+
+  it('names the leader a kill hits, and the family a bridge leaves in the middle', () => {
+    expect(atRun(32).fault?.text).toBe('SIGKILL family II, the Don');
+    expect(atRun(23).fault?.text).toBe('SIGKILL family I');
+    expect(atRun(100).fault?.text).toBe('I II III | V, bridged by IV');
   });
 
   it('ends the run with every family seated and eight reigns behind it', () => {
     const end = atRun(180);
-    expect(end).toMatchObject({ finished: true, don: 3, term: 8, successions: 7, faults: 32 });
+    expect(end).toMatchObject({ finished: true, don: 3, term: 8, successions: 7, faultsSoFar: 32 });
     expect([1, 2, 3, 4, 5].map((node) => end.seat(node))).toEqual(['up', 'up', 'up', 'up', 'up']);
   });
 });
 
 describe('the commission scene', () => {
   it('opens on the verdict, so a still frame already says it', () => {
+    const { hooks, labels } = sceneHooks(1200);
     const scene = createCommissionScene(hooks);
+    scene.setColors(palette);
     for (let i = 0; i < 40; i += 1) {
       scene.step(0.05, i * 0.05);
     }
+    scene.render(2, 10);
     expect(scene.readout()).toEqual([
       'after the heal: 51,012 operations, linearizable',
       'all five families at state 178dddfd, entry 30,706',
-      'the 6 three-minute runs: 187 faults · 287,516 operations · all linearizable',
+      '6 three-minute runs: 187 faults · 287,516 operations · 6 of 6 linearizable',
     ]);
+    expect(labels.map((label) => label.textContent)).toContain('III · 178dddfd');
     scene.dispose();
   });
 
-  it('starts the run again after the verdict', () => {
+  it('labels the families by their numerals alone on a narrow screen', () => {
+    const { hooks, labels } = sceneHooks(400);
     const scene = createCommissionScene(hooks);
-    for (let frame = 0; frame < 60 * (commissionParameters.holdSeconds + 3); frame += 1) {
+    scene.setColors(palette);
+    scene.step(2, 2);
+    scene.render(2, 10);
+    expect(labels.map((label) => label.textContent)).toContain('III');
+    scene.dispose();
+  });
+
+  it('starts the run again after the verdict and counts successions in words', () => {
+    const { hooks, labels } = sceneHooks(1200);
+    const scene = createCommissionScene(hooks);
+    scene.setColors(palette);
+    for (let frame = 0; frame < 60 * 9; frame += 1) {
       scene.step(1 / 60, frame / 60);
     }
-    expect(scene.readout()[0]).toMatch(/^0:\d\d of 3:00 · reign 1, family I is the Don$/);
-    expect(commissionLoop).toBeGreaterThan(30);
+    scene.render(9, 1 / 60);
+    const [first, , third] = scene.readout();
+    expect(first).toMatch(/^0:2\d of 3:00 · reign 2, family V is the Don$/);
+    expect(third).toMatch(/^fault 5 of 32 · 1 succession so far$/);
+    expect(labels.map((label) => label.textContent)).toContain('V · Don');
     scene.dispose();
   });
 });
