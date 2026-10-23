@@ -35,7 +35,7 @@ import type { Palette, SceneFactory } from './types';
 const seatRadius = 3;
 const outRadius = 4.9;
 const tableRadius = 4.2;
-const beat = data.heartbeat * p.speed;
+const beat = 0.6;
 const tilt = 1.02;
 const swing = 0.08;
 
@@ -98,14 +98,14 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   tableGeometry.rotateX(-Math.PI / 2);
   const rimGeometry = new EdgesGeometry(tableGeometry, 1);
   const seatGeometry = new SphereGeometry(0.42, 24, 16);
-  const crownGeometry = new RingGeometry(0.62, 0.72, 48);
-  crownGeometry.rotateX(-Math.PI / 2);
+  const donRingGeometry = new RingGeometry(0.62, 0.72, 48);
+  donRingGeometry.rotateX(-Math.PI / 2);
   const pulseGeometry = new SphereGeometry(0.09, 10, 8);
 
   const tableMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.12 });
   const rimMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.9 });
   const linkMaterial = new LineBasicMaterial({ vertexColors: true });
-  const crownMaterial = new MeshBasicMaterial({ side: DoubleSide });
+  const donRingMaterial = new MeshBasicMaterial({ side: DoubleSide });
   const pulseMaterial = new MeshBasicMaterial();
 
   const seats = families.map((_, index) => {
@@ -128,7 +128,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   linkGeometry.setAttribute('position', new Float32BufferAttribute(links.length * 6, 3));
   linkGeometry.setAttribute('color', new Float32BufferAttribute(links.length * 6, 3));
 
-  const crown = new Mesh(crownGeometry, crownMaterial);
+  const donRing = new Mesh(donRingGeometry, donRingMaterial);
   const pulses = new InstancedMesh(pulseGeometry, pulseMaterial, families.length * 2);
   pulses.instanceMatrix.setUsage(DynamicDrawUsage);
   pulses.frustumCulled = false;
@@ -136,7 +136,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
     new Mesh(tableGeometry, tableMaterial),
     new LineSegments(rimGeometry, rimMaterial),
     new LineSegments(linkGeometry, linkMaterial),
-    crown,
+    donRing,
     pulses,
     ...seats.map((seat) => seat.mesh),
   );
@@ -144,9 +144,9 @@ export const createCommissionScene: SceneFactory = (hooks) => {
 
   let palette: Palette | undefined;
   let seconds = commissionLoop - p.holdSeconds - 2;
-  let crownSize = 0;
+  let donRingSize = 0;
   let settled = false;
-  const crownAt = new Vector3(0, 0, -seatRadius);
+  const donRingAt = new Vector3(0, 0, -seatRadius);
   const colour = new Color();
   const matrix = new Matrix4();
   const spot = new Vector3();
@@ -177,7 +177,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       palette = next;
       tableMaterial.color.copy(next.grid);
       rimMaterial.color.copy(next.line);
-      crownMaterial.color.copy(next.accent);
+      donRingMaterial.color.copy(next.accent);
       pulseMaterial.color.copy(next.accent);
     },
     step(dt) {
@@ -228,11 +228,11 @@ export const createCommissionScene: SceneFactory = (hooks) => {
 
       const don = seats.find((seat) => seat.node === state.don && state.seat(seat.node) === 'up');
       if (don) {
-        crownAt.lerp(don.mesh.position, follow);
+        donRingAt.lerp(don.mesh.position, follow);
       }
-      crownSize += ((don ? 1 : 0) - crownSize) * follow;
-      crown.position.copy(crownAt);
-      crown.scale.setScalar(Math.max(0.001, crownSize));
+      donRingSize += ((don ? 1 : 0) - donRingSize) * follow;
+      donRing.position.copy(donRingAt);
+      donRing.scale.setScalar(Math.max(0.001, donRingSize));
 
       pulses.count = 0;
       if (don) {
@@ -288,7 +288,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         tableMaterial,
         rimMaterial,
         linkMaterial,
-        crownMaterial,
+        donRingMaterial,
         pulseMaterial,
       ]) {
         material.dispose();
@@ -297,7 +297,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         tableGeometry,
         rimGeometry,
         seatGeometry,
-        crownGeometry,
+        donRingGeometry,
         pulseGeometry,
         linkGeometry,
       ]) {

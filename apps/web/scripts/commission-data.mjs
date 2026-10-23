@@ -108,7 +108,6 @@ const [hash, stateIndex] = run.hashes[0].split('@');
 const data = {
   run: replayed,
   seconds: seconds(run.options.duration_ns),
-  heartbeat: Number.parseInt(run.options.heartbeat, 10) / 1000,
   ops: run.ops,
   linearizable: run.linearizable === 'Ok',
   sameState: run.states_equal && new Set(run.hashes).size === 1,

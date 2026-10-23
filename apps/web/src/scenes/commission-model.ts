@@ -9,7 +9,7 @@ export const commissionParameters = {
 
 export const families = ['I', 'II', 'III', 'IV', 'V'];
 
-export type Fault = {
+type Fault = {
   start: number;
   end: number;
   kind: string;
