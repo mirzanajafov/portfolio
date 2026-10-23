@@ -1,12 +1,3 @@
-import replay from './commission-data.json';
-
-export const commissionReplay = replay;
-
-export const commissionParameters = {
-  speed: 6,
-  holdSeconds: 4,
-};
-
 export const families = ['I', 'II', 'III', 'IV', 'V'];
 
 export type Seat = 'up' | 'down' | 'frozen' | 'out';
@@ -15,13 +6,19 @@ export type Heartbeat = 'answered' | 'unanswered' | 'lost' | 'none';
 
 type Link = { from: number; to: number };
 
-type Fault = {
+export type Fault = {
   start: number;
   end: number;
   kind: string;
   nodes: number[];
   groups: number[][];
   netem: { delay: number; jitter: number; loss: number } | null;
+};
+
+export type Replay = {
+  seconds: number;
+  leaders: { at: number; node: number; term: number }[];
+  faults: Fault[];
 };
 
 type Effect = {
@@ -32,10 +29,6 @@ type Effect = {
   blocked: Link[];
   text: string;
 };
-
-const parameters = commissionParameters;
-export const commissionRunEnd = replay.seconds / parameters.speed;
-export const commissionLoop = commissionRunEnd + parameters.holdSeconds;
 
 const everyone = families.map((_, index) => index + 1);
 
@@ -59,18 +52,14 @@ function across(a: number[], b: number[]): Link[] {
   );
 }
 
-function reignAt(at: number) {
-  return replay.leaders.filter((entry) => entry.at <= at);
-}
-
-function effectOf(fault: Fault): Effect {
+function effectOf(fault: Fault, leader: number): Effect {
   const none = { down: [], frozen: [], out: [], slow: [], blocked: [] };
   const [first = 0, second = 0] = fault.nodes;
   const [left = [], right = []] = fault.groups;
   switch (fault.kind) {
     case 'kill':
     case 'kill-leader': {
-      const don = first === reignAt(fault.start).at(-1)?.node ? ', the Don' : '';
+      const don = first === leader ? ', the Don' : '';
       return { ...none, down: [first], text: `SIGKILL family ${numeral(first)}${don}` };
     }
     case 'pause':
@@ -125,9 +114,6 @@ function effectOf(fault: Fault): Effect {
   }
 }
 
-const faults: Fault[] = replay.faults;
-const timeline = faults.map((fault) => ({ ...fault, ...effectOf(fault) }));
-
 function seatOf(node: number, active: Effect[]): Seat {
   if (active.some((fault) => fault.down.includes(node))) {
     return 'down';
@@ -138,53 +124,60 @@ function seatOf(node: number, active: Effect[]): Seat {
   return active.some((fault) => fault.out.includes(node)) ? 'out' : 'up';
 }
 
-export function commissionAt(seconds: number) {
-  const at = Math.min(replay.seconds, seconds * parameters.speed);
-  const active = timeline.filter((fault) => fault.start <= at && at < fault.end);
-  const seats = new Map(everyone.map((node) => [node, seatOf(node, active)]));
-  const seat = (node: number): Seat => seats.get(node) ?? 'up';
-  const blocked = active.flatMap((fault) => fault.blocked);
-  const slow = active.flatMap((fault) => fault.slow);
-  const reaches = (from: number, to: number) =>
-    !blocked.some((link) => link.from === from && link.to === to);
-  const gone = (node: number) => seat(node) === 'down' || seat(node) === 'out';
-  const elected = reignAt(at);
-  const current = elected.at(-1);
-  const leader = current?.node ?? 0;
-  const don = seat(leader) === 'down' ? 0 : leader;
-  const speaker = don > 0 && seat(don) === 'up' ? don : 0;
-  return {
-    at,
-    finished: seconds >= commissionRunEnd,
-    don,
-    speaker,
-    term: current?.term ?? 0,
-    seat,
-    slow: (node: number) => slow.includes(node),
-    link(a: number, b: number): LinkState {
-      const ab = reaches(a, b);
-      const ba = reaches(b, a);
-      if (gone(a) || gone(b) || (!ab && !ba)) {
-        return 'cut';
-      }
-      if (!ab || !ba) {
-        return 'one-way';
-      }
-      return slow.includes(a) || slow.includes(b) ? 'slow' : 'open';
-    },
-    heartbeat(node: number): Heartbeat {
-      if (speaker === 0 || node === speaker || seat(node) === 'out') {
-        return 'none';
-      }
-      if (seat(node) === 'down' || !reaches(speaker, node)) {
-        return 'lost';
-      }
-      return seat(node) === 'up' && reaches(node, speaker) ? 'answered' : 'unanswered';
-    },
-    fault: active.at(-1) ?? null,
-    faultsSoFar: timeline.filter((fault) => fault.start <= at).length,
-    successions: Math.max(0, elected.filter((entry) => entry.node > 0).length - 1),
+export function commissionOf(replay: Replay) {
+  const reignAt = (at: number) => replay.leaders.filter((entry) => entry.at <= at);
+  const timeline = replay.faults.map((fault) => ({
+    ...fault,
+    ...effectOf(fault, reignAt(fault.start).at(-1)?.node ?? 0),
+  }));
+
+  return (at: number) => {
+    const active = timeline.filter((fault) => fault.start <= at && at < fault.end);
+    const seats = new Map(everyone.map((node) => [node, seatOf(node, active)]));
+    const seat = (node: number): Seat => seats.get(node) ?? 'up';
+    const blocked = active.flatMap((fault) => fault.blocked);
+    const slow = active.flatMap((fault) => fault.slow);
+    const reaches = (from: number, to: number) =>
+      !blocked.some((link) => link.from === from && link.to === to);
+    const gone = (node: number) => seat(node) === 'down' || seat(node) === 'out';
+    const elected = reignAt(at);
+    const current = elected.at(-1);
+    const leader = current?.node ?? 0;
+    const don = leader > 0 && seat(leader) !== 'down' ? leader : 0;
+    const speaker = don > 0 && seat(don) === 'up' ? don : 0;
+    return {
+      at,
+      finished: at >= replay.seconds,
+      don,
+      speaker,
+      term: current?.term ?? 0,
+      seat,
+      slow: (node: number) => slow.includes(node),
+      link(a: number, b: number): LinkState {
+        const ab = reaches(a, b);
+        const ba = reaches(b, a);
+        if (gone(a) || gone(b) || (!ab && !ba)) {
+          return 'cut';
+        }
+        if (!ab || !ba) {
+          return 'one-way';
+        }
+        return slow.includes(a) || slow.includes(b) ? 'slow' : 'open';
+      },
+      heartbeat(node: number): Heartbeat {
+        if (speaker === 0 || node === speaker || seat(node) === 'out') {
+          return 'none';
+        }
+        if (seat(node) === 'down' || !reaches(speaker, node)) {
+          return 'lost';
+        }
+        return seat(node) === 'up' && reaches(node, speaker) ? 'answered' : 'unanswered';
+      },
+      fault: active.at(-1) ?? null,
+      faultsSoFar: timeline.filter((fault) => fault.start <= at).length,
+      successions: Math.max(0, elected.filter((entry) => entry.node > 0).length - 1),
+    };
   };
 }
 
-export type Commission = ReturnType<typeof commissionAt>;
+export type Commission = ReturnType<ReturnType<typeof commissionOf>>;

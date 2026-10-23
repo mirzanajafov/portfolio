@@ -25,9 +25,7 @@ const details = {
     String.raw`^netem delay (?<delay>\d+)ms (?<jitter>\d+)ms loss (?<loss>\d+)% on node ${node('a')}$`,
   ),
   member: new RegExp(`^remove node ${node('a')}, then add it back as a learner and promote it$`),
-  transfer: new RegExp(
-    String.raw`^hand leadership from node ${node('a')} to ${node('b')}(?: \(node [1-5] leads after it\))?$`,
-  ),
+  transfer: new RegExp(`^hand leadership from node ${node('a')} to ${node('b')}$`),
 };
 
 const seconds = (ns) => Math.round(ns / 1e7) / 100;

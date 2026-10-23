@@ -1,13 +1,13 @@
 import { Color, LineBasicMaterial, LineSegments } from 'three';
 import { describe, expect, it } from 'vitest';
-import { createCommissionScene } from './commission';
 import {
-  commissionAt,
   commissionLoop,
   commissionParameters,
   commissionReplay,
   commissionRunEnd,
-} from './commission-model';
+  createCommissionScene,
+} from './commission';
+import { type Fault, type Replay, commissionOf } from './commission-model';
 import type { Palette, SceneHooks } from './types';
 
 function sceneHooks(width: number) {
@@ -36,7 +36,15 @@ const palette: Palette = {
   signal: new Color(),
 };
 
-const atRun = (seconds: number) => commissionAt(seconds / commissionParameters.speed);
+const atRun = commissionOf(commissionReplay);
+
+function replayWith(fault: Partial<Fault>): Replay {
+  return {
+    seconds: 60,
+    leaders: [{ at: 0, node: 1, term: 1 }],
+    faults: [{ start: 10, end: 20, kind: 'pause', nodes: [], groups: [], netem: null, ...fault }],
+  };
+}
 
 describe("the lab run taken from FiveFamilies' results", () => {
   it('adds up to what its README says about the six three-minute runs', () => {
@@ -105,6 +113,28 @@ describe('the replay', () => {
     const end = atRun(180);
     expect(end).toMatchObject({ finished: true, don: 3, term: 8, successions: 7, faultsSoFar: 32 });
     expect([1, 2, 3, 4, 5].map((node) => end.seat(node))).toEqual(['up', 'up', 'up', 'up', 'up']);
+  });
+
+  it('keeps a frozen Don as the Don, though nobody hears from it', () => {
+    const frozen = commissionOf(replayWith({ kind: 'pause', nodes: [1] }))(15);
+    expect(frozen).toMatchObject({ don: 1, speaker: 0 });
+    expect(frozen.heartbeat(2)).toBe('none');
+  });
+
+  it('takes a removed family off the table, its links and its heartbeats', () => {
+    const removed = commissionOf(replayWith({ kind: 'member', nodes: [3] }))(15);
+    expect(removed.seat(3)).toBe('out');
+    expect(removed.link(1, 3)).toBe('cut');
+    expect(removed.heartbeat(3)).toBe('none');
+  });
+
+  it('marks the links of a family on a bad network and says how bad', () => {
+    const slow = commissionOf(
+      replayWith({ kind: 'netem', nodes: [2], netem: { delay: 45, jitter: 18, loss: 9 } }),
+    )(15);
+    expect(slow.link(1, 2)).toBe('slow');
+    expect(slow.link(1, 3)).toBe('open');
+    expect(slow.fault?.text).toBe('family II on a bad network: 45 ± 18 ms, 9% loss');
   });
 });
 

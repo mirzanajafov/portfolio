@@ -18,20 +18,27 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
+import replay from './commission-data.json';
 import {
   type Commission,
   type LinkState,
   type Seat,
-  commissionAt,
-  commissionLoop,
-  commissionReplay as replay,
-  commissionRunEnd,
+  commissionOf,
   families,
   numeral,
 } from './commission-model';
 import { aim, viewFrom } from './framing';
-import { formatNumber, plural } from './readout';
+import { formatClock, formatNumber, plural } from './readout';
 import type { Palette, SceneFactory } from './types';
+
+export const commissionReplay = replay;
+export const commissionParameters = { speed: 6, holdSeconds: 4 };
+export const commissionRunEnd = replay.seconds / commissionParameters.speed;
+export const commissionLoop = commissionRunEnd + commissionParameters.holdSeconds;
+
+const commissionAt = commissionOf(replay);
+const runSeconds = (seconds: number) =>
+  Math.min(replay.seconds, seconds * commissionParameters.speed);
 
 const seatRadius = 3;
 const outRadius = 4.9;
@@ -53,10 +60,6 @@ const framePoints = Array.from({ length: 12 }, (_, index) => {
 }).concat([new Vector3(0, 1.9, -seatRadius), new Vector3(0, 1.2, seatRadius)]);
 const center = new Vector3(0, 0.4, 0);
 
-function clock(at: number) {
-  return `${Math.floor(at / 60)}:${String(Math.floor(at % 60)).padStart(2, '0')}`;
-}
-
 function readoutOf(state: Commission): string[] {
   if (state.finished) {
     return [
@@ -69,7 +72,7 @@ function readoutOf(state: Commission): string[] {
     ? `reign ${state.term}, family ${numeral(state.don)} is the Don`
     : 'no Don, a succession';
   return [
-    `${clock(state.at)} of ${clock(replay.seconds)} · ${reign}`,
+    `${formatClock(state.at)} of ${formatClock(replay.seconds)} · ${reign}`,
     state.fault?.text ?? 'no fault right now',
     `fault ${state.faultsSoFar} of ${replay.faults.length} · ${plural(state.successions, 'succession', 'successions')} so far`,
   ];
@@ -143,7 +146,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
 
   let palette: Palette | null = null;
   let seconds = commissionRunEnd - 1;
-  let state = commissionAt(seconds);
+  let state = commissionAt(runSeconds(seconds));
   let donRingSize = 0;
   let settled = false;
   const donRingAt = new Vector3(0, 0, -seatRadius);
@@ -151,7 +154,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   const matrix = new Matrix4();
   const spot = new Vector3();
 
-  const linkShade = (link: LinkState, shades: Palette) => {
+  const linkShade = (link: Exclude<LinkState, 'cut'>, shades: Palette) => {
     switch (link) {
       case 'open':
         return shades.muted;
@@ -159,8 +162,12 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         return shades.signal;
       case 'one-way':
         return shades.line;
-      case 'cut':
-        return shades.bg;
+    }
+  };
+
+  const write = (label: HTMLElement, text: string) => {
+    if (label.textContent !== text) {
+      label.textContent = text;
     }
   };
 
@@ -185,7 +192,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       if (seconds >= commissionLoop) {
         seconds -= commissionLoop;
       }
-      state = commissionAt(seconds);
+      state = commissionAt(runSeconds(seconds));
     },
     render(time, dt = 1 / 60) {
       if (!palette) {
@@ -209,7 +216,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         seat.material.color.lerp(color, follow);
         seat.mesh.position.copy(seat.direction).multiplyScalar(seat.radius).setY(seat.lift);
         seat.mesh.scale.setScalar(seat.size);
-        seat.label.textContent = seatText(state, seat.node, narrow);
+        write(seat.label, seatText(state, seat.node, narrow));
         hooks.place(seat.label, seat.mesh.position.x, seat.lift - 0.2, seat.mesh.position.z);
       }
 
@@ -217,7 +224,6 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       const colors = linkGeometry.getAttribute('color');
       for (const [index, { a, b }] of links.entries()) {
         const link = state.link(a.node, b.node);
-        const shade = linkShade(link, palette);
         const end = link === 'cut' ? a : b;
         positions.setXYZ(index * 2, a.mesh.position.x, a.mesh.position.y, a.mesh.position.z);
         positions.setXYZ(
@@ -226,8 +232,11 @@ export const createCommissionScene: SceneFactory = (hooks) => {
           end.mesh.position.y,
           end.mesh.position.z,
         );
-        colors.setXYZ(index * 2, shade.r, shade.g, shade.b);
-        colors.setXYZ(index * 2 + 1, shade.r, shade.g, shade.b);
+        if (link !== 'cut') {
+          const shade = linkShade(link, palette);
+          colors.setXYZ(index * 2, shade.r, shade.g, shade.b);
+          colors.setXYZ(index * 2 + 1, shade.r, shade.g, shade.b);
+        }
       }
       positions.needsUpdate = true;
       colors.needsUpdate = true;
@@ -243,7 +252,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       pulses.count = 0;
       const speaker = seats.find((seat) => seat.node === state.speaker);
       if (speaker) {
-        const phase = (seconds % beat) / beat;
+        const phase = (time % beat) / beat;
         for (const seat of seats) {
           const heartbeat = state.heartbeat(seat.node);
           if (heartbeat === 'none') {
@@ -272,11 +281,11 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       pulses.instanceMatrix.needsUpdate = true;
 
       if (state.finished) {
-        reign.textContent = 'linearizable';
+        write(reign, 'linearizable');
       } else {
-        reign.textContent = state.don ? `reign ${state.term}` : 'no Don';
+        write(reign, state.don ? `reign ${state.term}` : 'no Don');
       }
-      hooks.place(reign, 0, 0, tableRadius);
+      hooks.place(reign, 0, 0, narrow ? outRadius + 0.4 : tableRadius);
 
       aim(
         camera,
