@@ -1,7 +1,13 @@
-import { Color } from 'three';
+import { Color, LineBasicMaterial, LineSegments } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createCommissionScene } from './commission';
-import { commissionAt, commissionParameters, commissionReplay } from './commission-model';
+import {
+  commissionAt,
+  commissionLoop,
+  commissionParameters,
+  commissionReplay,
+  commissionRunEnd,
+} from './commission-model';
 import type { Palette, SceneHooks } from './types';
 
 function sceneHooks(width: number) {
@@ -21,13 +27,13 @@ function sceneHooks(width: number) {
 }
 
 const palette: Palette = {
-  bg: new Color('#121110'),
-  fg: new Color('#ede9e2'),
-  muted: new Color('#a09a90'),
-  line: new Color('#3a3733'),
-  grid: new Color('#1e1d1b'),
-  accent: new Color('#e8794a'),
-  signal: new Color('#86b3d6'),
+  bg: new Color(),
+  fg: new Color(),
+  muted: new Color(),
+  line: new Color(),
+  grid: new Color(),
+  accent: new Color(),
+  signal: new Color(),
 };
 
 const atRun = (seconds: number) => commissionAt(seconds / commissionParameters.speed);
@@ -71,7 +77,7 @@ describe('the replay', () => {
     expect(split.link(1, 2)).toBe('cut');
     expect(split.link(1, 3)).toBe('open');
     const oneWay = atRun(17);
-    expect(oneWay.fault?.text).toBe("II can't reach III, III still reaches II");
+    expect(oneWay.fault?.text).toBe("family II's packets to III dropped");
     expect(oneWay.link(2, 3)).toBe('one-way');
   });
 
@@ -120,13 +126,49 @@ describe('the commission scene', () => {
     scene.dispose();
   });
 
-  it('labels the families by their numerals alone on a narrow screen', () => {
+  it('leaves the state hash off the families at the verdict on a narrow screen', () => {
     const { hooks, labels } = sceneHooks(400);
     const scene = createCommissionScene(hooks);
     scene.setColors(palette);
     scene.step(2, 2);
     scene.render(2, 10);
     expect(labels.map((label) => label.textContent)).toContain('III');
+    scene.dispose();
+  });
+
+  it('draws no line across a link a fault cuts', () => {
+    const { hooks } = sceneHooks(1200);
+    const scene = createCommissionScene(hooks);
+    scene.setColors(palette);
+    const openedAt = commissionRunEnd - 1;
+    scene.step(commissionLoop - openedAt + 52 / commissionParameters.speed, 0);
+    scene.render(0, 10);
+    const [links] = scene.scene.children.filter(
+      (child): child is LineSegments =>
+        child instanceof LineSegments &&
+        child.material instanceof LineBasicMaterial &&
+        child.material.vertexColors,
+    );
+    const positions = links?.geometry.getAttribute('position');
+    const lengths = Array.from({ length: (positions?.count ?? 0) / 2 }, (_, index) =>
+      Math.hypot(
+        (positions?.getX(index * 2) ?? 0) - (positions?.getX(index * 2 + 1) ?? 0),
+        (positions?.getZ(index * 2) ?? 0) - (positions?.getZ(index * 2 + 1) ?? 0),
+      ),
+    );
+    expect(scene.readout()[1]).toBe('family II cut off from the rest');
+    expect(lengths.map((length) => length > 0)).toEqual([
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+    ]);
     scene.dispose();
   });
 

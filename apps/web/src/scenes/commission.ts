@@ -24,8 +24,8 @@ import {
   type Seat,
   commissionAt,
   commissionLoop,
-  commissionParameters,
   commissionReplay as replay,
+  commissionRunEnd,
   families,
   numeral,
 } from './commission-model';
@@ -142,7 +142,8 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   const reign = hooks.label('', 'node');
 
   let palette: Palette | null = null;
-  let seconds = commissionLoop - commissionParameters.holdSeconds - 1;
+  let seconds = commissionRunEnd - 1;
+  let state = commissionAt(seconds);
   let donRingSize = 0;
   let settled = false;
   const donRingAt = new Vector3(0, 0, -seatRadius);
@@ -184,13 +185,13 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       if (seconds >= commissionLoop) {
         seconds -= commissionLoop;
       }
+      state = commissionAt(seconds);
     },
     render(time, dt = 1 / 60) {
       if (!palette) {
         return;
       }
       const narrow = hooks.size().width < 600;
-      const state = commissionAt(seconds);
       const follow = settled ? 1 - Math.exp(-dt * 9) : 1;
       settled = true;
 
@@ -215,24 +216,32 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       const positions = linkGeometry.getAttribute('position');
       const colors = linkGeometry.getAttribute('color');
       for (const [index, { a, b }] of links.entries()) {
-        const shade = linkShade(state.link(a.node, b.node), palette);
+        const link = state.link(a.node, b.node);
+        const shade = linkShade(link, palette);
+        const end = link === 'cut' ? a : b;
         positions.setXYZ(index * 2, a.mesh.position.x, a.mesh.position.y, a.mesh.position.z);
-        positions.setXYZ(index * 2 + 1, b.mesh.position.x, b.mesh.position.y, b.mesh.position.z);
+        positions.setXYZ(
+          index * 2 + 1,
+          end.mesh.position.x,
+          end.mesh.position.y,
+          end.mesh.position.z,
+        );
         colors.setXYZ(index * 2, shade.r, shade.g, shade.b);
         colors.setXYZ(index * 2 + 1, shade.r, shade.g, shade.b);
       }
       positions.needsUpdate = true;
       colors.needsUpdate = true;
 
-      const speaker = seats.find((seat) => seat.node === state.speaker);
-      if (speaker) {
-        donRingAt.lerp(speaker.mesh.position, follow);
+      const don = seats.find((seat) => seat.node === state.don);
+      if (don) {
+        donRingAt.lerp(don.mesh.position, follow);
       }
-      donRingSize += ((speaker ? 1 : 0) - donRingSize) * follow;
+      donRingSize += ((don ? 1 : 0) - donRingSize) * follow;
       donRing.position.copy(donRingAt);
       donRing.scale.setScalar(Math.max(0.001, donRingSize));
 
       pulses.count = 0;
+      const speaker = seats.find((seat) => seat.node === state.speaker);
       if (speaker) {
         const phase = (seconds % beat) / beat;
         for (const seat of seats) {
@@ -278,7 +287,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       );
     },
     readout() {
-      return readoutOf(commissionAt(seconds));
+      return readoutOf(state);
     },
     dispose() {
       reign.remove();

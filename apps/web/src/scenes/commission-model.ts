@@ -34,8 +34,8 @@ type Effect = {
 };
 
 const parameters = commissionParameters;
-const replayEnd = replay.seconds / parameters.speed;
-export const commissionLoop = replayEnd + parameters.holdSeconds;
+export const commissionRunEnd = replay.seconds / parameters.speed;
+export const commissionLoop = commissionRunEnd + parameters.holdSeconds;
 
 const everyone = families.map((_, index) => index + 1);
 
@@ -59,8 +59,8 @@ function across(a: number[], b: number[]): Link[] {
   );
 }
 
-function leaderAt(at: number): number {
-  return replay.leaders.filter((entry) => entry.at <= at).at(-1)?.node ?? 0;
+function reignAt(at: number) {
+  return replay.leaders.filter((entry) => entry.at <= at);
 }
 
 function effectOf(fault: Fault): Effect {
@@ -70,7 +70,7 @@ function effectOf(fault: Fault): Effect {
   switch (fault.kind) {
     case 'kill':
     case 'kill-leader': {
-      const don = first === leaderAt(fault.start) ? ', the Don' : '';
+      const don = first === reignAt(fault.start).at(-1)?.node ? ', the Don' : '';
       return { ...none, down: [first], text: `SIGKILL family ${numeral(first)}${don}` };
     }
     case 'pause':
@@ -100,7 +100,7 @@ function effectOf(fault: Fault): Effect {
       return {
         ...none,
         blocked: [{ from: first, to: second }],
-        text: `${numeral(first)} can't reach ${numeral(second)}, ${numeral(second)} still reaches ${numeral(first)}`,
+        text: `family ${numeral(first)}'s packets to ${numeral(second)} dropped`,
       };
     case 'netem': {
       const network = fault.netem
@@ -148,14 +148,14 @@ export function commissionAt(seconds: number) {
   const reaches = (from: number, to: number) =>
     !blocked.some((link) => link.from === from && link.to === to);
   const gone = (node: number) => seat(node) === 'down' || seat(node) === 'out';
-  const elected = replay.leaders.filter((entry) => entry.at <= at);
+  const elected = reignAt(at);
   const current = elected.at(-1);
   const leader = current?.node ?? 0;
   const don = seat(leader) === 'down' ? 0 : leader;
   const speaker = don > 0 && seat(don) === 'up' ? don : 0;
   return {
     at,
-    finished: seconds >= replayEnd,
+    finished: seconds >= commissionRunEnd,
     don,
     speaker,
     term: current?.term ?? 0,

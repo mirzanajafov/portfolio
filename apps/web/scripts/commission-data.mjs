@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [labDir, outPath = 'src/scenes/commission-data.json'] = process.argv.slice(2);
@@ -9,51 +9,63 @@ if (!labDir) {
 
 const replayed = '20261017-seed5-3m';
 const threeMinutes = 180e9;
-const kinds = [
-  'kill',
-  'kill-leader',
-  'pause',
-  'isolate',
-  'split',
-  'bridge',
-  'one-way',
-  'netem',
-  'member',
-  'transfer',
-];
+const nodes = 5;
+const node = (name) => `(?<${name}>[1-5])`;
+const group = (name) => String.raw`\[(?<${name}>[1-5]( [1-5])*)\]`;
 
-const reportOf = (dir) => JSON.parse(readFileSync(join(labDir, dir, 'report.json'), 'utf8'));
+const details = {
+  kill: new RegExp(`^SIGKILL node ${node('a')}$`),
+  'kill-leader': new RegExp(`^SIGKILL node ${node('a')}$`),
+  pause: new RegExp(`^pause node ${node('a')}$`),
+  isolate: new RegExp(`^isolate node ${node('a')}$`),
+  split: new RegExp(String.raw`^split ${group('left')} \| ${group('right')}$`),
+  bridge: new RegExp(`^bridge ${node('a')} between ${group('left')} and ${group('right')}$`),
+  'one-way': new RegExp(`^one-way ${node('a')} -> ${node('b')}$`),
+  netem: new RegExp(
+    String.raw`^netem delay (?<delay>\d+)ms (?<jitter>\d+)ms loss (?<loss>\d+)% on node ${node('a')}$`,
+  ),
+  member: new RegExp(`^remove node ${node('a')}, then add it back as a learner and promote it$`),
+  transfer: new RegExp(
+    String.raw`^hand leadership from node ${node('a')} to ${node('b')}(?: \(node [1-5] leads after it\))?$`,
+  ),
+};
+
 const seconds = (ns) => Math.round(ns / 1e7) / 100;
-const nodesIn = (text) => [...text.matchAll(/\d+/g)].map((match) => Number(match[0]));
+const numbers = (text) => text.split(' ').map(Number);
 
 function parse(fault) {
+  const at = `the ${fault.kind} fault at ${seconds(fault.start_ns)} s`;
   if (fault.error) {
-    throw new Error(
-      `the ${fault.kind} fault at ${seconds(fault.start_ns)} s failed: ${fault.error}`,
-    );
+    throw new Error(`${at} failed: ${fault.error}`);
   }
-  if (!kinds.includes(fault.kind)) {
-    throw new Error(`a ${fault.kind} fault is not one the scene can draw`);
+  const fields = details[fault.kind]?.exec(fault.detail)?.groups;
+  if (!fields) {
+    throw new Error(`${at} has a detail the scene can't read: ${fault.detail}`);
   }
-  const netem = /delay (\d+)ms (\d+)ms loss (\d+)% on node (\d+)/.exec(fault.detail);
+  const { a, b, left, right, delay, jitter, loss } = fields;
   return {
     start: seconds(fault.start_ns),
     end: seconds(fault.end_ns),
     kind: fault.kind,
-    nodes: netem ? [Number(netem[4])] : nodesIn(fault.detail.replace(/\[[\d ]+\]|\(.*\)/g, '')),
-    groups: [...fault.detail.matchAll(/\[([\d ]+)\]/g)].map((match) => nodesIn(match[1])),
-    netem: netem
-      ? { delay: Number(netem[1]), jitter: Number(netem[2]), loss: Number(netem[3]) }
-      : null,
+    nodes: [a, b].filter(Boolean).map(Number),
+    groups: [left, right].filter(Boolean).map(numbers),
+    netem: delay ? { delay: Number(delay), jitter: Number(jitter), loss: Number(loss) } : null,
   };
 }
 
+const reportOf = (dir) => JSON.parse(readFileSync(join(labDir, dir, 'report.json'), 'utf8'));
 const run = reportOf(replayed);
-if (run.linearizable !== 'Ok' || !run.states_equal || new Set(run.hashes).size !== 1) {
-  throw new Error(`${replayed} did not end linearizable with every node at one state`);
+if (
+  run.linearizable !== 'Ok' ||
+  !run.states_equal ||
+  run.hashes.length !== nodes ||
+  new Set(run.hashes).size !== 1
+) {
+  throw new Error(`${replayed} did not end linearizable with all ${nodes} nodes at one state`);
 }
-const lab = readdirSync(labDir)
-  .map(reportOf)
+const lab = readdirSync(labDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && existsSync(join(labDir, entry.name, 'report.json')))
+  .map((entry) => reportOf(entry.name))
   .filter((report) => report.options.duration_ns === threeMinutes);
 
 const replay = {
