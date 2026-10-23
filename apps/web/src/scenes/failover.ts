@@ -20,6 +20,7 @@ import {
 import data from './failover-data.json';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
+import { formatNumber } from './readout';
 import type { Palette, SceneFactory } from './types';
 
 export const failoverParameters = {
@@ -377,7 +378,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
           );
           portal.discMaterial.color.copy(broken ? palette.accent : palette.signal);
         });
-        const lost = `${now.lost.toLocaleString('en-US')} lost`;
+        const lost = `${formatNumber(now.lost)} lost`;
         const text = stateText(state, down);
         lane.title.textContent =
           text && !narrow
@@ -411,7 +412,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       const pace = speed < 1 ? `slowed ${Math.round(1 / speed)}×` : `${speed}× speed`;
       const what =
         clock < 0
-          ? `three dimensions, ${data.rate.toLocaleString('en-US')} requests a second`
+          ? `three dimensions, ${formatNumber(data.rate)} requests a second`
           : clock < data.clearMs
             ? 'dimension a refuses every connection'
             : `a is back after ${Math.round(data.clearMs / 1000)} s`;
@@ -420,7 +421,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         ...lanes.map(({ lane }) => {
           const now = laneAt(lane, clock);
           const retried = lane.id === 'probes' ? '' : ` · ${now.retried} retried`;
-          return `${lane.label}: ${Math.round(now.toA * 100)}% sent to a · ${now.lost.toLocaleString('en-US')} lost${retried}`;
+          return `${lane.label}: ${Math.round(now.toA * 100)}% sent to a · ${formatNumber(now.lost)} lost${retried}`;
         }),
       ];
     },
