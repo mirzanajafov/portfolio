@@ -330,7 +330,8 @@
         "portalgun/registry-runs"
       ],
       "cited": [
-        "portalgun/fivefamilies-registry"
+        "portalgun/fivefamilies-registry",
+        "portalgun/bounded-chaos"
       ],
       "hit": true,
       "refused": false

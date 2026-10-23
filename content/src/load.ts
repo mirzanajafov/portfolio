@@ -12,7 +12,7 @@ import {
   type Content,
   type Cv,
   type Project,
-  type ProjectFile,
+  type UnlinkedProject,
   type Role,
   type UsedProject,
 } from './schema.ts';
@@ -87,7 +87,7 @@ async function loadProject(
   root: string,
   slug: string,
   issues: ContentIssue[],
-): Promise<ProjectFile | undefined> {
+): Promise<UnlinkedProject | undefined> {
   const dir = `projects/${slug}`;
   if (!slugSchema.safeParse(slug).success) {
     issues.push({ file: dir, path: '', message: 'folder name must be a slug' });
@@ -149,7 +149,7 @@ async function loadProject(
 }
 
 function resolveUses(
-  project: ProjectFile,
+  project: UnlinkedProject,
   folders: string[],
   names: Map<string, string>,
   issues: ContentIssue[],
@@ -180,7 +180,7 @@ async function loadProjects(root: string, issues: ContentIssue[]): Promise<Proje
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  const projects: ProjectFile[] = [];
+  const projects: UnlinkedProject[] = [];
   for (const slug of slugs) {
     const project = await loadProject(root, slug, issues);
     if (project) {

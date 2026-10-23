@@ -172,12 +172,12 @@ export type EvalQuestion = z.infer<typeof evalSchema>;
 export type CaseStudy = z.infer<typeof caseStudySchema>;
 export type SceneName = (typeof sceneNames)[number];
 export type UsedProject = { slug: string; name: string; for: string };
-export type ProjectFile = z.infer<typeof projectSchema> & {
+export type UnlinkedProject = z.infer<typeof projectSchema> & {
   slug: string;
   evals: EvalQuestion[];
   caseStudy?: CaseStudy;
 };
-export type Project = Omit<ProjectFile, 'uses'> & { uses: UsedProject[] };
+export type Project = Omit<UnlinkedProject, 'uses'> & { uses: UsedProject[] };
 
 export type Content = {
   profile: Profile;
