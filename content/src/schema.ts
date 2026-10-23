@@ -69,6 +69,9 @@ export const projectSchema = z
       repo: z.url().optional(),
     }),
     stack: z.array(z.string().min(1)).min(1),
+    uses: z
+      .array(z.strictObject({ project: slugSchema, for: z.string().min(1).max(60) }))
+      .default([]),
     headline: slugSchema,
     facts: z.array(factSchema).min(1),
     health: z.url().optional(),
@@ -85,6 +88,17 @@ export const projectSchema = z
         });
       }
       ids.add(fact.id);
+    });
+    const used = new Set<string>();
+    project.uses.forEach((use, index) => {
+      if (used.has(use.project)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'project is used twice',
+          path: ['uses', index, 'project'],
+        });
+      }
+      used.add(use.project);
     });
     if (!ids.has(project.headline)) {
       ctx.addIssue({
@@ -157,11 +171,13 @@ export type Fact = z.infer<typeof factSchema>;
 export type EvalQuestion = z.infer<typeof evalSchema>;
 export type CaseStudy = z.infer<typeof caseStudySchema>;
 export type SceneName = (typeof sceneNames)[number];
-export type Project = z.infer<typeof projectSchema> & {
+export type UsedProject = { slug: string; name: string; for: string };
+export type UnlinkedProject = z.infer<typeof projectSchema> & {
   slug: string;
   evals: EvalQuestion[];
   caseStudy?: CaseStudy;
 };
+export type Project = Omit<UnlinkedProject, 'uses'> & { uses: UsedProject[] };
 
 export type Content = {
   profile: Profile;

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { type CSSProperties, ViewTransition, useEffect, useRef, useState } from 'react';
-import type { SceneName } from '@portfolio/content';
+import type { SceneName, UsedProject } from '@portfolio/content';
+import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
 
@@ -12,6 +13,7 @@ export type TourStop = {
   hook: string;
   fact?: { text: string; kind: 'measured' | 'parameter' | 'design' };
   stack: string[];
+  uses: UsedProject[];
   live?: string;
   code?: string;
   caseStudy?: string;
@@ -235,6 +237,7 @@ export function SystemsTour({
                   </li>
                 ))}
               </ul>
+              <ProjectUses uses={stop.uses} className="tour-uses" />
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 {stop.caseStudy && (
                   <Link

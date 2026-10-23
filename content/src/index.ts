@@ -9,4 +9,5 @@ export type {
   Project,
   Role,
   SceneName,
+  UsedProject,
 } from './schema.ts';

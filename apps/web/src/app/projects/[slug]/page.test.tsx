@@ -41,6 +41,14 @@ describe('case study pages', () => {
     expect(within(decision as HTMLElement).queryByText(/design parameter/)).toBeNull();
   });
 
+  it('links to the tour stop of a project this one uses', async () => {
+    await renderCaseStudy('portalgun');
+    expect(screen.getByRole('link', { name: 'FiveFamilies' })).toHaveAttribute(
+      'href',
+      '/#fivefamilies',
+    );
+  });
+
   it('refuses a project without a case study', async () => {
     await expect(CaseStudyPage({ params: Promise.resolve({ slug: 'tm-post' }) })).rejects.toThrow(
       'not found',

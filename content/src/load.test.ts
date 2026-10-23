@@ -189,6 +189,65 @@ describe('loadContent', () => {
     ]);
   });
 
+  it('links a project to another project by slug and names it once at load', async () => {
+    await putProject('alpha', project(2, { uses: [{ project: 'beta', for: 'its registry' }] }));
+    const content = await loadContent(root);
+    expect(content.projects.find((p) => p.slug === 'alpha')?.uses).toEqual([
+      { slug: 'beta', name: 'Project 1', for: 'its registry' },
+    ]);
+  });
+
+  it('refuses a link to itself or to a project that does not exist', async () => {
+    await putProject(
+      'alpha',
+      project(2, {
+        uses: [
+          { project: 'gamma', for: 'its registry' },
+          { project: 'alpha', for: 'itself' },
+        ],
+      }),
+    );
+    expect(await issues()).toEqual([
+      {
+        file: 'projects/alpha/project.yaml',
+        path: 'uses.0.project',
+        message: '"gamma" is not another project',
+      },
+      {
+        file: 'projects/alpha/project.yaml',
+        path: 'uses.1.project',
+        message: '"alpha" is not another project',
+      },
+    ]);
+  });
+
+  it('refuses one project used twice', async () => {
+    await putProject(
+      'alpha',
+      project(2, {
+        uses: [
+          { project: 'beta', for: 'its registry' },
+          { project: 'beta', for: 'its leases' },
+        ],
+      }),
+    );
+    expect(await issues()).toEqual([
+      {
+        file: 'projects/alpha/project.yaml',
+        path: 'uses.1.project',
+        message: 'project is used twice',
+      },
+    ]);
+  });
+
+  it('blames only the broken project when a project uses one that fails to load', async () => {
+    await putProject('alpha', project(2, { uses: [{ project: 'beta', for: 'its registry' }] }));
+    await putProject('beta', project(1, { headline: 'missing' }));
+    expect((await issues()).map((issue) => `${issue.file} ${issue.path}`)).toEqual([
+      'projects/beta/project.yaml headline',
+    ]);
+  });
+
   it('rejects a fact id used twice', async () => {
     const facts = project(2).facts;
     await putProject('alpha', project(2, { facts: [...facts, facts[0]] }));

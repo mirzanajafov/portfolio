@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ViewTransition } from 'react';
 import { content, type Fact, type Project } from '@portfolio/content';
+import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
 
 type Params = { slug: string };
@@ -97,6 +98,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             </li>
           ))}
         </ul>
+        <ProjectUses uses={project.uses} />
         <div className="flex flex-wrap gap-4">
           <a
             className="font-medium text-[var(--accent)] underline underline-offset-4"

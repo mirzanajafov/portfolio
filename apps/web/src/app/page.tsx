@@ -15,6 +15,7 @@ function toStop(project: Project): TourStop {
     hook: project.hook,
     fact: { text: fact.text, kind: fact.kind },
     stack: project.stack,
+    uses: project.uses,
     live: project.links.live,
     code: project.links.repo,
     caseStudy: project.caseStudy ? `/projects/${project.slug}` : undefined,

@@ -340,7 +340,8 @@ h3 {
     font-size: 15px;
     line-height: 1.5;
   }
-  .tour-stack {
+  .tour-stack,
+  .tour-uses {
     display: none;
   }
 }
