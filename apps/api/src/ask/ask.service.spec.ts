@@ -115,6 +115,17 @@ describe('AskService', () => {
     expect(outcome).toMatchObject({ refused: true, sentences: [{ sources: [] }] });
   });
 
+  it('refuses instead of saying nothing when a sourced draft is only markup', async () => {
+    const service = new AskService(
+      engineSaying({ text: '<break time="1s"/>', sourceIds: ['demo/fast'] }),
+      knowledge,
+      'me@example.com',
+    );
+    const events = await collect(service);
+    expect(events).toContainEqual({ type: 'withheld', reason: 'empty' });
+    expect(events.filter((event) => event.type === 'sentence')).toEqual([refusal]);
+  });
+
   it('refuses when the engine has nothing to say', async () => {
     const service = new AskService(engineSaying(), knowledge, 'me@example.com');
     const sentences = (await collect(service)).filter((event) => event.type === 'sentence');
