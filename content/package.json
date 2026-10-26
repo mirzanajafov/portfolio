@@ -13,6 +13,10 @@
     "./ask": {
       "types": "./dist/ask.d.ts",
       "default": "./dist/ask.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {

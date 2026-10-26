@@ -5,7 +5,7 @@
       "ignoreDependencies": ["@prisma/client"]
     },
     "content": {
-      "entry": ["src/{index,ask,cli}.ts"]
+      "entry": ["src/{index,ask,testing,cli}.ts"]
     }
   }
 }

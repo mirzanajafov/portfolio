@@ -26,6 +26,10 @@ describe('the real content', () => {
     },
   );
 
+  it('publishes no phone number anywhere', () => {
+    expect(JSON.stringify(content)).not.toMatch(/\+\d{3}[\s\d]{6,}/);
+  });
+
   it('lists every role newest first', () => {
     const starts = content.cv.experience.map((role) => role.from);
     expect(starts).toEqual([...starts].sort().reverse());
