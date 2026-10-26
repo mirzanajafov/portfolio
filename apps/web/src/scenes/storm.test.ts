@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createStormScene, stormParameters } from './storm';
-import { stormAt, stormData, stormSample } from './storm-model';
+import { stormAt, stormData, stormSample, stormSeries } from './storm-model';
 import { testHooks } from './test-hooks';
 
 const { hooks } = testHooks();
 
-const box = stormData.policies.find((series) => series.id === 'box')!;
-const pool = stormData.policies.find((series) => series.id === 'pool')!;
+const { box, pool } = stormSeries;
 
 describe('the storm data taken from the poof simulator', () => {
   it('covers 25 simulated minutes around the burst, one sample a second', () => {
@@ -45,7 +44,9 @@ describe('the storm scene', () => {
     const scene = createStormScene(hooks);
     const secondsToBurst = (stormData.burst.from - stormData.startMinute) * 60 + 30;
     const frames = Math.round((secondsToBurst / stormParameters.secondsPerSecond) * 60);
-    for (let frame = 0; frame < frames; frame += 1) scene.step(1 / 60, frame / 60);
+    for (let frame = 0; frame < frames; frame += 1) {
+      scene.step(1 / 60, frame / 60);
+    }
     const lines = scene.readout();
     expect(lines[0]).toContain('arrivals at 1.5× capacity');
     const now = stormSample(box, secondsToBurst);
@@ -56,7 +57,9 @@ describe('the storm scene', () => {
 
     const rest =
       Math.round(((25 * 60 - secondsToBurst) / stormParameters.secondsPerSecond) * 60) + 60;
-    for (let frame = 0; frame < rest; frame += 1) scene.step(1 / 60, frame / 60);
+    for (let frame = 0; frame < rest; frame += 1) {
+      scene.step(1 / 60, frame / 60);
+    }
     expect(scene.readout()[0]).toContain(`simulated minute ${stormData.startMinute}`);
   });
 });

@@ -4,28 +4,9 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const scenes = 'apps/web/src/scenes';
-
 const notPassingYet = {
-  curly: [
-    `${scenes}/{campaign,failover,storm}.test.ts`,
-    'apps/web/scripts/{campaign,failover,storm}-data.mjs',
-  ],
-  '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
-  '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],
-  '@typescript-eslint/no-non-null-assertion': [
-    `${scenes}/{campaign,failover,storm,systems-graph}.test.ts`,
-    'apps/web/src/app/palette.node.test.ts',
-    'apps/web/src/components/{scene-player,systems-tour}.test.tsx',
-    'apps/api/evals/evals.spec.ts',
-  ],
+  curly: ['apps/web/scripts/{campaign,failover,storm}-data.mjs'],
   '@typescript-eslint/no-unsafe-argument': ['apps/api/src/health/health.controller.spec.ts'],
-  '@typescript-eslint/no-unsafe-return': ['apps/web/src/app/palette.node.test.ts'],
-  '@typescript-eslint/non-nullable-type-assertion-style': [
-    'apps/web/src/app/page.test.tsx',
-    'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',
-  ],
-  '@typescript-eslint/restrict-template-expressions': ['content/src/scaffold.test.ts'],
 };
 
 export default defineConfig(

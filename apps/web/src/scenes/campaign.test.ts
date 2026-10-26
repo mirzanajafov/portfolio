@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { createCampaignScene } from './campaign';
 import { campaignAt, campaignData, campaignLoop, campaignPace, type Run } from './campaign-model';
 import { testHooks } from './test-hooks';
@@ -54,7 +54,9 @@ describe('the campaign replay', () => {
 describe('the campaign scene', () => {
   it('opens on the finished night, so a still frame already says it', () => {
     const scene = createCampaignScene(hooks);
-    for (let i = 0; i < 40; i += 1) scene.step(0.05, i * 0.05);
+    for (let i = 0; i < 40; i += 1) {
+      scene.step(0.05, i * 0.05);
+    }
     scene.render(2, 0.05);
     const [first, second, third] = scene.readout();
     expect(first).toMatch(
@@ -71,7 +73,11 @@ describe('the campaign scene', () => {
     const seen: string[] = [];
     for (let frame = 0; frame < 60 * 12; frame += 1) {
       scene.step(1 / 60, frame / 60);
-      if (frame % 20 === 0) seen.push(scene.readout()[0]!);
+      if (frame % 20 === 0) {
+        const [line] = scene.readout();
+        assert(line);
+        seen.push(line);
+      }
     }
     expect(seen.some((line) => line.startsWith('run 1 of 200'))).toBe(true);
   });

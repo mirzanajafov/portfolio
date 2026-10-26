@@ -1,15 +1,17 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { questionMaxLength } from '@portfolio/content/ask';
+import { askEventSchema, questionMaxLength, type AskEvent } from '@portfolio/content/ask';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
+import { CONTENT } from '../src/ask/knowledge.js';
 import { ClockService } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { fixtureContent } from './content.fixture.js';
 
 class FixedClock extends ClockService {
   current = new Date('2026-10-02T12:00:00Z');
@@ -18,16 +20,22 @@ class FixedClock extends ClockService {
   }
 }
 
-type Event = { event: string; data: { type: string; sources?: { id: string; href?: string }[] } };
+type Event = { event: string; data: AskEvent };
 
 function parseEvents(body: string): Event[] {
   return body
     .split('\n\n')
     .filter(Boolean)
-    .map((block) => ({
-      event: /^event: (.*)$/m.exec(block)?.[1] ?? '',
-      data: JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? 'null') as Event['data'],
-    }));
+    .map((block) => {
+      const sent: unknown = JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? 'null');
+      const data = askEventSchema.parse(sent);
+      expect(data).toStrictEqual(sent);
+      return { event: /^event: (.*)$/m.exec(block)?.[1] ?? '', data };
+    });
+}
+
+function sentencesOf(events: Event[]) {
+  return events.flatMap(({ data }) => (data.type === 'sentence' ? [data] : []));
 }
 
 async function startApp(overrides: Record<string, string> = {}, engine?: AnswerEngine) {
@@ -36,7 +44,9 @@ async function startApp(overrides: Record<string, string> = {}, engine?: AnswerE
     .overrideProvider(ENV)
     .useValue(parseEnv({ ...process.env, ...overrides }))
     .overrideProvider(ClockService)
-    .useValue(clock);
+    .useValue(clock)
+    .overrideProvider(CONTENT)
+    .useValue(fixtureContent);
   if (engine) {
     builder = builder.overrideProvider(ANSWER_ENGINE).useValue(engine);
   }
@@ -79,26 +89,26 @@ describe('POST /ask against a real database', () => {
   });
 
   it('streams an answer as server-sent events, with the source of every sentence', async () => {
-    const response = await ask(app, 'How does Matchium decide which questions to ask each user?')
+    const response = await ask(app, 'How does Tuner decide which questions to ask each user?')
       .expect(200)
       .expect('Content-Type', /text\/event-stream/);
     const events = parseEvents(response.text);
     expect(events[0]?.data).toEqual({ type: 'meta', engine: 'keyword' });
     expect(events.at(-1)?.data).toEqual({ type: 'done' });
-    const first = events.find((e) => e.event === 'sentence')?.data;
-    const source = first?.sources?.[0];
-    expect(source?.id.startsWith('matchium/')).toBe(true);
+    const [first] = sentencesOf(events);
+    const source = first?.sources[0];
+    expect(source?.id.startsWith('tuner/')).toBe(true);
     const href = source?.href ?? '';
-    expect(
-      href.startsWith('https://github.com/mirzanajafov/matchium/') || href === '/projects/matchium',
-    ).toBe(true);
+    expect(href.startsWith('https://github.com/someone/tuner/') || href === '/projects/tuner').toBe(
+      true,
+    );
   });
 
   it('never links into a private repo', async () => {
-    const response = await ask(app, 'How does cancelling a request work in TM Post?').expect(200);
-    const sentence = parseEvents(response.text).find((e) => e.event === 'sentence')?.data;
-    expect(sentence?.sources?.[0]?.id).toBe('tm-post/cancel-latency');
-    expect(sentence?.sources?.[0]?.href).toBeUndefined();
+    const response = await ask(app, 'How does cancelling a request work in Courier?').expect(200);
+    const [sentence] = sentencesOf(parseEvents(response.text));
+    expect(sentence?.sources[0]?.id).toBe('courier/cancel-latency');
+    expect(sentence?.sources[0]?.href).toBeUndefined();
   });
 
   const invalid: [object, string][] = [
@@ -124,7 +134,7 @@ describe('POST /ask against a real database', () => {
     expect(row?.client).toMatch(/^[0-9a-f]{32}$/);
     expect(JSON.stringify(row)).not.toContain('203.0.113.7');
     expect(row?.sentences).toEqual([
-      expect.objectContaining({ sources: [expect.stringMatching(/^cv\/neurotime-ai/)] }),
+      expect.objectContaining({ sources: ['cv/northwind-2024-01/1'] }),
     ]);
   });
 
@@ -207,8 +217,8 @@ describe('POST /ask when the engine fails', () => {
   const failing: AnswerEngine = {
     name: 'failing',
     async *answer(question) {
-      if (question.includes('Matchium')) {
-        yield { text: 'It asks half the questions.', sourceIds: ['matchium/half-the-questions'] };
+      if (question.includes('Tuner')) {
+        yield { text: 'It asks fewer questions.', sourceIds: ['tuner/fewer-questions'] };
       }
       throw new Error('the model went away');
     },
@@ -234,9 +244,9 @@ describe('POST /ask when the engine fails', () => {
   }
 
   it('ends the answer without a done event when the engine fails after the first sentence, and logs nothing', async () => {
-    const response = await ask(app, 'How does Matchium work?').expect(200);
+    const response = await ask(app, 'How does Tuner work?').expect(200);
     expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta', 'sentence']);
-    await expectNoRow('How does Matchium work?');
+    await expectNoRow('How does Tuner work?');
   });
 
   it('ends the answer without a done event when the engine fails before saying anything, and logs nothing', async () => {

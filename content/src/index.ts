@@ -1,15 +1,7 @@
 import { content } from './.generated/data.ts';
-import type { CaseStudy, Project } from './schema.ts';
+import { caseStudiesIn } from './case-studies.ts';
 
-type ProjectWithCaseStudy = Project & { caseStudy: CaseStudy };
-
-export const projectsWithCaseStudy = content.projects.filter(
-  (project): project is ProjectWithCaseStudy => project.caseStudy !== undefined,
-);
-
-export function findProjectWithCaseStudy(slug: string): ProjectWithCaseStudy | undefined {
-  return projectsWithCaseStudy.find((project) => project.slug === slug);
-}
+export const { projectsWithCaseStudy, findProjectWithCaseStudy } = caseStudiesIn(content.projects);
 
 export { content };
 export type {

@@ -1,10 +1,10 @@
-import { content } from '@portfolio/content';
 import { describe, expect, it } from 'vitest';
+import { fixtureContent } from '../../test/content.fixture.js';
 import type { DraftSentence } from './answer-engine.js';
 import { KeywordAnswerEngine, tokenize } from './keyword-engine.js';
 import { buildKnowledge } from './knowledge.js';
 
-const knowledge = buildKnowledge(content);
+const knowledge = buildKnowledge(fixtureContent);
 const engine = new KeywordAnswerEngine(knowledge);
 
 async function draft(question: string): Promise<DraftSentence[]> {
@@ -27,25 +27,23 @@ describe('tokenize', () => {
 
 describe('KeywordAnswerEngine', () => {
   it('answers from the fact that matches, or a passage backed by it, and cites it', async () => {
-    const sentences = await draft('How does Matchium pick which questions to ask?');
+    const sentences = await draft('How does Tuner pick which questions to ask?');
     const cited = sentences[0]?.sourceIds[0] ?? '';
     const backs = knowledge.get(cited)?.backs ?? [];
-    expect(
-      cited === 'matchium/half-the-questions' || backs.includes('matchium/half-the-questions'),
-    ).toBe(true);
+    expect(cited === 'tuner/fewer-questions' || backs.includes('tuner/fewer-questions')).toBe(true);
   });
 
   it('stays inside a project once the question names it', async () => {
-    const sentences = await draft('How does Marauder handle backups?');
+    const sentences = await draft('How does Courier handle requests?');
     expect(sentences.length).toBeGreaterThan(0);
     for (const sentence of sentences) {
-      expect(sentence.sourceIds[0]).toMatch(/^marauder\//);
+      expect(sentence.sourceIds[0]).toMatch(/^courier\//);
     }
   });
 
   it('finds experience in the CV', async () => {
     const sentences = await draft('Have you worked with Stripe payments?');
-    expect(sentences[0]?.sourceIds[0]).toMatch(/^cv\/neurotime-ai-2026-07/);
+    expect(sentences[0]?.sourceIds[0]).toBe('cv/northwind-2024-01/1');
   });
 
   it('says nothing rather than guess when nothing matches well enough', async () => {
@@ -56,7 +54,7 @@ describe('KeywordAnswerEngine', () => {
     const abort = new AbortController();
     abort.abort();
     const sentences: DraftSentence[] = [];
-    for await (const sentence of engine.answer('Matchium questions', abort.signal)) {
+    for await (const sentence of engine.answer('Tuner questions', abort.signal)) {
       sentences.push(sentence);
     }
     expect(sentences).toEqual([]);

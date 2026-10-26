@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadContent } from './load.ts';
+import { phoneNumber } from './testing.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const content = await loadContent(root);
@@ -25,6 +26,10 @@ describe('the real content', () => {
       }
     },
   );
+
+  it('publishes no phone number anywhere', () => {
+    expect(JSON.stringify(content)).not.toMatch(phoneNumber);
+  });
 
   it('lists every role newest first', () => {
     const starts = content.cv.experience.map((role) => role.from);

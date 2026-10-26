@@ -1,5 +1,5 @@
 import { act, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
 import { SystemsTour, type TourStop } from './systems-tour';
 
 vi.mock('@/components/scene-player', () => ({
@@ -132,9 +132,10 @@ describe('SystemsTour', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['#matchium', '#tm-post']);
     expect(links[1]).toHaveTextContent('TM PostKeeps working offline');
     for (const link of links) {
-      const stop = document.getElementById(link.getAttribute('href')!.slice(1));
+      const stop = document.getElementById((link.getAttribute('href') ?? '').slice(1));
+      assert(stop);
       expect(stop).toHaveClass('tour-step');
-      expect(within(stop!).getByRole('article')).toBeInTheDocument();
+      expect(within(stop).getByRole('article')).toBeInTheDocument();
     }
   });
 
@@ -166,16 +167,18 @@ describe('SystemsTour', () => {
         observe(target: Element) {
           observed.push(target);
         }
-        disconnect() {}
+        disconnect = () => undefined;
       },
     );
     render(<SystemsTour intro={{ title: 'Things I built', body: '' }} stops={stops} apps={[]} />);
     expect(observed).toEqual([screen.getByRole('article', { name: 'Matchium' })]);
     arriveAt('matchium');
-    const card = observed[0]!;
+    const [card] = observed;
+    assert(card);
     const entry = { target: card, borderBoxSize: [{ blockSize: 401.4, inlineSize: 320 }] };
     act(() => measure([entry as unknown as ResizeObserverEntry], {} as ResizeObserver));
-    const layer = screen.getByTestId('scene-population').parentElement!;
+    const layer = screen.getByTestId('scene-population').parentElement;
+    assert(layer);
     expect(layer.style.getPropertyValue('--card-height')).toBe('401px');
   });
 
@@ -191,13 +194,17 @@ describe('SystemsTour', () => {
     expect(systems).toHaveAttribute('data-focus', 'matchium');
     expect(systems).toHaveAttribute('data-shown', 'true');
     expect(population).toHaveAttribute('data-shown', 'false');
-    act(() => vi.advanceTimersByTime(5000));
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(population).toHaveAttribute('data-shown', 'false');
 
     cross('scene', 'matchium', true);
     expect(population).toHaveAttribute('data-shown', 'true');
     expect(systems).toHaveAttribute('data-shown', 'true');
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(systems).toHaveAttribute('data-shown', 'false');
     expect(screen.getByText('Each point is a simulated person.')).toBeVisible();
 

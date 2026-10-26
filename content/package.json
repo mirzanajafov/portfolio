@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "!dist/testing.*"
   ],
   "exports": {
     ".": {
@@ -13,6 +14,10 @@
     "./ask": {
       "types": "./dist/ask.d.ts",
       "default": "./dist/ask.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
