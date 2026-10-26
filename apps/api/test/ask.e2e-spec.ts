@@ -6,8 +6,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
-import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
+import { CONTENT } from '../src/ask/ask.module.js';
 import { ClockService } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
@@ -43,8 +43,8 @@ async function startApp(overrides: Record<string, string> = {}, engine?: AnswerE
     .useValue(parseEnv({ ...process.env, ...overrides }))
     .overrideProvider(ClockService)
     .useValue(clock)
-    .overrideProvider(Knowledge)
-    .useValue(buildKnowledge(fixtureContent));
+    .overrideProvider(CONTENT)
+    .useValue(fixtureContent);
   if (engine) {
     builder = builder.overrideProvider(ANSWER_ENGINE).useValue(engine);
   }
