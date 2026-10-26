@@ -10,6 +10,8 @@ vi.mock('@portfolio/content', async () => {
       profile: aProfile({
         name: 'Ada Lovelace',
         headline: 'Senior Backend Engineer',
+        location: 'Baku, Azerbaijan',
+        timezone: 'UTC+4',
         availability: 'Open to remote roles',
         links: {
           email: 'ada@example.com',
@@ -22,6 +24,8 @@ vi.mock('@portfolio/content', async () => {
           slug: 'open',
           name: 'Open',
           links: { live: 'https://open.example.com', repo: 'https://github.com/someone/open' },
+          headline: 'fast',
+          facts: [aFact({ id: 'fast', text: 'Answers in 40 ms.', kind: 'measured' })],
         }),
         aProject({
           slug: 'closed',
@@ -34,7 +38,11 @@ vi.mock('@portfolio/content', async () => {
         }),
       ],
       cv: aCv({
-        experience: [aRole({ company: 'Northwind', kind: 'contract' }), aRole({ company: 'Acme' })],
+        experience: [
+          aRole({ company: 'Northwind', kind: 'contract' }),
+          aRole({ company: undefined, role: 'Freelance Backend Developer', kind: 'freelance' }),
+          aRole({ company: 'Acme', kind: 'employee' }),
+        ],
       }),
     }),
   );
@@ -51,7 +59,7 @@ describe('home page', () => {
     render(<Home />);
     expect(screen.getByRole('heading', { level: 1, name: 'Ada Lovelace' })).toBeInTheDocument();
     expect(screen.getByText('Senior Backend Engineer')).toBeInTheDocument();
-    expect(screen.getByText(/Open to remote roles/)).toBeInTheDocument();
+    expect(screen.getByText('Baku, Azerbaijan · UTC+4 · Open to remote roles')).toBeInTheDocument();
     const contact = within(screen.getByRole('navigation', { name: 'Contact' }));
     expect(contact.getByRole('link', { name: 'Email me' })).toHaveAttribute(
       'href',
@@ -102,6 +110,8 @@ describe('home page', () => {
     render(<Home />);
     const northwind = itemOf(screen.getByRole('heading', { name: /Northwind/ }));
     expect(within(northwind).getByText('Contract')).toBeInTheDocument();
+    const freelance = itemOf(screen.getByRole('heading', { name: 'Freelance Backend Developer' }));
+    expect(within(freelance).getByText('Freelance')).toBeInTheDocument();
     const acme = itemOf(screen.getByRole('heading', { name: /Acme/ }));
     expect(within(acme).queryByText('Contract')).toBeNull();
   });

@@ -20,7 +20,12 @@ vi.mock('@portfolio/content', async () => {
           links: { live: 'https://open.example.com', repo: 'https://github.com/someone/open' },
           headline: 'fast',
           facts: [
-            aFact({ id: 'fast', text: 'It answers in 40 ms.', source: { file: 'README.md' } }),
+            aFact({
+              id: 'fast',
+              text: 'It answers in 40 ms.',
+              kind: 'measured',
+              source: { file: 'README.md' },
+            }),
             aFact({
               id: 'small',
               text: 'It keeps one table.',
