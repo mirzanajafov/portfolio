@@ -36,24 +36,17 @@ vi.mock('./storm', () => ({
   },
 }));
 
-class InertObserver {
-  observe = () => undefined;
-  disconnect = () => undefined;
-}
+const colors = ['bg', 'fg', 'muted', 'line', 'grid', 'accent', 'signal'];
 
 beforeEach(() => {
   Object.assign(renderers, { fail: false, created: 0, disposed: 0 });
-  vi.stubGlobal('ResizeObserver', InertObserver);
-  vi.stubGlobal('IntersectionObserver', InertObserver);
-  vi.stubGlobal('matchMedia', () => ({
-    matches: false,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-  }));
+  for (const name of colors) {
+    document.documentElement.style.setProperty(`--${name}`, '#121110');
+  }
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  document.documentElement.removeAttribute('style');
 });
 
 function start(name: 'floor' | 'population' | 'storm', signal = new AbortController().signal) {
@@ -97,6 +90,13 @@ describe('play', () => {
     renderers.fail = true;
     const { starting, labels } = start('floor');
     await expect(starting).rejects.toThrow('Error creating WebGL context.');
+    expect(labels.childElementCount).toBe(0);
+  });
+
+  it('refuses to start a scene on a page that defines none of its colors', async () => {
+    document.documentElement.removeAttribute('style');
+    const { starting, labels } = start('floor');
+    await expect(starting).rejects.toThrow('the page defines no --bg color for the scenes');
     expect(labels.childElementCount).toBe(0);
   });
 
