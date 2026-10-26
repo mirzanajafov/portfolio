@@ -87,7 +87,7 @@ pnpm build
 
 `pnpm --filter @portfolio/content validate` checks the content without building anything.
 
-Lint is one ESLint config at the root for all three packages: typescript-eslint's strict and stylistic type-checked sets, plus Next's rules for the site. Some rules don't pass yet, mostly non-null assertions and braceless `if`s in the scenes, and those are off only for the files that still break them. The scripts that cut the scene data from the other projects' results are TypeScript too, and they check what they read with zod before they cut it. A pre-commit hook typechecks everything and runs Prettier and ESLint on the files staged for the commit, as they are on disk, so a partly staged file is checked whole.
+Lint is one ESLint config at the root for all three packages: typescript-eslint's strict and stylistic type-checked sets, plus Next's rules for the site. Every rule passes everywhere, with no file-level exceptions. When I first turned the config on, a few rules failed, mostly on non-null assertions and braceless `if`s in the scenes, so I switched them off only for the files that broke them and turned each back on in the refactor that fixed those files. The scripts that cut the scene data from the other projects' results are TypeScript too, and they check what they read with zod before they cut it. A pre-commit hook typechecks everything and runs Prettier and ESLint on the files staged for the commit, as they are on disk, so a partly staged file is checked whole.
 
 To see the whole thing the way the server runs it, Docker alone is enough:
 

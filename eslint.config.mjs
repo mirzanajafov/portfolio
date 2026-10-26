@@ -4,8 +4,6 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const notPassingYet = {};
-
 export default defineConfig(
   globalIgnores([
     '**/dist/',
@@ -59,5 +57,4 @@ export default defineConfig(
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.nodeBuiltin },
   },
-  Object.entries(notPassingYet).map(([rule, files]) => ({ files, rules: { [rule]: 'off' } })),
 );
