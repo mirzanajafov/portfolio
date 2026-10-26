@@ -25,7 +25,7 @@ function engineSaying(...drafts: DraftSentence[]): AnswerEngine {
   };
 }
 
-const refusal = {
+const refusal: AskEvent = {
   type: 'sentence',
   text: "I don't have a source for that, so I won't guess. Ask me directly at me@example.com.",
   sources: [],
