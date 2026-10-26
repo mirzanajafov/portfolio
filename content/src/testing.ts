@@ -142,14 +142,18 @@ export async function contentOf({
   cv?: CvFile;
   projects?: ProjectFolder[];
 } = {}): Promise<Content> {
+  const slugs = projects.map((folder) => folder.slug);
+  const repeated = slugs.find((slug, index) => slugs.indexOf(slug) !== index);
+  if (repeated) {
+    throw new Error(`two fixture projects use the slug ${repeated}`);
+  }
   const root = await mkdtemp(join(tmpdir(), 'content-'));
   try {
     await writeFile(join(root, 'profile.yaml'), stringify(profile));
     await writeFile(join(root, 'cv.yaml'), stringify(cv));
-    await mkdir(join(root, 'projects'));
     for (const { slug, project, evals, caseStudy } of projects) {
       const folder = join(root, 'projects', slug);
-      await mkdir(folder);
+      await mkdir(folder, { recursive: true });
       await writeFile(join(folder, 'project.yaml'), stringify(project));
       await writeFile(join(folder, 'evals.yaml'), stringify(evals));
       if (caseStudy) {
