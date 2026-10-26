@@ -35,8 +35,8 @@ beforeAll(async () => {
   const pages: string[] = [];
   for (let number = 1; number <= document.numPages; number += 1) {
     const page = await document.getPage(number);
-    const items = (await page.getTextContent()).items as { str?: string }[];
-    pages.push(items.map((item) => item.str ?? '').join(' '));
+    const { items } = await page.getTextContent();
+    pages.push(items.map((item) => ('str' in item ? item.str : '')).join(' '));
   }
   text = pages.join(' ').replace(/\s+/g, ' ');
 }, 30_000);
