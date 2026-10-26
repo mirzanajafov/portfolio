@@ -18,9 +18,10 @@ describe('the systems graph', () => {
   });
 
   it('draws each project’s own stack around it, since each app runs its own containers', () => {
-    const matchium = content.projects.find((p) => p.slug === 'matchium');
-    const parts = graph.nodes.filter((node) => node.kind === 'part' && node.app === 'matchium');
-    expect(parts.map((node) => node.label)).toEqual(matchium?.stack);
+    for (const project of content.projects) {
+      const parts = graph.nodes.filter((node) => node.kind === 'part' && node.app === project.slug);
+      expect(parts.map((node) => node.label)).toEqual(project.stack);
+    }
   });
 
   it('connects the server to every app and every app to its parts, and nothing else', () => {
@@ -40,15 +41,17 @@ describe('the systems graph', () => {
   });
 
   it('moves the camera close to an app when it is in focus and back out otherwise', () => {
+    const [app] = apps;
+    assert(app);
     const overview = focusPose(graph, null);
-    const close = focusPose(graph, 'marauder');
-    const marauder = graph.nodes.find((node) => node.id === 'marauder');
-    assert(marauder);
+    const close = focusPose(graph, app.id);
+    const node = graph.nodes.find((candidate) => candidate.id === app.id);
+    assert(node);
     type Point = [number, number, number];
     const distance = ([ax, ay, az]: Point, [bx, by, bz]: Point) =>
       Math.hypot(ax - bx, ay - by, az - bz);
-    expect(distance(close.position, marauder.position)).toBeLessThan(
-      distance(overview.position, marauder.position),
+    expect(distance(close.position, node.position)).toBeLessThan(
+      distance(overview.position, node.position),
     );
     expect(focusPose(graph, 'no-such-app')).toEqual(overview);
   });
