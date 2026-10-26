@@ -15,9 +15,12 @@ const play = vi.fn(async () => {
   return created;
 });
 
+const webgl = { available: true };
+
 beforeEach(() => {
   handles.length = 0;
   play.mockClear();
+  webgl.available = true;
 });
 
 afterEach(() => {
@@ -25,10 +28,11 @@ afterEach(() => {
 });
 
 vi.mock('@/scenes/player', () => ({ play }));
+vi.mock('@/scenes/webgl', () => ({ webglAvailable: () => webgl.available }));
 
 describe('ScenePlayer', () => {
   it('describes the scene for screen readers and stays quiet when there is no WebGL', async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    webgl.available = false;
     const { container } = render(
       <ScenePlayer scene={{ name: 'systems', apps: [] }} description="A graph of my systems" />,
     );
@@ -40,8 +44,19 @@ describe('ScenePlayer', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('says which scene failed to start instead of passing it off as a browser without WebGL', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const broken = new RangeError('every series needs the same, non-zero number of samples');
+    play.mockRejectedValueOnce(broken);
+    const { container } = render(<ScenePlayer scene={{ name: 'storm' }} description="A storm" />);
+    await waitFor(() =>
+      expect(container.querySelector('.scene')).toHaveAttribute('data-state', 'failed'),
+    );
+    expect(error).toHaveBeenCalledWith('the storm scene could not start', broken);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
   it('starts the scene it is given now, and tells it what the old one was told', async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
     const { rerender } = render(
       <ScenePlayer scene={{ name: 'floor' }} description="A floor" shown={false} />,
     );
@@ -63,7 +78,6 @@ describe('ScenePlayer', () => {
   });
 
   it('pauses every scene on the page from any one button, and stops drawing a hidden one', async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
     const systems = (
       <ScenePlayer key="systems" scene={{ name: 'systems', apps: [] }} description="A graph" />
     );

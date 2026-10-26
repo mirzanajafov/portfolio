@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { failureMessage } from './ask-failure';
+import { failureMessage } from './failure';
 
 describe('failureMessage', () => {
   it('tells a rate-limited visitor when to come back, rounded up to whole minutes', () => {

@@ -35,7 +35,13 @@ export type PlayerHandle = {
 
 function readPalette(element: HTMLElement): Palette {
   const style = getComputedStyle(element);
-  const token = (name: string) => new Color(style.getPropertyValue(name).trim() || '#888888');
+  const token = (name: string) => {
+    const value = style.getPropertyValue(name).trim();
+    if (!value) {
+      throw new Error(`the page defines no ${name} color for the scenes`);
+    }
+    return new Color(value);
+  };
   return {
     bg: token('--bg'),
     fg: token('--fg'),

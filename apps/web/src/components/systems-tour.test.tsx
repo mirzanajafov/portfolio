@@ -28,6 +28,9 @@ class FakeObserver {
   observe(target: Element) {
     this.watcher.targets.push(target);
   }
+  unobserve(target: Element) {
+    this.watcher.targets = this.watcher.targets.filter((element) => element !== target);
+  }
   disconnect() {
     this.watcher.targets = [];
   }

@@ -1,9 +1,9 @@
 'use client';
 
 import { askLogDays, questionMaxLength, type AskSource } from '@portfolio/content/ask';
-import { useRef, useState, type FormEvent } from 'react';
-import { readEvents } from '@/lib/ask-events';
-import { AskFailure, failureMessage } from '@/lib/ask-failure';
+import { useRef, useState, type SubmitEvent } from 'react';
+import { readEvents } from './events';
+import { AskFailure, failureMessage } from './failure';
 
 type Sentence = { text: string; sources: AskSource[] };
 
@@ -69,7 +69,7 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
     }
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     void ask(question);
   }

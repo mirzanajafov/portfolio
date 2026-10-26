@@ -10,10 +10,7 @@ const notPassingYet = {
   curly: [
     `${scenes}/{campaign,failover,storm}.test.ts`,
     'apps/web/scripts/{campaign,failover,storm}-data.mjs',
-    'apps/web/src/components/systems-tour.tsx',
   ],
-  'no-nested-ternary': ['apps/web/src/components/systems-tour.tsx'],
-  '@typescript-eslint/no-deprecated': ['apps/web/src/components/ask.tsx'],
   '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-non-null-assertion': [
@@ -22,18 +19,13 @@ const notPassingYet = {
     'apps/web/src/components/{scene-player,systems-tour}.test.tsx',
     'apps/api/evals/evals.spec.ts',
   ],
-  '@typescript-eslint/no-unnecessary-condition': ['apps/web/src/components/scene-player.tsx'],
   '@typescript-eslint/no-unsafe-argument': ['apps/api/src/health/health.controller.spec.ts'],
   '@typescript-eslint/no-unsafe-return': ['apps/web/src/app/palette.node.test.ts'],
   '@typescript-eslint/non-nullable-type-assertion-style': [
     'apps/web/src/app/page.test.tsx',
     'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',
-    'apps/web/src/components/systems-tour.tsx',
   ],
-  '@typescript-eslint/restrict-template-expressions': [
-    'apps/web/src/components/systems-tour.tsx',
-    'content/src/scaffold.test.ts',
-  ],
+  '@typescript-eslint/restrict-template-expressions': ['content/src/scaffold.test.ts'],
 };
 
 export default defineConfig(
