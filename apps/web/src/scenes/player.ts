@@ -2,7 +2,7 @@ import type { DemoName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
 import { labelPosition } from './label-position';
 import type { GraphApp } from './systems-graph';
-import type { Palette, SceneFactory, SceneHooks, SceneInstance } from './types';
+import type { Palette, SceneFactory, SceneInstance } from './types';
 
 export type SceneSpec = { name: 'systems'; apps: GraphApp[] } | { name: DemoName };
 
@@ -15,7 +15,7 @@ const demos: Record<DemoName, () => Promise<SceneFactory>> = {
   commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
 
-async function load(spec: SceneSpec): Promise<(hooks: SceneHooks) => SceneInstance> {
+async function load(spec: SceneSpec): Promise<SceneFactory> {
   if (spec.name === 'systems') {
     const { createSystemsScene } = await import('./systems');
     return (hooks) => createSystemsScene(hooks, spec.apps);

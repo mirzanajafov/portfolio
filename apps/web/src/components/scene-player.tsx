@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import type { PlayerHandle, SceneSpec } from '@/scenes/player';
 
 function webglAvailable(): boolean {
@@ -65,12 +65,14 @@ export function ScenePlayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<PlayerHandle | null>(null);
-  const sceneRef = useRef(scene);
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
   const [readout, setReadout] = useState<string[]>([]);
   const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
+  const start = useEffectEvent((canvas: HTMLCanvasElement, labels: HTMLElement) =>
+    import('@/scenes/player').then(({ play }) => play(scene, canvas, labels, setReadout)),
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -84,9 +86,8 @@ export function ScenePlayer({
         if (!webglAvailable()) {
           throw new Error('no WebGL');
         }
-        return import('@/scenes/player');
+        return start(canvas, labels);
       })
-      .then(({ play }) => play(sceneRef.current, canvas, labels, setReadout))
       .then((handle) => {
         if (cancelled) {
           handle.dispose();

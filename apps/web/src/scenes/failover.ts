@@ -45,7 +45,11 @@ type FailoverLane = (typeof data.lanes)[number];
 
 export const failoverData = data;
 
-const bins = Math.min(...data.lanes.map((lane) => lane.requests.length));
+const [firstLane] = data.lanes;
+if (!firstLane) {
+  throw new Error('the failover data has no lanes');
+}
+const bins = firstLane.requests.length;
 const endMs = data.fromMs + bins * data.binMs;
 
 export function speedAt(ms: number): number {
@@ -57,15 +61,15 @@ function binAt(ms: number): number {
   return Math.min(bins - 1, Math.max(0, Math.floor((ms - data.fromMs) / data.binMs)));
 }
 
-function sum(values: number[]): number {
-  return values.reduce((total, value) => total + value, 0);
-}
-
 export function laneAt(lane: FailoverLane, ms: number) {
   const position = Math.min(bins, Math.max(0, (ms - data.fromMs) / data.binMs));
   const whole = Math.floor(position);
-  let lost = sum(lane.failed.slice(0, whole));
-  let retried = sum(lane.retried.slice(0, whole));
+  let lost = 0;
+  let retried = 0;
+  for (let i = 0; i < whole; i += 1) {
+    lost += sampleAt(lane.failed, i);
+    retried += sampleAt(lane.retried, i);
+  }
   const bin = binAt(ms);
   const part = position - whole;
   if (part > 0) {
@@ -73,11 +77,12 @@ export function laneAt(lane: FailoverLane, ms: number) {
     retried += sampleAt(lane.retried, bin) * part;
   }
   const requests = Math.max(1, sampleAt(lane.requests, bin));
-  const toA = sampleAt(lane.served, bin) + sampleAt(lane.failed, bin) + sampleAt(lane.retried, bin);
+  const sentToA =
+    sampleAt(lane.served, bin) + sampleAt(lane.failed, bin) + sampleAt(lane.retried, bin);
   return {
     lost: Math.floor(lost),
     retried: Math.floor(retried),
-    toA: toA / requests,
+    toA: sentToA / requests,
   };
 }
 

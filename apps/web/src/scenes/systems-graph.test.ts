@@ -24,9 +24,8 @@ describe('the systems graph', () => {
   });
 
   it('connects the server to every app and every app to its parts, and nothing else', () => {
-    const ids = new Set(graph.nodes.map((node) => node.id));
     for (const edge of graph.edges) {
-      expect(ids.has(edge.from.id) && ids.has(edge.to.id)).toBe(true);
+      expect(graph.nodes.includes(edge.from) && graph.nodes.includes(edge.to)).toBe(true);
     }
     expect(graph.edges.filter((edge) => edge.from.kind === 'server')).toHaveLength(apps.length);
   });

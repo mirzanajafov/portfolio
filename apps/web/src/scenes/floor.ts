@@ -100,7 +100,6 @@ type Tag = {
   target: Vector2 | null;
   dot: Mesh<SphereGeometry, MeshBasicMaterial>;
   halo: Mesh<RingGeometry, MeshBasicMaterial>;
-  trail: Float32Array;
   trailPositions: BufferAttribute;
   trailGeometry: BufferGeometry;
   trailMaterial: LineBasicMaterial;
@@ -166,8 +165,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
       new MeshBasicMaterial({ transparent: true, opacity: 0.6, side: DoubleSide }),
     );
     halo.rotation.x = -Math.PI / 2;
-    const trail = new Float32Array(trailLength * 3);
-    const trailPositions = new BufferAttribute(trail, 3);
+    const trailPositions = new BufferAttribute(new Float32Array(trailLength * 3), 3);
     const trailGeometry = new BufferGeometry();
     trailGeometry.setAttribute('position', trailPositions);
     const trailMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.55 });
@@ -182,7 +180,6 @@ export const createFloorScene: SceneFactory = (hooks) => {
       target: null,
       dot,
       halo,
-      trail,
       trailPositions,
       trailGeometry,
       trailMaterial,
@@ -275,10 +272,9 @@ export const createFloorScene: SceneFactory = (hooks) => {
               tag.fitted = true;
             }
           }
-          tag.trail.copyWithin(3, 0, tag.trail.length - 3);
-          tag.trail[0] = tag.estimate.x;
-          tag.trail[1] = 0.05;
-          tag.trail[2] = tag.estimate.y;
+          const trail = tag.trailPositions.array;
+          trail.copyWithin(3, 0, trail.length - 3);
+          tag.trailPositions.setXYZ(0, tag.estimate.x, 0.05, tag.estimate.y);
           tag.count = Math.min(tag.count + 1, trailLength);
           tag.trailGeometry.setDrawRange(0, tag.count);
           tag.trailPositions.needsUpdate = true;

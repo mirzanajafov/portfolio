@@ -30,7 +30,8 @@ type StormSeries = (typeof data.policies)[number];
 
 export const stormData = data;
 
-const [boxSeries, poolSeries] = data.policies;
+const boxSeries = data.policies.find((series) => series.id === 'box');
+const poolSeries = data.policies.find((series) => series.id === 'pool');
 if (!boxSeries || !poolSeries) {
   throw new Error('the storm data needs the box and the pool');
 }
@@ -160,8 +161,9 @@ export const createStormScene: SceneFactory = (hooks) => {
         const now = stormSample(cage.series, whole);
         if (whole > lastWhole) {
           const respawned = now.spawns - stormSample(cage.series, lastWhole).spawns;
+          const alive = cage.slots.slice(0, now.processes);
           for (let k = 0; k < respawned && now.processes > 0; k += 1) {
-            pick(random, cage.slots.slice(0, now.processes)).scale = 0;
+            pick(random, alive).scale = 0;
           }
         }
         cage.slots.forEach((slot, index) => {

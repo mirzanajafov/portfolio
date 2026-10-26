@@ -14,7 +14,7 @@ import {
 import { gaussian, seeded } from './random';
 import type { SceneFactory } from './types';
 
-export const learningCurve: [number, number][] = [
+export const learningCurve: [[number, number], ...[number, number][]] = [
   [1, 0.47],
   [2, 0.6],
   [7, 0.69],
@@ -24,16 +24,14 @@ export const oracle = 0.77;
 const matchesPerDay = 3;
 
 export function correlationOn(day: number): number {
-  let previous: [number, number] | undefined;
-  for (const point of learningCurve) {
-    const [d1, c1] = point;
-    if (previous && day <= d1) {
-      const [d0, c0] = previous;
+  let [d0, c0] = learningCurve[0];
+  for (const [d1, c1] of learningCurve.slice(1)) {
+    if (day <= d1) {
       return c0 + (c1 - c0) * Math.max(0, (day - d0) / (d1 - d0));
     }
-    previous = point;
+    [d0, c0] = [d1, c1];
   }
-  return previous ? previous[1] : 0;
+  return c0;
 }
 
 export function blurOn(day: number): number {

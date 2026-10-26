@@ -8,7 +8,7 @@ export type GraphNode = {
   position: [number, number, number];
 };
 
-type GraphEdge = { from: GraphNode; to: GraphNode; app: string };
+export type GraphEdge = { from: GraphNode; to: GraphNode; app: string };
 
 type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; apps: GraphApp[] };
 

@@ -5,6 +5,8 @@ type Point = { x: number; y: number };
 type Vec3 = [number, number, number];
 type Mat3 = [Vec3, Vec3, Vec3];
 
+const axes = [0, 1, 2] as const;
+
 const minRange = 0.1;
 const scalePrior = 0.5;
 const iterations = 40;
@@ -99,9 +101,9 @@ export function fitPosition(anchors: Anchor[], bounds: Bounds): Point {
       const r2 = Math.max(minRange * minRange, dx * dx + dy * dy);
       const e = 0.5 * Math.log(r2) - k * term.log;
       const j: Vec3 = [dx / r2, dy / r2, scaled ? -term.log : 0];
-      for (const p of [0, 1, 2] as const) {
+      for (const p of axes) {
         g[p] += j[p] * e;
-        for (const q of [0, 1, 2] as const) {
+        for (const q of axes) {
           h[p][q] += j[p] * j[q];
         }
       }
@@ -112,12 +114,12 @@ export function fitPosition(anchors: Anchor[], bounds: Bounds): Point {
     } else {
       h[2][2] = 1;
     }
-    const keep = 1 + damping;
+    const diagonalScale = 1 + damping;
     const step = solve3(
       [
-        [h[0][0] * keep, h[0][1], h[0][2]],
-        [h[1][0], h[1][1] * keep, h[1][2]],
-        [h[2][0], h[2][1], h[2][2] * keep],
+        [h[0][0] * diagonalScale, h[0][1], h[0][2]],
+        [h[1][0], h[1][1] * diagonalScale, h[1][2]],
+        [h[2][0], h[2][1], h[2][2] * diagonalScale],
       ],
       [-g[0], -g[1], -g[2]],
     );

@@ -13,8 +13,15 @@ import {
   Vector3,
 } from 'three';
 import { pick, seeded } from './random';
-import { buildGraph, focusPose, pullBack, type GraphApp, type GraphNode } from './systems-graph';
-import type { Palette, SceneFactory } from './types';
+import {
+  buildGraph,
+  focusPose,
+  pullBack,
+  type GraphApp,
+  type GraphEdge,
+  type GraphNode,
+} from './systems-graph';
+import type { Palette, SceneHooks, SceneInstance } from './types';
 
 type NodeView = {
   node: GraphNode;
@@ -23,12 +30,9 @@ type NodeView = {
   label: HTMLElement;
 };
 
-type Edge = ReturnType<typeof buildGraph>['edges'][number];
-
 type Pulse = {
-  app: string;
-  edge: Edge;
-  next?: Edge;
+  edge: GraphEdge;
+  next?: GraphEdge;
   t: number;
   speed: number;
   mesh: Mesh<SphereGeometry, MeshBasicMaterial>;
@@ -37,11 +41,11 @@ type Pulse = {
 const sizes = { server: 0.7, app: 0.46, part: 0.17 };
 const tones = { server: 'fg', app: 'accent', part: 'muted' } as const;
 
-export const createSystemsScene: SceneFactory<GraphApp[]> = (hooks, apps) => {
+export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneInstance => {
   const graph = buildGraph(apps);
   const routes = graph.edges
     .filter((edge) => edge.from.kind === 'server')
-    .map((edge) => ({ edge, parts: graph.edges.filter((part) => part.from === edge.to) }));
+    .map((edge) => ({ edge, parts: graph.edges.filter((next) => next.from === edge.to) }));
   const scene = new Scene();
   const camera = new PerspectiveCamera(36, 1, 0.1, 500);
   const random = seeded(3);
@@ -134,7 +138,6 @@ export const createSystemsScene: SceneFactory<GraphApp[]> = (hooks, apps) => {
     );
     scene.add(mesh);
     pulses.push({
-      app: route.edge.app,
       edge: route.edge,
       next,
       t: 0,
@@ -174,7 +177,7 @@ export const createSystemsScene: SceneFactory<GraphApp[]> = (hooks, apps) => {
         start.fromArray(pulse.edge.from.position);
         end.fromArray(pulse.edge.to.position);
         pulse.mesh.position.lerpVectors(start, end, Math.min(pulse.t, 1));
-        pulse.mesh.material.opacity = inFocus(pulse.app) ? 1 : 0.06;
+        pulse.mesh.material.opacity = inFocus(pulse.edge.app) ? 1 : 0.06;
         if (pulse.t < 1) {
           return true;
         }

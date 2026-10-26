@@ -26,6 +26,21 @@ describe('ScenePlayer', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('starts the scene it is given now, not the one it was first given', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
+    const { rerender } = render(<ScenePlayer scene={{ name: 'floor' }} description="A floor" />);
+    await screen.findByRole('button', { name: 'Pause motion' });
+    rerender(<ScenePlayer scene={{ name: 'storm' }} description="A storm" />);
+    await waitFor(() => {
+      expect(play).toHaveBeenLastCalledWith(
+        { name: 'storm' },
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+  });
+
   it('pauses every scene on the page from any one button, and stops drawing a hidden one', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
     const systems = (
