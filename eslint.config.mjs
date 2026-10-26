@@ -4,9 +4,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const notPassingYet = {
-  curly: ['apps/web/scripts/{campaign,failover,storm}-data.mjs'],
-};
+const notPassingYet = {};
 
 export default defineConfig(
   globalIgnores([

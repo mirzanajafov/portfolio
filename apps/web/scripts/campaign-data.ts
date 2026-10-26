@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { z } from 'zod';
 
 const [resultsDir, outPath = 'src/scenes/campaign-data.json'] = process.argv.slice(2);
 if (!resultsDir) {
-  console.error('usage: node scripts/campaign-data.mjs <carwash-ledger>/tools/chaos/results');
+  console.error('usage: node scripts/campaign-data.ts <carwash-ledger>/tools/chaos/results');
   process.exit(1);
 }
 
@@ -38,22 +39,44 @@ const mutants = [
   { id: 'M12', dir: '20261013-133213-M12', guard: 'the checkpointer sends the wrong root' },
 ];
 
-const sum = (values) => Object.values(values).reduce((total, value) => total + value, 0);
+const counts = z.record(z.string(), z.number());
+const mutantRunSchema = z.object({ violations: z.array(z.object({ id: z.string() })) });
+const runSchema = mutantRunSchema.extend({
+  startedAt: z.string(),
+  seed: z.number(),
+  journeys: z.number(),
+  kills: z.object({ random: counts, failpoints: counts }),
+  postgres: z.object({ kills: z.number() }),
+  kafka: z.object({ kills: z.number() }),
+  toxics: counts,
+  forged: counts,
+});
 
-function runsOf(dir) {
-  const path = join(resultsDir, dir, 'runs.jsonl');
-  if (!existsSync(path)) throw new Error(`no runs in ${dir}`);
+const sum = (values: Record<string, number> | number[]) =>
+  Object.values(values).reduce((total, value) => total + value, 0);
+
+function runsOf<T>(dir: string, schema: z.ZodType<T>): T[] {
+  const path = join(dir, 'runs.jsonl');
+  if (!existsSync(path)) {
+    throw new Error(`no runs in ${dir}`);
+  }
   return readFileSync(path, 'utf8')
     .split('\n')
     .filter(Boolean)
-    .map((line) => JSON.parse(line));
+    .map((line) => schema.parse(JSON.parse(line)));
 }
 
 const campaignDirs = readdirSync(resultsDir)
   .filter((dir) => /^\d{8}-\d{6}$/.test(dir) && dir >= campaign.from && dir <= campaign.to)
   .sort();
-const runs = campaignDirs.flatMap(runsOf).sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-const start = Date.parse(runs[0].startedAt);
+const runs = campaignDirs
+  .flatMap((dir) => runsOf(join(resultsDir, dir), runSchema))
+  .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+const [firstRun] = runs;
+if (!firstRun) {
+  throw new Error(`no campaign runs between ${campaign.from} and ${campaign.to}`);
+}
+const start = Date.parse(firstRun.startedAt);
 
 const data = {
   runs: runs.map((run) => ({
@@ -68,12 +91,11 @@ const data = {
     violations: run.violations.length,
   })),
   mutants: mutants.map(({ id, dir, guard }) => {
-    const mutantRuns = runsOf(dir);
+    const mutantRuns = runsOf(join(resultsDir, dir), mutantRunSchema);
     const first = mutantRuns.findIndex((run) => run.violations.length > 0);
-    const caughtBy =
-      first < 0
-        ? []
-        : [...new Set(mutantRuns[first].violations.map((violation) => violation.id))].sort();
+    const caughtBy = [
+      ...new Set(mutantRuns[first]?.violations.map((violation) => violation.id)),
+    ].sort();
     return {
       id,
       guard,
@@ -87,5 +109,5 @@ const data = {
 writeFileSync(outPath, `${JSON.stringify(data)}\n`);
 const caught = data.mutants.filter((mutant) => mutant.caughtIn !== null);
 console.log(
-  `wrote ${outPath}: ${data.runs.length} runs from ${campaignDirs.length} folders, ${sum(data.runs.map((run) => run.journeys))} journeys, ${sum(data.runs.map((run) => run.violations))} violations; ${caught.length} of ${data.mutants.length} mutants caught`,
+  `wrote ${outPath}: ${data.runs.length} runs from ${campaignDirs.length} folders, ${sum(data.runs.map((run) => run.journeys))} journeys, ${sum(data.runs.map((run) => run.violations))} violations, and ${caught.length} of ${data.mutants.length} mutants caught`,
 );

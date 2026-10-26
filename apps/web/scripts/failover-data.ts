@@ -1,30 +1,61 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { z } from 'zod';
 
 const [runsPath, outPath = 'src/scenes/failover-data.json'] = process.argv.slice(2);
 if (!runsPath) {
   console.error(
-    'usage: node scripts/failover-data.mjs <portalgun-router>/bench/results/e3/20261009-175756/runs.jsonl',
+    'usage: node scripts/failover-data.ts <portalgun-router>/bench/results/e3/20261009-175756/runs.jsonl',
   );
   process.exit(1);
 }
 
-const window = { from: -3000, to: 42000 };
+const span = { from: -3000, to: 42000 };
 const picks = [
   { id: 'probes', cell: 'crash/probes', label: 'probes only' },
   { id: 'all', cell: 'crash/both-retries', label: 'probes, ejection, retries' },
 ];
 
+const runSchema = z.object({
+  cell: z.string(),
+  report: z.object({
+    window: z.object({ injectAt: z.number(), clearAt: z.number() }),
+    generator: z.object({ rate: z.number() }),
+    result: z.object({
+      lost: z.number(),
+      bins: z
+        .array(
+          z.object({
+            atMs: z.number(),
+            requests: z.number(),
+            target: z.number(),
+            failed: z.number(),
+            retried: z.number(),
+          }),
+        )
+        .nullish(),
+    }),
+    events: z
+      .array(z.object({ unixNano: z.number(), state: z.string(), reason: z.string() }))
+      .nullable(),
+  }),
+});
+
 const runs = readFileSync(runsPath, 'utf8')
   .split('\n')
   .filter(Boolean)
-  .map((line) => JSON.parse(line));
+  .map((line) => runSchema.parse(JSON.parse(line)));
 
-function extract({ id, cell, label }) {
+function extract({ id, cell, label }: (typeof picks)[number]) {
   const run = runs.find((r) => r.cell === cell && r.report.result.bins);
-  if (!run) throw new Error(`no run with bins for ${cell}`);
+  if (!run) {
+    throw new Error(`no run with bins for ${cell}`);
+  }
   const { window: fault, generator, result, events } = run.report;
-  const bins = result.bins.filter((b) => b.atMs >= window.from && b.atMs < window.to);
-  if (bins.length !== (window.to - window.from) / 100) {
+  if (!events) {
+    throw new Error(`${cell}: the run recorded no health events`);
+  }
+  const bins = (result.bins ?? []).filter((b) => b.atMs >= span.from && b.atMs < span.to);
+  if (bins.length !== (span.to - span.from) / 100) {
     throw new Error(`${cell}: expected one bin per 100 ms, got ${bins.length}`);
   }
   const failed = bins.reduce((total, b) => total + b.failed, 0);
@@ -50,13 +81,16 @@ function extract({ id, cell, label }) {
   };
 }
 
-const runsUsed = picks.map(extract);
-const lanes = runsUsed.map((run) => run.lane);
+const [first, ...rest] = picks.map(extract);
+if (!first) {
+  throw new Error('no runs were picked');
+}
+const lanes = [first, ...rest].map((run) => run.lane);
 const data = {
-  rate: runsUsed[0].rate,
+  rate: first.rate,
   binMs: 100,
-  fromMs: window.from,
-  clearMs: runsUsed[0].clearMs,
+  fromMs: span.from,
+  clearMs: first.clearMs,
   lanes,
 };
 
