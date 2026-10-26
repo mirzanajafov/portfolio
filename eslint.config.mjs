@@ -22,7 +22,7 @@ const notPassingYet = {
   '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-non-null-assertion': [
-    `${scenes}/{campaign,failover,floor,storm,systems-graph}.test.ts`,
+    `${scenes}/{campaign,failover,storm,systems-graph}.test.ts`,
     'apps/web/src/app/palette.node.test.ts',
     'apps/web/src/components/{scene-player,systems-tour}.test.tsx',
     'apps/api/evals/evals.spec.ts',
@@ -35,7 +35,6 @@ const notPassingYet = {
     'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',
     'apps/web/src/components/systems-tour.tsx',
   ],
-  '@typescript-eslint/prefer-optional-chain': [`${scenes}/player.ts`],
   '@typescript-eslint/restrict-template-expressions': [
     'apps/web/src/components/systems-tour.tsx',
     'content/src/scaffold.test.ts',

@@ -1,4 +1,4 @@
-import { Color, LineBasicMaterial, LineSegments } from 'three';
+import { LineBasicMaterial, LineSegments } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   commissionLoop,
@@ -8,32 +8,7 @@ import {
   createCommissionScene,
 } from './commission';
 import { type Fault, type Replay, commissionOf } from './commission-model';
-import type { Palette, SceneHooks } from './types';
-
-function sceneHooks(width: number) {
-  const labels: HTMLElement[] = [];
-  const hooks: SceneHooks = {
-    label: (text) => {
-      const label = document.createElement('span');
-      label.textContent = text;
-      labels.push(label);
-      return label;
-    },
-    place: () => undefined,
-    size: () => ({ width, height: 800 }),
-  };
-  return { hooks, labels };
-}
-
-const palette: Palette = {
-  bg: new Color(),
-  fg: new Color(),
-  muted: new Color(),
-  line: new Color(),
-  grid: new Color(),
-  accent: new Color(),
-  signal: new Color(),
-};
+import { testHooks } from './test-hooks';
 
 const atRun = commissionOf(commissionReplay);
 
@@ -152,9 +127,8 @@ describe('the replay', () => {
 
 describe('the commission scene', () => {
   it('opens on the verdict, so a still frame already says it', () => {
-    const { hooks, labels } = sceneHooks(1200);
+    const { hooks, labels } = testHooks({ width: 1200 });
     const scene = createCommissionScene(hooks);
-    scene.setColors(palette);
     for (let i = 0; i < 40; i += 1) {
       scene.step(0.05, i * 0.05);
     }
@@ -165,23 +139,19 @@ describe('the commission scene', () => {
       '6 three-minute runs: 187 faults · 287,516 operations · 6 of 6 linearizable',
     ]);
     expect(labels.map((label) => label.textContent)).toContain('III · 178dddfd');
-    scene.dispose();
   });
 
   it('leaves the state hash off the families at the verdict on a narrow screen', () => {
-    const { hooks, labels } = sceneHooks(400);
+    const { hooks, labels } = testHooks({ width: 400 });
     const scene = createCommissionScene(hooks);
-    scene.setColors(palette);
     scene.step(2, 2);
     scene.render(2, 10);
     expect(labels.map((label) => label.textContent)).toContain('III');
-    scene.dispose();
   });
 
   it('draws no line across a link a fault cuts', () => {
-    const { hooks } = sceneHooks(1200);
+    const { hooks } = testHooks({ width: 1200 });
     const scene = createCommissionScene(hooks);
-    scene.setColors(palette);
     const openedAt = commissionRunEnd - 1;
     scene.step(commissionLoop - openedAt + 52 / commissionParameters.speed, 0);
     scene.render(0, 10);
@@ -211,13 +181,11 @@ describe('the commission scene', () => {
       true,
       true,
     ]);
-    scene.dispose();
   });
 
   it('starts the run again after the verdict and counts successions in words', () => {
-    const { hooks, labels } = sceneHooks(1200);
+    const { hooks, labels } = testHooks({ width: 1200 });
     const scene = createCommissionScene(hooks);
-    scene.setColors(palette);
     for (let frame = 0; frame < 60 * 9; frame += 1) {
       scene.step(1 / 60, frame / 60);
     }
@@ -226,6 +194,5 @@ describe('the commission scene', () => {
     expect(first).toMatch(/^0:2\d of 3:00 · reign 2, family V is the Don$/);
     expect(third).toMatch(/^fault 5 of 32 · 1 succession so far$/);
     expect(labels.map((label) => label.textContent)).toContain('V · Don');
-    scene.dispose();
   });
 });

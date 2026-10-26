@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createStormScene, stormData, stormParameters, stormSample } from './storm';
-import type { SceneHooks } from './types';
+import { createStormScene, stormParameters } from './storm';
+import { stormAt, stormData, stormSample } from './storm-model';
+import { testHooks } from './test-hooks';
 
-const hooks: SceneHooks = {
-  label: () => document.createElement('span'),
-  place: () => undefined,
-  size: () => ({ width: 1200, height: 800 }),
-};
+const { hooks } = testHooks();
 
 const box = stormData.policies.find((series) => series.id === 'box')!;
 const pool = stormData.policies.find((series) => series.id === 'pool')!;
@@ -34,6 +31,15 @@ describe('the storm data taken from the poof simulator', () => {
   });
 });
 
+describe('the storm replay', () => {
+  it('runs the burst at 1.5 times capacity for five minutes and half of it otherwise', () => {
+    const minute = (at: number) => (at - stormData.startMinute) * 60;
+    expect(stormAt(minute(19.9))).toMatchObject({ minute: 19, burst: false, load: 0.5 });
+    expect(stormAt(minute(20))).toMatchObject({ minute: 20, burst: true, load: 1.5 });
+    expect(stormAt(minute(25))).toMatchObject({ minute: 25, burst: false, load: 0.5 });
+  });
+});
+
 describe('the storm scene', () => {
   it('reads out the sample it is showing and loops at the end', () => {
     const scene = createStormScene(hooks);
@@ -52,6 +58,5 @@ describe('the storm scene', () => {
       Math.round(((25 * 60 - secondsToBurst) / stormParameters.secondsPerSecond) * 60) + 60;
     for (let frame = 0; frame < rest; frame += 1) scene.step(1 / 60, frame / 60);
     expect(scene.readout()[0]).toContain(`simulated minute ${stormData.startMinute}`);
-    scene.dispose();
   });
 });

@@ -1,19 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createFailoverScene,
-  failoverData,
-  laneAt,
-  layoutIsWide,
-  speedAt,
-  stateOfA,
-} from './failover';
-import type { SceneHooks } from './types';
+import { createFailoverScene, layoutIsWide, speedAt } from './failover';
+import { failoverData, laneAt, stateOfA } from './failover-model';
+import { testHooks } from './test-hooks';
 
-const hooks: SceneHooks = {
-  label: () => document.createElement('span'),
-  place: () => undefined,
-  size: () => ({ width: 1200, height: 800 }),
-};
+const { hooks } = testHooks();
 
 const probes = failoverData.lanes.find((lane) => lane.id === 'probes')!;
 const all = failoverData.lanes.find((lane) => lane.id === 'all')!;
@@ -103,7 +93,6 @@ describe('the failover scene', () => {
     expect(when).toContain('dimension a refuses every connection · slowed 4×');
     expect(first).toMatch(/^probes only: \d+% sent to a · [1-9][\d,]* lost$/);
     expect(second).toMatch(/^probes, ejection, retries: 0% sent to a · 0 lost/);
-    scene.dispose();
   });
 
   it('plays to the recovery and loops back to before the crash', () => {
@@ -116,6 +105,5 @@ describe('the failover scene', () => {
     const back = seen.findIndex((line) => line.includes('a is back after 30 s'));
     expect(back).toBeGreaterThan(0);
     expect(seen.slice(back).some((line) => line.includes('three dimensions'))).toBe(true);
-    scene.dispose();
   });
 });

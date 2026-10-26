@@ -112,7 +112,6 @@ export function ScenePlayer({
       setHandle(null);
       setFailure(null);
       setReadout([]);
-      labels.replaceChildren();
     };
   }, [scene.name]);
 

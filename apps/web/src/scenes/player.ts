@@ -1,5 +1,6 @@
 import type { DemoName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
+import { disposeScene } from './dispose';
 import { labelPosition } from './label-position';
 import type { GraphApp } from './systems-graph';
 import type { Palette, SceneFactory, SceneInstance } from './types';
@@ -14,6 +15,8 @@ const demos: Record<DemoName, () => Promise<SceneFactory>> = {
   campaign: () => import('./campaign').then((m) => m.createCampaignScene),
   commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
+
+const narrowWidth = 600;
 
 async function load(spec: SceneSpec): Promise<SceneFactory> {
   if (spec.name === 'systems') {
@@ -59,52 +62,66 @@ export async function play(
   signal.throwIfAborted();
   const create = await load(spec);
   signal.throwIfAborted();
+  const host = canvas.parentElement ?? canvas;
+  const projected = new Vector3();
+  const halfWidths = new WeakMap<HTMLElement, number>();
+  const halfWidth = (label: HTMLElement) => {
+    const known = halfWidths.get(label);
+    if (known !== undefined) {
+      return known;
+    }
+    const half = label.offsetWidth / 2;
+    if (half > 0) {
+      halfWidths.set(label, half);
+    }
+    return half;
+  };
+
+  let instance: SceneInstance;
+  try {
+    instance = create({
+      palette: readPalette(document.documentElement),
+      label(text, kind) {
+        const element = document.createElement('div');
+        element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
+        element.textContent = text;
+        labels.appendChild(element);
+        return element;
+      },
+      write(label, text) {
+        if (label.textContent !== text) {
+          label.textContent = text;
+          halfWidths.delete(label);
+        }
+      },
+      place(label, x, y, z) {
+        projected.set(x, y, z).project(instance.camera);
+        const spot = labelPosition(
+          projected,
+          host.clientWidth,
+          host.clientHeight,
+          halfWidth(label),
+        );
+        label.style.display = spot ? '' : 'none';
+        if (spot) {
+          label.style.left = `${spot.left}px`;
+          label.style.top = `${spot.top}px`;
+        }
+      },
+      size: () => ({ width: host.clientWidth, height: host.clientHeight }),
+      narrow: () => host.clientWidth < narrowWidth,
+    });
+  } catch (error) {
+    labels.replaceChildren();
+    throw error;
+  }
+
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
     powerPreference: 'high-performance',
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  const projected = new Vector3();
-  const host = canvas.parentElement ?? canvas;
-  const labelWidths = new WeakMap<HTMLElement, { text: string | null; half: number }>();
-  const labelHalfWidth = (element: HTMLElement) => {
-    const known = labelWidths.get(element);
-    if (known !== undefined && known.text === element.textContent) {
-      return known.half;
-    }
-    const half = element.offsetWidth / 2;
-    if (half > 0) {
-      labelWidths.set(element, { text: element.textContent, half });
-    }
-    return half;
-  };
-
-  const instance: SceneInstance = create({
-    label(text, kind) {
-      const element = document.createElement('div');
-      element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
-      element.textContent = text;
-      labels.appendChild(element);
-      return element;
-    },
-    place(element, x, y, z) {
-      projected.set(x, y, z).project(instance.camera);
-      const spot = labelPosition(
-        projected,
-        host.clientWidth,
-        host.clientHeight,
-        labelHalfWidth(element),
-      );
-      element.style.display = spot ? '' : 'none';
-      if (spot) {
-        element.style.left = `${spot.left}px`;
-        element.style.top = `${spot.top}px`;
-      }
-    },
-    size: () => ({ width: host.clientWidth, height: host.clientHeight }),
-  });
-
   const applyColors = () => {
     const palette = readPalette(document.documentElement);
     renderer.setClearColor(palette.bg);
@@ -178,8 +195,9 @@ export async function play(
       intersection.disconnect();
       scheme.removeEventListener('change', applyColors);
       themeObserver.disconnect();
-      instance.dispose();
+      disposeScene(instance.scene);
       renderer.dispose();
+      labels.replaceChildren();
     },
   };
 }

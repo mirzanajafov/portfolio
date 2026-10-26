@@ -1,6 +1,6 @@
 import { Float32BufferAttribute } from 'three';
 import { describe, expect, it } from 'vitest';
-import { blurOn, correlationOn, greedyMatch, learningCurve, oracle } from './population';
+import { blurOn, correlationOn, greedyMatch, learningCurve, oracle } from './population-model';
 
 describe('the learning curve', () => {
   it('passes through the measured points from the Matchium simulator', () => {
