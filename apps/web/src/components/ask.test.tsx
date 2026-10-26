@@ -46,6 +46,8 @@ describe('Ask', () => {
       '/api/ask',
       expect.objectContaining({ body: JSON.stringify({ question: 'How does Matchium work?' }) }),
     );
+    expect(await screen.findByRole('button', { name: 'Ask' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('asks a suggested question with one click', async () => {
@@ -69,6 +71,29 @@ describe('Ask', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ask' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Try again in 2 minutes');
+  });
+
+  it('keeps what it said and shows the failure when the answer stops before it finishes', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        sse(
+          { type: 'meta', engine: 'keyword' },
+          {
+            type: 'sentence',
+            text: 'It answers in 40 ms.',
+            sources: [{ id: 'd/f', label: 'Demo' }],
+          },
+        ),
+      ),
+    );
+    render(<Ask suggestions={[]} email="me@example.com" />);
+
+    await userEvent.type(screen.getByLabelText('Your question'), 'How fast is it?');
+    await userEvent.click(screen.getByRole('button', { name: 'Ask' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Email me at me@example.com');
+    expect(screen.getByText('It answers in 40 ms.')).toBeInTheDocument();
   });
 
   it('points to email when the service is down', async () => {

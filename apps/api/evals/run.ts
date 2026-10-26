@@ -1,18 +1,19 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
+import { AskService } from '../src/ask/ask.service.js';
 import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
 import { buildKnowledge } from '../src/ask/knowledge.js';
 import { adversarial } from './adversarial.js';
 import { runEvals } from './evals.js';
 
 const knowledge = buildKnowledge(content);
-const report = await runEvals(
+const ask = new AskService(
   new KeywordAnswerEngine(knowledge),
   knowledge,
-  content.projects,
-  adversarial,
+  content.profile.links.email,
 );
+const report = await runEvals(ask, knowledge, content.projects, adversarial);
 
 await writeFile(
   join(import.meta.dirname, `${report.engine}.json`),

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class Clock {
+export class ClockService {
   now(): Date {
     return new Date();
   }

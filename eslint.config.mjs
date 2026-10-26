@@ -17,7 +17,6 @@ const notPassingYet = {
     'apps/web/src/app/projects/\\[slug\\]/page.tsx',
     'apps/web/src/components/systems-tour.tsx',
   ],
-  '@typescript-eslint/consistent-type-definitions': ['apps/api/src/ask/answer-engine.ts'],
   '@typescript-eslint/no-deprecated': ['apps/web/src/components/ask.tsx'],
   '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],

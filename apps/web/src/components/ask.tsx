@@ -37,7 +37,9 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
           failureMessage(response.status, response.headers.get('retry-after'), email),
         );
       }
+      let finished = false;
       for await (const event of readEvents(response.body)) {
+        finished = event.type === 'done';
         if (event.type === 'sentence') {
           const sentence = { text: event.text, sources: event.sources };
           setState((previous) =>
@@ -46,6 +48,9 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
               : previous,
           );
         }
+      }
+      if (!finished) {
+        throw new AskFailure(failureMessage(0, null, email));
       }
       setState((previous) =>
         previous.status === 'asking' ? { ...previous, status: 'done' } : previous,

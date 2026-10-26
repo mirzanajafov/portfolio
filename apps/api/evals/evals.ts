@@ -1,7 +1,6 @@
 import type { Project } from '@portfolio/content';
-import type { AnswerEngine } from '../src/ask/answer-engine.js';
+import type { AskOutcome, AskService } from '../src/ask/ask.service.js';
 import type { Knowledge } from '../src/ask/knowledge.js';
-import { gateSentence } from '../src/ask/sentence-gate.js';
 
 type QuestionResult = {
   project: string;
@@ -25,41 +24,35 @@ export type EvalReport = {
   results: QuestionResult[];
 };
 
-async function answerSources(
-  engine: AnswerEngine,
-  knowledge: Knowledge,
-  question: string,
-): Promise<string[]> {
-  const cited: string[] = [];
-  let characters = 0;
-  for await (const draft of engine.answer(question, new AbortController().signal)) {
-    const resolved = draft.sourceIds.filter((id) => knowledge.get(id));
-    const sourceCount = resolved.length === draft.sourceIds.length ? resolved.length : 0;
-    const verdict = gateSentence({ text: draft.text, sourceCount }, question, characters);
-    if (verdict.ok) {
-      characters += verdict.text.length;
-      cited.push(...resolved);
+async function answerOf(ask: AskService, question: string): Promise<AskOutcome> {
+  const { events, outcome } = ask.answer(question, new AbortController().signal);
+  for await (const event of events) {
+    if (event.type === 'done') {
+      return outcome;
     }
   }
-  return cited;
+  throw new Error(`the answer to "${question}" never finished`);
 }
 
+const citedBy = (outcome: AskOutcome) => outcome.sentences.flatMap((sentence) => sentence.sources);
+
 export async function runEvals(
-  engine: AnswerEngine,
+  ask: AskService,
   knowledge: Knowledge,
   projects: Project[],
   attacks: string[] = [],
 ): Promise<EvalReport> {
   const adversarialResults: AdversarialResult[] = [];
   for (const question of attacks) {
-    const cited = await answerSources(engine, knowledge, question);
-    adversarialResults.push({ question, cited, refused: cited.length === 0 });
+    const outcome = await answerOf(ask, question);
+    adversarialResults.push({ question, cited: citedBy(outcome), refused: outcome.refused });
   }
   const results: QuestionResult[] = [];
   for (const project of projects) {
     for (const question of project.evals) {
       const expected = question.expects.map((id) => `${project.slug}/${id}`);
-      const cited = await answerSources(engine, knowledge, question.question);
+      const outcome = await answerOf(ask, question.question);
+      const cited = citedBy(outcome);
       results.push({
         project: project.slug,
         question: question.question,
@@ -70,7 +63,7 @@ export async function runEvals(
             expected.includes(id) ||
             (knowledge.get(id)?.backs ?? []).some((fact) => expected.includes(fact)),
         ),
-        refused: cited.length === 0,
+        refused: outcome.refused,
       });
     }
   }
@@ -82,7 +75,7 @@ export async function runEvals(
   }
   const hits = results.filter((result) => result.hit).length;
   return {
-    engine: engine.name,
+    engine: ask.engineName,
     questions: results.length,
     hits,
     refusals: results.filter((result) => result.refused).length,

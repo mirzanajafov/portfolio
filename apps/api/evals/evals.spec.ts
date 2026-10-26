@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { content } from '@portfolio/content';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
+import { AskService } from '../src/ask/ask.service.js';
 import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
 import { adversarial } from './adversarial.js';
@@ -14,12 +15,12 @@ const knowledge = buildKnowledge(content);
 describe('the keyword baseline on the real eval set', () => {
   let report: EvalReport;
   beforeAll(async () => {
-    report = await runEvals(
+    const ask = new AskService(
       new KeywordAnswerEngine(knowledge),
       knowledge,
-      content.projects,
-      adversarial,
+      content.profile.links.email,
     );
+    report = await runEvals(ask, knowledge, content.projects, adversarial);
   });
 
   it('does not fall below the baseline it was merged with', () => {
@@ -101,12 +102,21 @@ describe('runEvals', () => {
         yield { text: 'I made it fast on purpose.', sourceIds: ['demo/case-study/decision-1'] };
       },
     };
-    const report = await runEvals(passageEngine, withPassage, [project]);
+    const report = await runEvals(
+      new AskService(passageEngine, withPassage, 'me@example.com'),
+      withPassage,
+      [project],
+    );
     expect(report.hits).toBe(2);
   });
 
   it('counts a hit only when an expected fact is cited, and a refusal when nothing is', async () => {
-    const report = await runEvals(engine, tiny, [project], ['attack', 'quiet']);
+    const report = await runEvals(
+      new AskService(engine, tiny, 'me@example.com'),
+      tiny,
+      [project],
+      ['attack', 'quiet'],
+    );
     expect(report.hits).toBe(1);
     expect(report.refusals).toBe(1);
     expect(report.hitRate).toBe(0.5);

@@ -1,8 +1,8 @@
-export type GateReason = 'unsupported' | 'echo' | 'denied' | 'too-long';
+export type GateReason = 'unsupported' | 'empty' | 'echo' | 'denied' | 'too-long';
 
 type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 
-export const limits = {
+export const gateThresholds = {
   echoRun: 8,
   answerCharacters: 700,
 };
@@ -14,11 +14,10 @@ const denied = [
   /\bi (accept|agree to)\b/i,
 ];
 
-function stripMarkup(text: string): string {
-  return text
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+const tag = /<[^\s<>][^<>]*>/g;
+
+function withoutMarkup(text: string, gap: string): string {
+  return text.replace(tag, gap).replace(/\s+/g, ' ').trim();
 }
 
 function words(text: string): string[] {
@@ -56,14 +55,18 @@ export function gateSentence(
   if (sentence.sourceCount === 0) {
     return { ok: false, reason: 'unsupported' };
   }
-  const text = stripMarkup(sentence.text);
-  if (longestSharedRun(text, question) >= limits.echoRun) {
+  const text = withoutMarkup(sentence.text, ' ');
+  if (words(text).length === 0) {
+    return { ok: false, reason: 'empty' };
+  }
+  const readings = [text, withoutMarkup(sentence.text, '')];
+  if (readings.some((reading) => longestSharedRun(reading, question) >= gateThresholds.echoRun)) {
     return { ok: false, reason: 'echo' };
   }
-  if (denied.some((pattern) => pattern.test(text))) {
+  if (readings.some((reading) => denied.some((pattern) => pattern.test(reading)))) {
     return { ok: false, reason: 'denied' };
   }
-  if (charactersSoFar + text.length > limits.answerCharacters) {
+  if (charactersSoFar + text.length > gateThresholds.answerCharacters) {
     return { ok: false, reason: 'too-long' };
   }
   return { ok: true, text };

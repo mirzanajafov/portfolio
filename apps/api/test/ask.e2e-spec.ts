@@ -4,12 +4,13 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
+import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
-import { Clock } from '../src/common/clock.js';
+import { ClockService } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
-class FixedClock extends Clock {
+class FixedClock extends ClockService {
   current = new Date('2026-10-02T12:00:00Z');
   override now(): Date {
     return this.current;
@@ -28,14 +29,17 @@ function parseEvents(body: string): Event[] {
     }));
 }
 
-async function startApp(overrides: Record<string, string> = {}) {
+async function startApp(overrides: Record<string, string> = {}, engine?: AnswerEngine) {
   const clock = new FixedClock();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV)
     .useValue(parseEnv({ ...process.env, ...overrides }))
-    .overrideProvider(Clock)
-    .useValue(clock)
-    .compile();
+    .overrideProvider(ClockService)
+    .useValue(clock);
+  if (engine) {
+    builder = builder.overrideProvider(ANSWER_ENGINE).useValue(engine);
+  }
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>();
   configureApp(app);
   await app.init();
@@ -140,6 +144,17 @@ describe('POST /ask against a real database', () => {
     await ask(app, 'Have you worked with Stripe payments?', '198.51.100.2').expect(200);
   });
 
+  it('does not let a refused client use up the budget the whole site shares', async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await ask(app, 'Stripe?', '198.51.100.4').expect(200);
+    }
+    for (let i = 0; i < 3; i += 1) {
+      await ask(app, 'Stripe?', '198.51.100.4').expect(429);
+    }
+    const everyone = await prisma.rateLimit.findFirst({ where: { key: 'ask:day:everyone' } });
+    expect(everyone?.count).toBe(3);
+  });
+
   it('lets a caller back in when the window moves on', async () => {
     for (let i = 0; i < 3; i += 1) {
       await ask(app, 'Stripe?', '198.51.100.3').expect(200);
@@ -184,5 +199,48 @@ describe('POST /ask behind a proxy it does not trust', () => {
       await ask(app, 'Stripe?', `192.0.2.${i}`).expect(200);
     }
     await ask(app, 'Stripe?', '192.0.2.99').expect(429);
+  });
+});
+
+describe('POST /ask when the engine fails', () => {
+  const failing: AnswerEngine = {
+    name: 'failing',
+    async *answer(question) {
+      if (question.includes('Matchium')) {
+        yield { text: 'It asks half the questions.', sourceIds: ['matchium/half-the-questions'] };
+      }
+      throw new Error('the model went away');
+    },
+  };
+  let app: NestExpressApplication;
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    ({ app, prisma } = await startApp({}, failing));
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(async () => {
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
+  });
+
+  async function expectNoRow(question: string) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(await prisma.askLog.count({ where: { question } })).toBe(0);
+  }
+
+  it('ends the answer without a done event when the engine fails after the first sentence, and logs nothing', async () => {
+    const response = await ask(app, 'How does Matchium work?').expect(200);
+    expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta', 'sentence']);
+    await expectNoRow('How does Matchium work?');
+  });
+
+  it('ends the answer without a done event when the engine fails before saying anything, and logs nothing', async () => {
+    const response = await ask(app, 'What is your favourite colour?').expect(200);
+    expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta']);
+    await expectNoRow('What is your favourite colour?');
   });
 });
