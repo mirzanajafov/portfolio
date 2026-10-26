@@ -39,6 +39,8 @@ export class AskController {
     if (!req.ip) {
       throw new BadRequestException('the client has no address');
     }
+    const abort = new AbortController();
+    res.on('close', () => abort.abort());
     const client = this.limits.clientOf(req.ip);
     const verdict = await this.limits.admit(client);
     if (!verdict.allowed) {
@@ -49,8 +51,6 @@ export class AskController {
       );
     }
 
-    const abort = new AbortController();
-    res.on('close', () => abort.abort());
     res.status(200).set({
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-store',
@@ -69,12 +69,12 @@ export class AskController {
       }
     } finally {
       res.end();
-      await this.askLog.record({
-        client,
-        question,
-        ...outcome,
-        durationMs: Math.round(performance.now() - started),
-      });
     }
+    await this.askLog.record({
+      client,
+      question,
+      ...outcome,
+      durationMs: Math.round(performance.now() - started),
+    });
   }
 }
