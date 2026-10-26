@@ -18,41 +18,44 @@ const picks = [
 
 const runSchema = z.object({
   cell: z.string(),
-  report: z.object({
-    window: z.object({ injectAt: z.number(), clearAt: z.number() }),
-    generator: z.object({ rate: z.number() }),
-    result: z.object({
-      lost: z.number(),
-      bins: z
-        .array(
-          z.object({
-            atMs: z.number(),
-            requests: z.number(),
-            target: z.number(),
-            failed: z.number(),
-            retried: z.number(),
-          }),
-        )
-        .nullish(),
-    }),
-    events: z
-      .array(z.object({ unixNano: z.number(), state: z.string(), reason: z.string() }))
-      .nullable(),
-  }),
+  report: z
+    .object({
+      window: z.object({ injectAt: z.number(), clearAt: z.number() }),
+      generator: z.object({ rate: z.number() }),
+      result: z.object({
+        lost: z.number(),
+        bins: z
+          .array(
+            z.object({
+              atMs: z.number(),
+              requests: z.number(),
+              target: z.number(),
+              failed: z.number(),
+              retried: z.number(),
+            }),
+          )
+          .nullish(),
+      }),
+      events: z
+        .array(z.object({ unixNano: z.number(), state: z.string(), reason: z.string().optional() }))
+        .nullable(),
+    })
+    .nullable(),
 });
 
 const runs = readJsonLines(runsPath, runSchema);
 
 function extract({ id, cell, label }: (typeof picks)[number]) {
-  const run = runs.find((r) => r.cell === cell && r.report.result.bins);
-  if (!run) {
+  const report = runs.find((run) => run.cell === cell && run.report?.result.bins)?.report;
+  const allBins = report?.result.bins;
+  if (!report || !allBins) {
     throw new Error(`no run with bins for ${cell}`);
   }
-  const { window: fault, generator, result, events } = run.report;
+  const { window: fault, generator, result, events } = report;
   if (!events) {
     throw new Error(`${cell}: the run recorded no health events`);
   }
-  const bins = (result.bins ?? []).filter((b) => b.atMs >= span.from && b.atMs < span.to);
+  const bins = allBins.filter((b) => b.atMs >= span.from && b.atMs < span.to);
   if (bins.length !== (span.to - span.from) / 100) {
     throw new Error(`${cell}: expected one bin per 100 ms, got ${bins.length}`);
   }
