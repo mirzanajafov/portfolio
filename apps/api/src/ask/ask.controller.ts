@@ -9,7 +9,7 @@ import { AskLogService, type AskLogEntry } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
 import { clientKey } from './client-key.js';
 
-export const askRequestSchema = z.strictObject({
+const askRequestSchema = z.strictObject({
   question: z.string().trim().min(1).max(300),
 });
 

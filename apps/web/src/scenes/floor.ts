@@ -20,7 +20,7 @@ import { fitPosition, rssiToDistance } from './position-fit';
 import { gaussian, seeded } from './random';
 import type { Palette, SceneFactory } from './types';
 
-export const floorParameters = {
+const floorParameters = {
   width: 40,
   depth: 25,
   tags: 6,

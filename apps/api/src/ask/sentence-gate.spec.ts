@@ -63,8 +63,4 @@ describe('gateSentence', () => {
       reason: 'too-long',
     });
   });
-
-  it('lets a fixed sentence through without a source', () => {
-    expect(gateSentence({ text: 'Email me.', sourceCount: 0, fixed: true }, 'q', 0).ok).toBe(true);
-  });
 });

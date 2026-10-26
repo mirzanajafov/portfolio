@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
-import { AskService, refusal, type AskEvent } from './ask.service.js';
+import { AskService, type AskEvent } from './ask.service.js';
 import { Knowledge } from './knowledge.js';
 
 const knowledge = new Knowledge(
@@ -24,6 +24,12 @@ function engineSaying(...drafts: DraftSentence[]): AnswerEngine {
     },
   };
 }
+
+const refusal = {
+  type: 'sentence',
+  text: "I don't have a source for that, so I won't guess. Ask me directly at me@example.com.",
+  sources: [],
+};
 
 async function collect(service: AskService, question = 'How fast is it?'): Promise<AskEvent[]> {
   const events: AskEvent[] = [];
@@ -69,17 +75,13 @@ describe('AskService', () => {
       'me@example.com',
     );
     const events = await collect(service);
-    expect(events.at(-2)).toEqual({
-      type: 'sentence',
-      text: refusal('me@example.com'),
-      sources: [],
-    });
+    expect(events.at(-2)).toEqual(refusal);
     expect(events.at(-1)).toEqual({ type: 'done' });
   });
 
   it('refuses when the engine has nothing to say', async () => {
     const service = new AskService(engineSaying(), knowledge, 'me@example.com');
     const sentences = (await collect(service)).filter((event) => event.type === 'sentence');
-    expect(sentences).toEqual([{ type: 'sentence', text: refusal('me@example.com'), sources: [] }]);
+    expect(sentences).toEqual([refusal]);
   });
 });

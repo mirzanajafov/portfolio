@@ -49,14 +49,11 @@ export function longestSharedRun(a: string, b: string): number {
 }
 
 export function gateSentence(
-  sentence: { text: string; sourceCount: number; fixed?: boolean },
+  sentence: { text: string; sourceCount: number },
   question: string,
   charactersSoFar: number,
 ): GateVerdict {
   const text = stripMarkup(sentence.text);
-  if (sentence.fixed) {
-    return { ok: true, text };
-  }
   if (sentence.sourceCount === 0) {
     return { ok: false, reason: 'unsupported' };
   }

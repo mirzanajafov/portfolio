@@ -27,17 +27,19 @@ function extract({ id, cell, label }) {
   if (bins.length !== (window.to - window.from) / 100) {
     throw new Error(`${cell}: expected one bin per 100 ms, got ${bins.length}`);
   }
+  const failed = bins.reduce((total, b) => total + b.failed, 0);
+  if (failed !== result.lost) {
+    throw new Error(`${cell}: the bins fail ${failed} requests, the run lost ${result.lost}`);
+  }
   return {
     rate: generator.rate,
     clearMs: Math.round((fault.clearAt - fault.injectAt) / 1e6),
     lane: {
       id,
       label,
-      lost: result.lost,
       events: events.map((e) => ({
         atMs: Math.round((e.unixNano - fault.injectAt) / 1e5) / 10,
         state: e.state,
-        reason: e.reason,
       })),
       requests: bins.map((b) => b.requests),
       served: bins.map((b) => b.target),
@@ -50,7 +52,6 @@ function extract({ id, cell, label }) {
 const runsUsed = picks.map(extract);
 const lanes = runsUsed.map((run) => run.lane);
 const data = {
-  fault: { mode: 'crash', dimension: 'a' },
   dimensions: ['a', 'b', 'c'],
   rate: runsUsed[0].rate,
   binMs: 100,
@@ -61,5 +62,5 @@ const data = {
 
 writeFileSync(outPath, `${JSON.stringify(data)}\n`);
 console.log(
-  `wrote ${outPath}: ${lanes.map((l) => `${l.id} ${l.requests.length} bins, ${l.failed.reduce((a, b) => a + b, 0)} failed of ${l.lost} lost`).join('; ')}`,
+  `wrote ${outPath}: ${lanes.map((l) => `${l.id} ${l.requests.length} bins, ${l.failed.reduce((a, b) => a + b, 0)} lost`).join('; ')}`,
 );

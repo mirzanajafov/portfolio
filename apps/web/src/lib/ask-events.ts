@@ -1,12 +1,12 @@
 import * as z from 'zod/mini';
 
-export const sourceSchema = z.object({
+const sourceSchema = z.object({
   id: z.string(),
   label: z.string(),
   href: z.optional(z.string()),
 });
 
-export const askEventSchema = z.discriminatedUnion('type', [
+const askEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('meta'), engine: z.string() }),
   z.object({ type: z.literal('sentence'), text: z.string(), sources: z.array(sourceSchema) }),
   z.object({ type: z.literal('withheld'), reason: z.string() }),

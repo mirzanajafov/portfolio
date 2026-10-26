@@ -13,7 +13,6 @@ import type { Palette, SceneHooks } from './types';
 function sceneHooks(width: number) {
   const labels: HTMLElement[] = [];
   const hooks = {
-    renderer: undefined,
     label: (text: string) => {
       const label = document.createElement('span');
       label.textContent = text;
@@ -53,7 +52,6 @@ describe("the lab run taken from FiveFamilies' results", () => {
       faults: 187,
       ops: 287516,
       linearizable: 6,
-      sameState: 6,
     });
   });
 

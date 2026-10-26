@@ -3,7 +3,6 @@ import { createStormScene, stormData, stormParameters, stormSample } from './sto
 import type { SceneHooks } from './types';
 
 const hooks = {
-  renderer: undefined,
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),

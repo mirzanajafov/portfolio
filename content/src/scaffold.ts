@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { slugSchema } from './schema.ts';
 
-export const projectTemplate = `name: ''
+const projectTemplate = `name: ''
 order: 0
 hook: ''
 summary: ''
@@ -18,7 +18,7 @@ knowledge:
   - README.md
 `;
 
-export const evalsTemplate = `- question: ''
+const evalsTemplate = `- question: ''
   expects: []
 `;
 

@@ -3,7 +3,6 @@ import type { SceneHooks } from './types';
 import { createFloorScene } from './floor';
 
 const hooks = {
-  renderer: undefined,
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),

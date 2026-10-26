@@ -86,7 +86,6 @@ const replay = {
     faults: lab.reduce((total, report) => total + (report.faults ?? []).length, 0),
     ops: lab.reduce((total, report) => total + report.ops, 0),
     linearizable: lab.filter(passed).length,
-    sameState: lab.filter((report) => report.states_equal).length,
   },
 };
 

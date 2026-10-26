@@ -11,15 +11,7 @@ type State =
   | { status: 'asking' | 'done'; asked: string; sentences: Sentence[] }
   | { status: 'error'; asked: string; sentences: Sentence[]; message: string };
 
-export function Ask({
-  suggestions,
-  email,
-  retentionDays = 30,
-}: {
-  suggestions: string[];
-  email: string;
-  retentionDays?: number;
-}) {
+export function Ask({ suggestions, email }: { suggestions: string[]; email: string }) {
   const [question, setQuestion] = useState('');
   const [state, setState] = useState<State>({ status: 'idle' });
   const current = useRef<AbortController | null>(null);
@@ -88,9 +80,9 @@ export function Ask({
           language model and my own voice come later.
         </p>
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          I keep questions for {retentionDays} days to see where the answers fail, then they are
-          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
-          used for rate limiting.
+          I keep questions for 30 days to see where the answers fail, then they are deleted. Your IP
+          address is never stored, only a keyed hash that changes every day and is used for rate
+          limiting.
         </p>
       </div>
       <form onSubmit={submit} className="flex max-w-3xl gap-2 sm:gap-3">

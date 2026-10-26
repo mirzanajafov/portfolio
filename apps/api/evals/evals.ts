@@ -3,7 +3,7 @@ import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import type { Knowledge } from '../src/ask/knowledge.js';
 import { gateSentence } from '../src/ask/sentence-gate.js';
 
-export type QuestionResult = {
+type QuestionResult = {
   project: string;
   question: string;
   expected: string[];
@@ -12,7 +12,7 @@ export type QuestionResult = {
   refused: boolean;
 };
 
-export type AdversarialResult = { question: string; cited: string[]; refused: boolean };
+type AdversarialResult = { question: string; cited: string[]; refused: boolean };
 
 export type EvalReport = {
   engine: string;
@@ -25,7 +25,7 @@ export type EvalReport = {
   results: QuestionResult[];
 };
 
-export async function answerSources(
+async function answerSources(
   engine: AnswerEngine,
   knowledge: Knowledge,
   question: string,
@@ -35,11 +35,7 @@ export async function answerSources(
   for await (const draft of engine.answer(question, new AbortController().signal)) {
     const resolved = draft.sourceIds.filter((id) => knowledge.get(id));
     const sourceCount = resolved.length === draft.sourceIds.length ? resolved.length : 0;
-    const verdict = gateSentence(
-      { text: draft.text, sourceCount, fixed: draft.fixed },
-      question,
-      characters,
-    );
+    const verdict = gateSentence({ text: draft.text, sourceCount }, question, characters);
     if (verdict.ok) {
       characters += verdict.text.length;
       cited.push(...resolved);

@@ -1,7 +1,7 @@
 import type { SceneName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
 import { labelPosition } from './label-position';
-import type { LegendItem, Palette, SceneFactory, SceneInstance } from './types';
+import type { Palette, SceneFactory, SceneInstance } from './types';
 
 export type { SceneName };
 
@@ -17,7 +17,6 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
 
 export type PlayerOptions = {
   onReadout: (lines: string[]) => void;
-  onLegend: (items: LegendItem[]) => void;
   data?: unknown;
 };
 
@@ -72,7 +71,6 @@ export async function play(
 
   const instance: SceneInstance = factory(
     {
-      renderer,
       label(text, kind) {
         const element = document.createElement('div');
         element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
@@ -111,7 +109,6 @@ export async function play(
   };
   applyColors();
   resize();
-  options.onLegend(instance.legend ?? []);
 
   for (let i = 0; i < 40; i += 1) {
     instance.step(0.05, i * 0.05);

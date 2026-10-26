@@ -526,13 +526,6 @@ h3 {
   gap: 8px;
 }
 
-.scene-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 .scene-button {
   pointer-events: auto;
   cursor: pointer;
@@ -544,11 +537,6 @@ h3 {
   background: color-mix(in srgb, var(--bg) 72%, transparent);
 }
 
-.scene-button[aria-pressed='true'] {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
 @media (max-width: 640px) {
   .scene-hud {
     flex-direction: column;
@@ -556,7 +544,6 @@ h3 {
   .scene-controls {
     align-items: flex-start;
   }
-  .scene-legend,
   .scene-readout {
     display: none;
   }

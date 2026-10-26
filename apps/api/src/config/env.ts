@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const positive = (fallback: number) => z.coerce.number().int().positive().default(fallback);
 
-export const envSchema = z
+const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: positive(3201),
