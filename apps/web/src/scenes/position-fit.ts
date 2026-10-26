@@ -14,7 +14,7 @@ const scalePrior = 0.5;
 const iterations = 40;
 
 export function rssiToDistance(rssi: number, txPower: number, exponent: number): number {
-  return Math.min(1000, Math.max(minRange, 10 ** ((txPower - rssi) / (10 * exponent))));
+  return MathUtils.clamp(10 ** ((txPower - rssi) / (10 * exponent)), minRange, 1000);
 }
 
 function determinant([a, b, c]: Mat3): number {

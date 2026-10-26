@@ -18,9 +18,10 @@ export function pick<T>(random: () => number, items: readonly T[], among = items
   if (!Number.isInteger(among) || among < 1 || among > items.length) {
     throw new RangeError(`cannot pick among ${among} of ${items.length} items`);
   }
-  const item = items[Math.floor(random() * among)];
+  const index = Math.floor(random() * among);
+  const item = items[index];
   if (item === undefined) {
-    throw new RangeError('there is nothing to pick from');
+    throw new RangeError(`there is no item ${index} among ${among}`);
   }
   return item;
 }

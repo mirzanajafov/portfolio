@@ -35,16 +35,17 @@ const poolSeries = data.policies.find((series) => series.id === 'pool');
 if (data.policies.length !== 2 || !boxSeries || !poolSeries) {
   throw new Error('the storm data needs the box and the pool');
 }
-const columns = (series: StormSeries) => [
-  series.processes,
-  series.running,
-  series.goodput,
-  series.spawns,
-  series.backlogSeconds,
+const seriesOf = (policy: StormSeries) => [
+  policy.processes,
+  policy.running,
+  policy.goodput,
+  policy.spawns,
+  policy.backlogSeconds,
 ];
-const stormSeconds = commonLength([...columns(boxSeries), ...columns(poolSeries)]);
-if (Math.max(...boxSeries.processes, ...poolSeries.processes) > data.machine.processLimit) {
-  throw new Error('the storm data runs more processes than the machine has slots');
+const stormSeconds = commonLength([...seriesOf(boxSeries), ...seriesOf(poolSeries)]);
+const processCounts = [...boxSeries.processes, ...poolSeries.processes];
+if (processCounts.some((count) => !Number.isInteger(count) || count > data.machine.processLimit)) {
+  throw new Error('the storm data needs whole process counts that fit in the machine');
 }
 
 export function stormSample(series: StormSeries, second: number) {

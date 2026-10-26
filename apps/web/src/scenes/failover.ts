@@ -8,6 +8,7 @@ import {
   InstancedMesh,
   LineBasicMaterial,
   LineSegments,
+  MathUtils,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -56,11 +57,11 @@ export function speedAt(ms: number): number {
 }
 
 function binAt(ms: number): number {
-  return Math.min(bins - 1, Math.max(0, Math.floor((ms - data.fromMs) / data.binMs)));
+  return MathUtils.clamp(Math.floor((ms - data.fromMs) / data.binMs), 0, bins - 1);
 }
 
 export function laneAt(lane: FailoverLane, ms: number) {
-  const position = Math.min(bins, Math.max(0, (ms - data.fromMs) / data.binMs));
+  const position = MathUtils.clamp((ms - data.fromMs) / data.binMs, 0, bins);
   const whole = Math.floor(position);
   let lost = 0;
   let retried = 0;

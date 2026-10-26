@@ -7,6 +7,7 @@ import {
   InstancedMesh,
   LineBasicMaterial,
   LineSegments,
+  MathUtils,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -130,8 +131,7 @@ const maxSparks = 500;
 const maxRings = 80;
 
 function ease(value: number) {
-  const clamped = Math.min(1, Math.max(0, value));
-  return 1 - (1 - clamped) ** 3;
+  return 1 - (1 - MathUtils.clamp(value, 0, 1)) ** 3;
 }
 
 export const createCampaignScene: SceneFactory = (hooks) => {

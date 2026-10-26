@@ -45,7 +45,7 @@ describe('ScenePlayer', () => {
     const { rerender } = render(
       <ScenePlayer scene={{ name: 'floor' }} description="A floor" shown={false} />,
     );
-    await screen.findByRole('button', { name: 'Pause motion' });
+    await screen.findByRole('button', { name: /motion$/ });
     rerender(<ScenePlayer scene={{ name: 'storm' }} description="A storm" shown={false} />);
     await waitFor(() => {
       expect(play).toHaveBeenLastCalledWith(

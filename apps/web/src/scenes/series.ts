@@ -11,7 +11,7 @@ export function commonLength(series: readonly (readonly number[])[]): number {
 export function sampleAt(values: readonly number[], index: number): number {
   const value = values[MathUtils.clamp(Math.floor(index), 0, values.length - 1)];
   if (value === undefined) {
-    throw new RangeError('an empty series has no samples');
+    throw new RangeError(`no sample at ${index} in a series of ${values.length}`);
   }
   return value;
 }
