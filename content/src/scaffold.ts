@@ -30,7 +30,7 @@ export async function scaffoldProject(root: string, slug: string): Promise<strin
   try {
     await mkdir(dir);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+    if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
       throw new Error(`projects/${slug} already exists`);
     }
     throw error;

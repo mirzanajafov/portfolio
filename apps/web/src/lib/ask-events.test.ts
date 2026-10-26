@@ -1,5 +1,6 @@
+import type { AskEvent } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
-import { readEvents, type AskEvent } from './ask-events';
+import { readEvents } from './ask-events';
 
 function streamOf(...chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();

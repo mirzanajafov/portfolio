@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
+import { questionMaxLength } from './ask.ts';
 import { ContentError, loadContent, type ContentIssue } from './load.ts';
 import { renderGenerated } from './generate.ts';
 
@@ -126,6 +127,28 @@ describe('loadContent', () => {
     expect(content.projects.find((p) => p.slug === 'beta')?.caseStudy).toBeUndefined();
   });
 
+  it('hands out the headline and the facts behind each decision, not their ids', async () => {
+    await put('projects/alpha/case-study.yaml', caseStudy);
+    const alpha = (await loadContent(root)).projects.find((p) => p.slug === 'alpha');
+    expect(alpha?.headline).toMatchObject({ id: 'fast', text: 'It is fast.' });
+    expect(alpha?.caseStudy?.decisions.map((d) => d.facts.map((f) => f.text))).toEqual([
+      ['It is fast.'],
+      ['It is small.'],
+    ]);
+  });
+
+  it("links a fact to its file in a public repo and leaves a private project's facts unlinked", async () => {
+    await putProject(
+      'beta',
+      project(1, { visibility: 'private', links: { live: 'https://example.com' }, knowledge: [] }),
+    );
+    const sources = (await loadContent(root)).projects.map((p) => [p.slug, p.headline.source]);
+    expect(sources).toEqual([
+      ['beta', { file: 'README.md' }],
+      ['alpha', { file: 'README.md', href: 'https://github.com/test/project/blob/main/README.md' }],
+    ]);
+  });
+
   it('backs every number in a case study with a fact of the same project', async () => {
     await put('projects/alpha/case-study.yaml', {
       ...caseStudy,
@@ -182,6 +205,19 @@ describe('loadContent', () => {
     await put('cv.yaml', { ...cv, experience: [role('Backwards', '2024-05', '2023-01')] });
     expect(await issues()).toEqual([
       expect.objectContaining({ file: 'cv.yaml', path: 'experience.0.to' }),
+    ]);
+  });
+
+  it('reports a headline that is not a fact together with the other problems of the project', async () => {
+    await putProject(
+      'alpha',
+      project(2, { headline: 'nowhere', links: { live: 'https://a.example' } }),
+      [],
+    );
+    expect((await issues()).map((issue) => `${issue.file} ${issue.path}`).sort()).toEqual([
+      'projects/alpha/evals.yaml (root)',
+      'projects/alpha/project.yaml headline',
+      'projects/alpha/project.yaml links.repo',
     ]);
   });
 
@@ -285,6 +321,16 @@ describe('loadContent', () => {
         path: '3.expects.0',
         message: '"ghost" is not a fact of this project',
       },
+    ]);
+  });
+
+  it('rejects an eval question longer than the Ask box takes, since the first one becomes a suggestion', async () => {
+    await putProject('alpha', project(2), [
+      ...evals,
+      { question: 'x'.repeat(questionMaxLength + 1), expects: ['fast'] },
+    ]);
+    expect(await issues()).toEqual([
+      expect.objectContaining({ file: 'projects/alpha/evals.yaml', path: '3.question' }),
     ]);
   });
 

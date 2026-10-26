@@ -41,13 +41,14 @@ describe('forwardAsk', () => {
     expect((await forwardAsk(ask('{}'), 'http://api', fetchImpl)).status).toBe(503);
   });
 
-  it('passes a rate limit through with the time to wait', async () => {
+  it('passes a rate limit through with only the time to wait', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('{}', { status: 429, headers: { 'retry-after': '420' } }),
     );
     const response = await forwardAsk(ask('{}'), 'http://api', fetchImpl);
     expect(response.status).toBe(429);
     expect(response.headers.get('retry-after')).toBe('420');
+    expect(await response.text()).toBe('');
   });
 
   it('keeps a validation error a validation error', async () => {

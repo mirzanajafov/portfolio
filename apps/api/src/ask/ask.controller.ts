@@ -8,6 +8,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
@@ -17,7 +18,7 @@ import { AskLogService } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
 
 const askRequestSchema = z.strictObject({
-  question: z.string().trim().min(1).max(300),
+  question: z.string().trim().min(1).max(questionMaxLength),
 });
 
 type AskRequest = z.infer<typeof askRequestSchema>;

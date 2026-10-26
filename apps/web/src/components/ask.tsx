@@ -1,7 +1,8 @@
 'use client';
 
+import { askLogDays, questionMaxLength, type AskSource } from '@portfolio/content/ask';
 import { useRef, useState, type FormEvent } from 'react';
-import { readEvents, type AskSource } from '@/lib/ask-events';
+import { readEvents } from '@/lib/ask-events';
 import { AskFailure, failureMessage } from '@/lib/ask-failure';
 
 type Sentence = { text: string; sources: AskSource[] };
@@ -85,9 +86,9 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
           and a language model and my own voice come later.
         </p>
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          I keep questions for 30 days to see where the answers fail, then they are deleted. Your IP
-          address is never stored, only a keyed hash that changes every day and is used for rate
-          limiting.
+          I keep questions for {askLogDays} days to see where the answers fail, then they are
+          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
+          used for rate limiting.
         </p>
       </div>
       <form onSubmit={submit} className="flex max-w-3xl gap-2 sm:gap-3">
@@ -99,7 +100,7 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
           name="question"
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          maxLength={300}
+          maxLength={questionMaxLength}
           autoComplete="off"
           placeholder="Ask about my work"
           className="min-w-0 flex-1 rounded-full border border-[var(--line)] bg-transparent px-5 py-3 outline-none focus:border-[var(--accent)]"

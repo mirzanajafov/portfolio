@@ -3,6 +3,9 @@
   "workspaces": {
     "apps/api": {
       "ignoreDependencies": ["@prisma/client"]
+    },
+    "content": {
+      "entry": ["src/{index,ask,cli}.ts"]
     }
   }
 }

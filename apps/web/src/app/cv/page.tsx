@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { content } from '@portfolio/content';
 import { RoleHeading } from '@/components/experience';
-import { roleKey } from '@/lib/format';
+import { languagesLine, linkText, roleKey } from '@/lib/format';
 
 const { profile, cv } = content;
 
@@ -48,10 +48,10 @@ export default function CvPage() {
             {profile.links.email}
           </a>
           <a className="underline underline-offset-4" href={profile.links.github}>
-            {profile.links.github.replace('https://', '')}
+            {linkText(profile.links.github)}
           </a>
           <a className="underline underline-offset-4" href={profile.links.linkedin}>
-            {profile.links.linkedin.replace('https://www.', '')}
+            {linkText(profile.links.linkedin)}
           </a>
         </p>
         <p className="print:hidden">
@@ -82,11 +82,7 @@ export default function CvPage() {
         <h2 className="border-b border-[var(--line)] pb-2 text-sm font-semibold uppercase tracking-widest">
           Languages
         </h2>
-        <p>
-          {cv.languages
-            .map((language) => `${language.name} (${language.level.toLowerCase()})`)
-            .join(', ')}
-        </p>
+        <p>{languagesLine(cv.languages)}</p>
       </section>
     </main>
   );

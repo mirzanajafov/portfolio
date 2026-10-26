@@ -1,12 +1,12 @@
 import PDFDocument from 'pdfkit';
 import type { Content, Role } from '@portfolio/content';
 import { fontPath } from './fonts';
-import { formatPeriod, kindLabel } from './format';
+import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
+import { palette } from './palette';
 import { siteUrl } from './site';
 
-const ink = '#1a1814';
+const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';
-const accent = '#b23f12';
 const margin = 50;
 function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
   return { ...extra, features: { liga: false } };
@@ -17,9 +17,9 @@ function roleLine(role: Role): string {
 }
 
 function roleMeta(role: Role): string {
-  const label = kindLabel(role.kind);
-  const place = role.remote ? `${role.location} (remote)` : role.location;
-  return [formatPeriod(role), place, label].filter(Boolean).join('  ·  ');
+  return [formatPeriod(role), rolePlace(role), roleKindLabel(role.kind)]
+    .filter(Boolean)
+    .join('  ·  ');
 }
 
 export function buildCvPdf(content: Content): Promise<Buffer> {
@@ -56,7 +56,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
       .moveTo(margin, y)
       .lineTo(margin + width, y)
       .lineWidth(0.6)
-      .strokeColor('#dad3c6')
+      .strokeColor(line)
       .stroke();
     doc.moveDown(0.6);
   };
@@ -85,21 +85,15 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     .fillColor(muted)
     .text('  ·  ', options({ continued: true }))
     .fillColor(ink)
-    .text(siteUrl.replace('https://', ''), options({ link: siteUrl, continued: true }))
+    .text(linkText(siteUrl), options({ link: siteUrl, continued: true }))
     .fillColor(muted)
     .text('  ·  ', options({ continued: true }))
     .fillColor(ink)
-    .text(
-      profile.links.github.replace('https://', ''),
-      options({ link: profile.links.github, continued: true }),
-    )
+    .text(linkText(profile.links.github), options({ link: profile.links.github, continued: true }))
     .fillColor(muted)
     .text('  ·  ', options({ continued: true }))
     .fillColor(ink)
-    .text(
-      profile.links.linkedin.replace('https://www.', ''),
-      options({ link: profile.links.linkedin }),
-    );
+    .text(linkText(profile.links.linkedin), options({ link: profile.links.linkedin }));
 
   heading('Summary');
   doc
@@ -110,7 +104,9 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
 
   heading('Experience');
   cv.experience.forEach((role, index) => {
-    if (index > 0) doc.moveDown(0.7);
+    if (index > 0) {
+      doc.moveDown(0.7);
+    }
     doc.font('semibold').fontSize(11.5).fillColor(ink).text(roleLine(role), options());
     doc.font('regular').fontSize(9.5).fillColor(muted).text(roleMeta(role), options());
     if (role.about) {
@@ -134,7 +130,9 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
 
   heading('Projects');
   projects.forEach((project, index) => {
-    if (index > 0) doc.moveDown(0.15);
+    if (index > 0) {
+      doc.moveDown(0.15);
+    }
     const href = project.caseStudy ? `${siteUrl}/projects/${project.slug}` : project.links.live;
     doc
       .font('semibold')
@@ -159,16 +157,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   }
 
   heading('Languages');
-  doc
-    .font('regular')
-    .fontSize(10)
-    .fillColor(ink)
-    .text(
-      cv.languages
-        .map((language) => `${language.name} (${language.level.toLowerCase()})`)
-        .join(', '),
-      options(),
-    );
+  doc.font('regular').fontSize(10).fillColor(ink).text(languagesLine(cv.languages), options());
 
   doc.end();
   return done;

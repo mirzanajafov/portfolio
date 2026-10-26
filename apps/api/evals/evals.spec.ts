@@ -53,6 +53,7 @@ describe('runEvals', () => {
     [
       {
         id: 'demo/fast',
+        kind: 'fact',
         project: 'demo',
         text: 'Fast.',
         keywords: '',
@@ -87,6 +88,7 @@ describe('runEvals', () => {
         ...tiny.documents,
         {
           id: 'demo/case-study/decision-1',
+          kind: 'case-study',
           project: 'demo',
           text: 'I made it fast on purpose.',
           keywords: '',

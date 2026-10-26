@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatMonth, formatPeriod, kindLabel } from './format';
+import {
+  factKindLabel,
+  formatMonth,
+  formatPeriod,
+  languagesLine,
+  linkText,
+  roleKindLabel,
+  rolePlace,
+} from './format';
 
 describe('formatMonth', () => {
   it('turns YYYY-MM into a short month and year', () => {
@@ -19,10 +27,44 @@ describe('formatPeriod', () => {
   });
 });
 
-describe('kindLabel', () => {
+describe('roleKindLabel', () => {
   it('labels everything except a regular job, so overlapping dates explain themselves', () => {
-    expect(kindLabel('employee')).toBeNull();
-    expect(kindLabel('contract')).toBe('Contract');
-    expect(kindLabel('freelance')).toBe('Freelance');
+    expect(roleKindLabel('employee')).toBeNull();
+    expect(roleKindLabel('contract')).toBe('Contract');
+    expect(roleKindLabel('freelance')).toBe('Freelance');
+  });
+});
+
+describe('factKindLabel', () => {
+  it('never calls a design parameter a measurement', () => {
+    expect(factKindLabel('measured')).toBe('measured');
+    expect(factKindLabel('parameter')).toBe('design parameter');
+    expect(factKindLabel('design')).toBe('design');
+  });
+});
+
+describe('rolePlace', () => {
+  it('adds remote to the location only when the role was remote', () => {
+    expect(rolePlace({ location: 'Baku, Azerbaijan', remote: true })).toBe(
+      'Baku, Azerbaijan (remote)',
+    );
+    expect(rolePlace({ location: 'Berlin', remote: false })).toBe('Berlin');
+  });
+});
+
+describe('languagesLine', () => {
+  it('lists each language with its level in lower case', () => {
+    const languages = [
+      { name: 'English', level: 'Professional' },
+      { name: 'Azerbaijani', level: 'Native' },
+    ];
+    expect(languagesLine(languages)).toBe('English (professional), Azerbaijani (native)');
+  });
+});
+
+describe('linkText', () => {
+  it('shows a link without its scheme or www', () => {
+    expect(linkText('https://www.linkedin.com/in/someone')).toBe('linkedin.com/in/someone');
+    expect(linkText('https://github.com/someone')).toBe('github.com/someone');
   });
 });

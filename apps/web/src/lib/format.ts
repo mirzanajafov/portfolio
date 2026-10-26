@@ -1,4 +1,4 @@
-import type { Fact, Project, Role } from '@portfolio/content';
+import type { Cv, Fact, Role } from '@portfolio/content';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,25 +16,41 @@ export function formatPeriod(role: Pick<Role, 'from' | 'to'>): string {
   return `${formatMonth(role.from)} – ${end}`;
 }
 
-const kindLabels: Record<Role['kind'], string | null> = {
+const roleKindLabels: Record<Role['kind'], string | null> = {
   employee: null,
   contract: 'Contract',
   freelance: 'Freelance',
   'part-time': 'Part-time',
 };
 
-export function kindLabel(kind: Role['kind']): string | null {
-  return kindLabels[kind];
+export function roleKindLabel(kind: Role['kind']): string | null {
+  return roleKindLabels[kind];
+}
+
+const factKindLabels: Record<Fact['kind'], string> = {
+  measured: 'measured',
+  parameter: 'design parameter',
+  design: 'design',
+};
+
+export function factKindLabel(kind: Fact['kind']): string {
+  return factKindLabels[kind];
+}
+
+export function rolePlace(role: Pick<Role, 'location' | 'remote'>): string {
+  return role.remote ? `${role.location} (remote)` : role.location;
 }
 
 export function roleKey(role: Pick<Role, 'company' | 'role' | 'from'>): string {
   return `${role.company ?? role.role}-${role.from}`;
 }
 
-export function headlineFact(project: Project): Fact {
-  const fact = project.facts.find((candidate) => candidate.id === project.headline);
-  if (!fact) {
-    throw new Error(`${project.slug} has no fact called ${project.headline}`);
-  }
-  return fact;
+export function languagesLine(languages: Cv['languages']): string {
+  return languages
+    .map((language) => `${language.name} (${language.level.toLowerCase()})`)
+    .join(', ');
+}
+
+export function linkText(url: string): string {
+  return url.replace(/^https:\/\/(www\.)?/, '');
 }

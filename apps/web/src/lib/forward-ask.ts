@@ -7,7 +7,7 @@ export async function forwardAsk(
 ): Promise<Response> {
   const body = await request.text();
   if (body.length > maxBody) {
-    return Response.json({ message: 'question is too long' }, { status: 413 });
+    return new Response(null, { status: 413 });
   }
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -23,19 +23,17 @@ export async function forwardAsk(
       signal: request.signal,
     });
   } catch {
-    return Response.json({ message: 'the answering service is not reachable' }, { status: 503 });
+    return new Response(null, { status: 503 });
   }
-  if (upstream.status === 400) {
-    return Response.json({ message: 'question must be 1 to 300 characters' }, { status: 400 });
-  }
-  if (upstream.status === 429) {
-    return Response.json(
-      { message: 'too many questions' },
-      { status: 429, headers: { 'retry-after': upstream.headers.get('retry-after') ?? '60' } },
-    );
+  if (upstream.status === 400 || upstream.status === 429) {
+    const retryAfter = upstream.headers.get('retry-after');
+    return new Response(null, {
+      status: upstream.status,
+      headers: retryAfter ? { 'retry-after': retryAfter } : undefined,
+    });
   }
   if (!upstream.ok || !upstream.body) {
-    return Response.json({ message: 'could not answer right now' }, { status: 502 });
+    return new Response(null, { status: 502 });
   }
   return new Response(upstream.body, {
     status: 200,

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Schibsted_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
+import { palette } from '@/lib/palette';
+import { siteUrl } from '@/lib/site';
 import './globals.css';
 
 const body = Schibsted_Grotesk({
@@ -20,7 +22,7 @@ const code = IBM_Plex_Mono({
 const { profile } = content;
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://najafov.dev'),
+  metadataBase: new URL(siteUrl),
   title: `${profile.name} · ${profile.headline}`,
   description: profile.summary,
   authors: [{ name: profile.name }],
@@ -35,8 +37,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: 'dark light',
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#121110' },
-    { media: '(prefers-color-scheme: light)', color: '#f4f1ea' },
+    { media: '(prefers-color-scheme: dark)', color: palette.dark.bg },
+    { media: '(prefers-color-scheme: light)', color: palette.light.bg },
   ],
 };
 

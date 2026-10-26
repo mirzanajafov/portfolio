@@ -1,13 +1,7 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { askLogDays } from '@portfolio/content/ask';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
-import { ENV, type Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AskOutcome } from './ask.service.js';
 
@@ -24,7 +18,6 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: ClockService,
-    @Inject(ENV) private readonly env: Env,
   ) {}
 
   onModuleInit(): void {
@@ -46,7 +39,7 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cleanup(): Promise<void> {
-    const cutoff = new Date(this.clock.now().getTime() - this.env.ASK_LOG_DAYS * dayMs);
+    const cutoff = new Date(this.clock.now().getTime() - askLogDays * dayMs);
     await this.prisma.askLog.deleteMany({ where: { createdAt: { lt: cutoff } } });
   }
 }

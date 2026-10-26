@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
-import { content } from '@portfolio/content';
-import { headlineFact } from '@/lib/format';
+import { content, findProjectWithCaseStudy, projectsWithCaseStudy } from '@portfolio/content';
 import { ogSize, renderCard, truncate } from '@/lib/og';
 
 export const alt = 'Case study';
@@ -9,14 +8,12 @@ export const contentType = 'image/png';
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return content.projects
-    .filter((project) => project.caseStudy)
-    .map((project) => ({ slug: project.slug }));
+  return projectsWithCaseStudy.map((project) => ({ slug: project.slug }));
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = content.projects.find((candidate) => candidate.slug === slug);
+  const project = findProjectWithCaseStudy(slug);
   if (!project) {
     notFound();
   }
@@ -24,6 +21,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     eyebrow: `Case study · ${content.profile.name}`,
     title: project.name,
     subtitle: truncate(project.hook, 72),
-    footer: truncate(headlineFact(project).text, 110),
+    footer: truncate(project.headline.text, 110),
   });
 }

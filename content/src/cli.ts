@@ -40,7 +40,7 @@ async function newProject(slug: string | undefined): Promise<void> {
     return;
   }
   const dir = await scaffoldProject(root, slug);
-  console.log(`created ${relative(root, dir)}; fill in what the checks below ask for:`);
+  console.log(`created ${relative(root, dir)}, now fill in what the checks below ask for:`);
   await validate(false);
 }
 

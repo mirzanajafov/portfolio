@@ -2,54 +2,43 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ViewTransition } from 'react';
-import { content, type Fact, type Project } from '@portfolio/content';
+import {
+  content,
+  findProjectWithCaseStudy,
+  projectsWithCaseStudy,
+  type Fact,
+} from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
+import { factKindLabel } from '@/lib/format';
 
 type Params = { slug: string };
 
-function withCaseStudy(slug: string) {
-  const project = content.projects.find((candidate) => candidate.slug === slug);
-  return project?.caseStudy ? { project, caseStudy: project.caseStudy } : undefined;
-}
-
 export function generateStaticParams(): Params[] {
-  return content.projects
-    .filter((project) => project.caseStudy)
-    .map((project) => ({ slug: project.slug }));
+  return projectsWithCaseStudy.map((project) => ({ slug: project.slug }));
 }
 
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
-  const found = withCaseStudy((await params).slug);
-  if (!found) {
+  const { slug } = await params;
+  const project = findProjectWithCaseStudy(slug);
+  if (!project) {
     return {};
   }
   return {
-    title: `${found.project.name} · ${content.profile.name}`,
-    description: found.project.hook,
+    title: `${project.name} · ${content.profile.name}`,
+    description: project.hook,
   };
 }
 
-function sourceHref(project: Project, fact: Fact): string | undefined {
-  if (project.visibility !== 'public' || !project.links.repo) {
-    return undefined;
-  }
-  return `${project.links.repo}/blob/main/${fact.source.file}`;
-}
-
-function FactLine({ project, fact }: { project: Project; fact: Fact }) {
-  const href = sourceHref(project, fact);
+function FactLine({ fact }: { fact: Fact }) {
+  const { href } = fact.source;
   return (
     <li className="flex flex-col gap-1 border-l-2 border-[var(--accent)] pl-4">
       <span>{fact.text}</span>
       <span className="font-mono text-xs text-[var(--muted)]">
-        {fact.kind === 'measured'
-          ? 'measured'
-          : fact.kind === 'parameter'
-            ? 'design parameter'
-            : 'design'}
+        {factKindLabel(fact.kind)}
         {' · '}
         {href ? (
           <a className="underline underline-offset-4" href={href}>
@@ -64,12 +53,12 @@ function FactLine({ project, fact }: { project: Project; fact: Fact }) {
 }
 
 export default async function CaseStudyPage({ params }: { params: Promise<Params> }) {
-  const found = withCaseStudy((await params).slug);
-  if (!found) {
+  const { slug } = await params;
+  const project = findProjectWithCaseStudy(slug);
+  if (!project) {
     notFound();
   }
-  const { project, caseStudy } = found;
-  const facts = new Map(project.facts.map((fact) => [fact.id, fact]));
+  const { caseStudy } = project;
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-14 px-4 py-10 sm:px-8 sm:py-14">
@@ -150,10 +139,9 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             <p className="max-w-[65ch] leading-relaxed">{decision.body}</p>
             {decision.facts.length > 0 && (
               <ul className="flex flex-col gap-3">
-                {decision.facts.map((id) => {
-                  const fact = facts.get(id);
-                  return fact ? <FactLine key={id} project={project} fact={fact} /> : null;
-                })}
+                {decision.facts.map((fact) => (
+                  <FactLine key={fact.id} fact={fact} />
+                ))}
               </ul>
             )}
           </article>
