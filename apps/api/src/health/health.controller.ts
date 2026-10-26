@@ -1,8 +1,10 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @Controller('health')
 export class HealthController {
+  private readonly log = new Logger(HealthController.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
@@ -10,7 +12,10 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch (error) {
-      throw new ServiceUnavailableException('the database is not answering', { cause: error });
+      this.log.warn(
+        `the database did not answer: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new ServiceUnavailableException('the database is not answering');
     }
     return { status: 'ok' };
   }
