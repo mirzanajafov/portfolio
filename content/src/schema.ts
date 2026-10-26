@@ -130,19 +130,11 @@ export const projectSchema = z
     }
   });
 
-const sceneNames = [
-  'systems',
-  'floor',
-  'population',
-  'storm',
-  'failover',
-  'campaign',
-  'commission',
-] as const;
+const demoNames = ['floor', 'population', 'storm', 'failover', 'campaign', 'commission'] as const;
 
 export const caseStudySchema = z.strictObject({
   problem: z.string().min(1).max(600),
-  demo: z.enum(sceneNames).optional(),
+  demo: z.enum(demoNames).optional(),
   demoCaption: z.string().min(1).max(400).optional(),
   decisions: z
     .array(
@@ -171,7 +163,7 @@ export type Role = Cv['experience'][number];
 export type Fact = z.infer<typeof factSchema>;
 export type EvalQuestion = z.infer<typeof evalSchema>;
 export type CaseStudy = z.infer<typeof caseStudySchema>;
-export type SceneName = (typeof sceneNames)[number];
+export type DemoName = (typeof demoNames)[number];
 export type UsedProject = { slug: string; name: string; for: string };
 export type UnlinkedProject = z.infer<typeof projectSchema> & {
   slug: string;

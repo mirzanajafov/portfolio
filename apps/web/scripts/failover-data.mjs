@@ -53,7 +53,6 @@ function extract({ id, cell, label }) {
 const runsUsed = picks.map(extract);
 const lanes = runsUsed.map((run) => run.lane);
 const data = {
-  dimensions: ['a', 'b', 'c'],
   rate: runsUsed[0].rate,
   binMs: 100,
   fromMs: window.from,

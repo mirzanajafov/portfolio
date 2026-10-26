@@ -1,12 +1,12 @@
-import type { SceneName } from '@portfolio/content';
+import type { DemoName } from '@portfolio/content';
 import { Color, Vector3, WebGLRenderer } from 'three';
 import { labelPosition } from './label-position';
+import type { GraphApp } from './systems-graph';
 import type { Palette, SceneFactory, SceneInstance } from './types';
 
-export type { SceneName };
+export type SceneSpec = { name: 'systems'; apps: GraphApp[] } | { name: DemoName };
 
-const factories: Record<SceneName, () => Promise<SceneFactory>> = {
-  systems: () => import('./systems').then((m) => m.createSystemsScene),
+const demos: Record<DemoName, () => Promise<SceneFactory>> = {
   floor: () => import('./floor').then((m) => m.createFloorScene),
   population: () => import('./population').then((m) => m.createPopulationScene),
   storm: () => import('./storm').then((m) => m.createStormScene),
@@ -15,10 +15,13 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
 
-type PlayerOptions = {
-  onReadout: (lines: string[]) => void;
-  data?: unknown;
-};
+async function load(spec: SceneSpec): Promise<SceneFactory> {
+  if (spec.name === 'systems') {
+    const { createSystemsScene } = await import('./systems');
+    return (hooks) => createSystemsScene(hooks, spec.apps);
+  }
+  return demos[spec.name]();
+}
 
 export type PlayerHandle = {
   setPlaying: (playing: boolean) => void;
@@ -42,12 +45,20 @@ function readPalette(element: HTMLElement): Palette {
 }
 
 export async function play(
-  name: SceneName,
+  spec: SceneSpec,
   canvas: HTMLCanvasElement,
   labels: HTMLElement,
-  options: PlayerOptions,
+  options: {
+    onReadout: (lines: string[]) => void;
+    signal: AbortSignal;
+    playing: boolean;
+    shown: boolean;
+  },
 ): Promise<PlayerHandle> {
-  const factory = await factories[name]();
+  const { onReadout, signal } = options;
+  signal.throwIfAborted();
+  const create = await load(spec);
+  signal.throwIfAborted();
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
@@ -69,33 +80,30 @@ export async function play(
     return half;
   };
 
-  const instance: SceneInstance = factory(
-    {
-      label(text, kind) {
-        const element = document.createElement('div');
-        element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
-        element.textContent = text;
-        labels.appendChild(element);
-        return element;
-      },
-      place(element, x, y, z) {
-        projected.set(x, y, z).project(instance.camera);
-        const spot = labelPosition(
-          projected,
-          host.clientWidth,
-          host.clientHeight,
-          labelHalfWidth(element),
-        );
-        element.style.display = spot ? '' : 'none';
-        if (spot) {
-          element.style.left = `${spot.left}px`;
-          element.style.top = `${spot.top}px`;
-        }
-      },
-      size: () => ({ width: host.clientWidth, height: host.clientHeight }),
+  const instance: SceneInstance = create({
+    label(text, kind) {
+      const element = document.createElement('div');
+      element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
+      element.textContent = text;
+      labels.appendChild(element);
+      return element;
     },
-    options.data,
-  );
+    place(element, x, y, z) {
+      projected.set(x, y, z).project(instance.camera);
+      const spot = labelPosition(
+        projected,
+        host.clientWidth,
+        host.clientHeight,
+        labelHalfWidth(element),
+      );
+      element.style.display = spot ? '' : 'none';
+      if (spot) {
+        element.style.left = `${spot.left}px`;
+        element.style.top = `${spot.top}px`;
+      }
+    },
+    size: () => ({ width: host.clientWidth, height: host.clientHeight }),
+  });
 
   const applyColors = () => {
     const palette = readPalette(document.documentElement);
@@ -114,9 +122,8 @@ export async function play(
     instance.step(0.05, i * 0.05);
   }
 
-  let playing = true;
+  let { playing, shown } = options;
   let visible = true;
-  let shown = true;
   let clock = 0;
   let last = performance.now();
   let readoutAt = 0;
@@ -134,7 +141,7 @@ export async function play(
       renderer.render(instance.scene, instance.camera);
       if (now - readoutAt > 250) {
         readoutAt = now;
-        options.onReadout(instance.readout());
+        onReadout(instance.readout());
       }
     }
     frame = requestAnimationFrame(draw);

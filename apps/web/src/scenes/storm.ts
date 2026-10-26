@@ -10,7 +10,8 @@ import {
   Scene,
 } from 'three';
 import data from './storm-data.json';
-import { seeded } from './random';
+import { pick, seeded } from './random';
+import { commonLength, sampleAt } from './series';
 import type { Palette, SceneFactory } from './types';
 
 export const stormParameters = {
@@ -29,15 +30,39 @@ type StormSeries = (typeof data.policies)[number];
 
 export const stormData = data;
 
+const boxSeries = data.policies.find((series) => series.id === 'box');
+const poolSeries = data.policies.find((series) => series.id === 'pool');
+if (data.policies.length !== 2 || !boxSeries || !poolSeries) {
+  throw new Error('the storm data needs the box and the pool');
+}
+const samplesOf = (series: StormSeries) => [
+  series.processes,
+  series.running,
+  series.goodput,
+  series.spawns,
+  series.backlogSeconds,
+];
+const stormSeconds = commonLength([...samplesOf(boxSeries), ...samplesOf(poolSeries)]);
+const processCounts = [...boxSeries.processes, ...poolSeries.processes];
+if (processCounts.some((count) => !Number.isInteger(count) || count > data.machine.processLimit)) {
+  throw new Error('the storm data needs whole process counts that fit in the machine');
+}
+
 export function stormSample(series: StormSeries, second: number) {
-  const index = Math.min(series.processes.length - 1, Math.max(0, Math.floor(second)));
   return {
-    processes: series.processes[index]!,
-    running: series.running[index]!,
-    goodput: series.goodput[index]!,
-    spawns: series.spawns[index]!,
-    queuedMinutes: series.backlogSeconds[index]! / 60,
+    processes: sampleAt(series.processes, second),
+    running: sampleAt(series.running, second),
+    goodput: sampleAt(series.goodput, second),
+    spawns: sampleAt(series.spawns, second),
+    queuedMinutes: sampleAt(series.backlogSeconds, second) / 60,
   };
+}
+
+function slotScale(index: number, processes: number, running: number): number {
+  if (index >= processes) {
+    return 0;
+  }
+  return index < running ? 1 : 0.55;
 }
 
 export const createStormScene: SceneFactory = (hooks) => {
@@ -47,7 +72,6 @@ export const createStormScene: SceneFactory = (hooks) => {
   const group = new Group();
   scene.add(group);
   const random = seeded(11);
-  const length = data.policies[0]!.processes.length;
 
   const cageGeometry = new EdgesGeometry(new BoxGeometry(p.cageWidth, p.cageHeight, p.cageDepth));
   const slotGeometry = new BoxGeometry(1.1, 1.1, 1.1);
@@ -55,7 +79,7 @@ export const createStormScene: SceneFactory = (hooks) => {
   const columnGeometry = new BoxGeometry(1.3, 1, 1.3);
   const floorGeometry = new BoxGeometry(p.cageWidth, 0.02, p.cageDepth);
 
-  const cages = data.policies.map((series, index) => {
+  const cageFor = (series: StormSeries, index: number) => {
     const root = new Group();
     group.add(root);
     const frameMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.9 });
@@ -109,7 +133,10 @@ export const createStormScene: SceneFactory = (hooks) => {
       usefulLabel: hooks.label('useful work'),
       queueLabel: hooks.label('queued'),
     };
-  });
+  };
+  const box = cageFor(boxSeries, 0);
+  const pool = cageFor(poolSeries, 1);
+  const cages = [box, pool];
   const burstLabel = hooks.label('burst: arrivals at 1.5× capacity', 'signal');
 
   let palette: Palette | null = null;
@@ -135,7 +162,7 @@ export const createStormScene: SceneFactory = (hooks) => {
     },
     step(dt) {
       second += dt * p.secondsPerSecond;
-      if (second >= length) {
+      if (second >= stormSeconds) {
         second = 0;
         lastWhole = 0;
       }
@@ -145,11 +172,11 @@ export const createStormScene: SceneFactory = (hooks) => {
         if (whole > lastWhole) {
           const respawned = now.spawns - stormSample(cage.series, lastWhole).spawns;
           for (let k = 0; k < respawned && now.processes > 0; k += 1) {
-            cage.slots[Math.floor(random() * now.processes)]!.scale = 0;
+            pick(random, cage.slots, now.processes).scale = 0;
           }
         }
         cage.slots.forEach((slot, index) => {
-          const target = index < now.processes ? (index < now.running ? 1 : 0.55) : 0;
+          const target = slotScale(index, now.processes, now.running);
           slot.scale += (target - slot.scale) * Math.min(1, dt * 6);
           slot.mesh.scale.setScalar(Math.max(0.001, slot.scale));
           if (palette) {
@@ -205,11 +232,12 @@ export const createStormScene: SceneFactory = (hooks) => {
     readout() {
       const minute = Math.floor(data.startMinute + second / 60);
       const load = inBurst() ? data.burst.load : data.baseLoad;
-      const [box, pool] = cages.map((cage) => stormSample(cage.series, second));
+      const boxNow = stormSample(box.series, second);
+      const poolNow = stormSample(pool.series, second);
       return [
         `simulated minute ${minute} · arrivals at ${load}× capacity · ${data.machine.cores} CPUs, ${data.machine.processLimit} processes`,
-        `the box: ${box!.processes} processes · ${box!.spawns} spawns so far · ${Math.round(Math.min(1, box!.goodput) * 100)}% useful · ${box!.queuedMinutes.toFixed(1)} min queued`,
-        `the pool: ${pool!.processes} processes · ${Math.round(Math.min(1, pool!.goodput) * 100)}% useful · ${pool!.queuedMinutes.toFixed(1)} min queued`,
+        `the box: ${boxNow.processes} processes · ${boxNow.spawns} spawns so far · ${Math.round(Math.min(1, boxNow.goodput) * 100)}% useful · ${boxNow.queuedMinutes.toFixed(1)} min queued`,
+        `the pool: ${poolNow.processes} processes · ${Math.round(Math.min(1, poolNow.goodput) * 100)}% useful · ${poolNow.queuedMinutes.toFixed(1)} min queued`,
       ];
     },
     dispose() {
@@ -217,7 +245,9 @@ export const createStormScene: SceneFactory = (hooks) => {
         cage.title.remove();
         cage.usefulLabel.remove();
         cage.queueLabel.remove();
-        for (const slot of cage.slots) slot.material.dispose();
+        for (const slot of cage.slots) {
+          slot.material.dispose();
+        }
         cage.frameMaterial.dispose();
         cage.floorMaterial.dispose();
         cage.trackMaterial.dispose();

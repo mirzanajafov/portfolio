@@ -1,3 +1,4 @@
+import { Float32BufferAttribute } from 'three';
 import { describe, expect, it } from 'vitest';
 import { blurOn, correlationOn, greedyMatch, learningCurve, oracle } from './population';
 
@@ -20,8 +21,8 @@ describe('the learning curve', () => {
 
 describe('greedyMatch', () => {
   it('gives nobody more than their daily capacity and pairs the closest first', () => {
-    const line = new Float32Array([0, 0, 0, 1, 0, 0, 1.1, 0, 0, 10, 0, 0, 10.2, 0, 0]);
-    const pairs = greedyMatch(line, 5, 1);
+    const line = new Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1.1, 0, 0, 10, 0, 0, 10.2, 0, 0], 3);
+    const pairs = greedyMatch(line, 1);
     expect(pairs).toContainEqual([1, 2]);
     expect(pairs).toContainEqual([3, 4]);
     const load = new Map<number, number>();

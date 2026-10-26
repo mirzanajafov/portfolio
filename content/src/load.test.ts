@@ -148,12 +148,15 @@ describe('loadContent', () => {
     ]);
   });
 
-  it('only accepts demos the site knows how to draw', async () => {
-    await put('projects/alpha/case-study.yaml', { ...caseStudy, demo: 'hologram' });
-    expect(await issues()).toEqual([
-      expect.objectContaining({ file: 'projects/alpha/case-study.yaml', path: 'demo' }),
-    ]);
-  });
+  it.each(['hologram', 'systems'])(
+    'only accepts demos a case study can draw, not %s',
+    async (demo) => {
+      await put('projects/alpha/case-study.yaml', { ...caseStudy, demo });
+      expect(await issues()).toEqual([
+        expect.objectContaining({ file: 'projects/alpha/case-study.yaml', path: 'demo' }),
+      ]);
+    },
+  );
 
   it('reports a missing file without a second complaint about its contents', async () => {
     await rm(join(root, 'cv.yaml'));

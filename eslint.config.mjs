@@ -8,14 +8,12 @@ const scenes = 'apps/web/src/scenes';
 
 const notPassingYet = {
   curly: [
-    `${scenes}/{campaign,failover,floor,framing,population,position-fit,storm,systems}.ts`,
     `${scenes}/{campaign,failover,storm}.test.ts`,
     'apps/web/scripts/{campaign,failover,storm}-data.mjs',
     'apps/web/src/components/systems-tour.tsx',
     'apps/web/src/lib/cv-pdf.ts',
   ],
   'no-nested-ternary': [
-    `${scenes}/{failover,storm,systems}.ts`,
     'apps/web/src/app/projects/\\[slug\\]/page.tsx',
     'apps/web/src/components/systems-tour.tsx',
   ],
@@ -24,21 +22,14 @@ const notPassingYet = {
   '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-non-null-assertion': [
-    `${scenes}/{campaign,failover,floor,population,position-fit,storm,systems}.ts`,
     `${scenes}/{campaign,failover,floor,storm,systems-graph}.test.ts`,
     'apps/web/src/app/palette.node.test.ts',
     'apps/web/src/components/{scene-player,systems-tour}.test.tsx',
     'apps/api/evals/evals.spec.ts',
   ],
   '@typescript-eslint/no-unnecessary-condition': ['apps/web/src/components/scene-player.tsx'],
-  '@typescript-eslint/no-unnecessary-type-assertion': [`${scenes}/{campaign,floor}.ts`],
   '@typescript-eslint/no-unsafe-argument': ['apps/api/src/health/health.controller.spec.ts'],
-  '@typescript-eslint/no-unsafe-assignment': ['apps/web/src/components/scene-player.test.tsx'],
-  '@typescript-eslint/no-unsafe-member-access': ['apps/web/src/components/scene-player.test.tsx'],
-  '@typescript-eslint/no-unsafe-return': [
-    'apps/web/src/app/palette.node.test.ts',
-    'apps/web/src/components/scene-player.test.tsx',
-  ],
+  '@typescript-eslint/no-unsafe-return': ['apps/web/src/app/palette.node.test.ts'],
   '@typescript-eslint/non-nullable-type-assertion-style': [
     'apps/web/src/app/page.test.tsx',
     'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',
@@ -94,6 +85,10 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    files: ['**/*.d.ts'],
+    rules: { '@typescript-eslint/consistent-type-definitions': 'off' },
   },
   {
     files: ['**/*.{js,mjs}'],

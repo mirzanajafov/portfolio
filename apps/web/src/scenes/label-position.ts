@@ -1,3 +1,5 @@
+import { MathUtils } from 'three';
+
 type Projected = { x: number; y: number; z: number };
 
 export function labelPosition(
@@ -14,7 +16,7 @@ export function labelPosition(
   const edge = Math.min(halfLabel + margin, width / 2);
   const left = ((projected.x + 1) / 2) * width;
   return {
-    left: Math.min(Math.max(left, edge), width - edge),
+    left: MathUtils.clamp(left, edge, width - edge),
     top: ((1 - projected.y) / 2) * height,
   };
 }

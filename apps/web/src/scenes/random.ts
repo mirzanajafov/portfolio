@@ -13,3 +13,15 @@ export function gaussian(random: () => number): number {
   const u = Math.max(random(), 1e-9);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
 }
+
+export function pick<T>(random: () => number, items: readonly T[], among = items.length): T {
+  if (!Number.isInteger(among) || among < 1 || among > items.length) {
+    throw new RangeError(`cannot pick among ${among} of ${items.length} items`);
+  }
+  const index = Math.floor(random() * among);
+  const item = items[index];
+  if (item === undefined) {
+    throw new RangeError(`there is no item ${index} among ${among}`);
+  }
+  return item;
+}

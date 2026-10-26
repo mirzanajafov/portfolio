@@ -8,10 +8,8 @@ const ink = '#1a1814';
 const muted = '#57524a';
 const accent = '#b23f12';
 const margin = 50;
-const noLigatures = { features: { liga: false } } as unknown as PDFKit.Mixins.TextOptions;
-
-function options(extra: PDFKit.Mixins.TextOptions = {}): PDFKit.Mixins.TextOptions {
-  return { ...noLigatures, ...extra };
+function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
+  return { ...extra, features: { liga: false } };
 }
 
 function roleLine(role: Role): string {

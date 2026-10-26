@@ -3,11 +3,11 @@ export type {
   CaseStudy,
   Content,
   Cv,
+  DemoName,
   EvalQuestion,
   Fact,
   Profile,
   Project,
   Role,
-  SceneName,
   UsedProject,
 } from './schema.ts';

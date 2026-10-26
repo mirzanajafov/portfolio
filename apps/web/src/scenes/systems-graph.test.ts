@@ -24,11 +24,19 @@ describe('the systems graph', () => {
   });
 
   it('connects the server to every app and every app to its parts, and nothing else', () => {
-    const ids = new Set(graph.nodes.map((node) => node.id));
+    const parts = graph.nodes.filter((node) => node.kind === 'part');
+    const links = graph.edges.map((edge) => `${edge.from.kind} > ${edge.to.kind}`);
+    expect(links.filter((link) => link === 'server > app')).toHaveLength(apps.length);
+    expect(links.filter((link) => link === 'app > part')).toHaveLength(parts.length);
+    expect(links).toHaveLength(apps.length + parts.length);
     for (const edge of graph.edges) {
-      expect(ids.has(edge.from) && ids.has(edge.to)).toBe(true);
+      expect(graph.nodes).toContain(edge.from);
+      expect(graph.nodes).toContain(edge.to);
     }
-    expect(graph.edges.filter((edge) => edge.from === 'server')).toHaveLength(apps.length);
+    for (const edge of graph.edges.filter((candidate) => candidate.to.kind === 'part')) {
+      expect(edge.to.app).toBe(edge.from.id);
+      expect(graph.edges.some((candidate) => candidate.to === edge.from)).toBe(true);
+    }
   });
 
   it('moves the camera close to an app when it is in focus and back out otherwise', () => {

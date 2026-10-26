@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { PlayerHandle, SceneName } from '@/scenes/player';
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
+import type { PlayerHandle, SceneSpec } from '@/scenes/player';
 
 function webglAvailable(): boolean {
   try {
@@ -50,29 +50,32 @@ function useMotionChoice(): boolean | null {
 }
 
 export function ScenePlayer({
-  name,
+  scene,
   description,
   showReadout = true,
-  data,
   focus = null,
   shown = true,
 }: {
-  name: SceneName;
+  scene: SceneSpec;
   description: string;
   showReadout?: boolean;
-  data?: unknown;
   focus?: string | null;
   shown?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
-  const handleRef = useRef<PlayerHandle | null>(null);
-  const dataRef = useRef(data);
+  const [handle, setHandle] = useState<PlayerHandle | null>(null);
   const reducedMotion = useReducedMotion();
-  const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
+  const [failure, setFailure] = useState<'unsupported' | null>(null);
   const [readout, setReadout] = useState<string[]>([]);
   const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
+  const start = useEffectEvent(
+    (canvas: HTMLCanvasElement, labels: HTMLElement, signal: AbortSignal) =>
+      import('@/scenes/player').then(({ play }) =>
+        play(scene, canvas, labels, { onReadout: setReadout, signal, playing, shown }),
+      ),
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,58 +83,56 @@ export function ScenePlayer({
     if (!canvas || !labels) {
       return;
     }
-    let cancelled = false;
+    const abort = new AbortController();
+    let started: PlayerHandle | null = null;
     Promise.resolve()
       .then(() => {
+        abort.signal.throwIfAborted();
         if (!webglAvailable()) {
           throw new Error('no WebGL');
         }
-        return import('@/scenes/player');
+        return start(canvas, labels, abort.signal);
       })
-      .then(({ play }) =>
-        play(name, canvas, labels, {
-          onReadout: setReadout,
-          data: dataRef.current,
-        }),
-      )
-      .then((handle) => {
-        if (cancelled) {
-          handle.dispose();
+      .then((next) => {
+        if (abort.signal.aborted) {
+          next.dispose();
           return;
         }
-        handleRef.current = handle;
-        setState('running');
+        started = next;
+        setHandle(next);
       })
       .catch(() => {
-        if (!cancelled) {
-          setState('unsupported');
+        if (!abort.signal.aborted) {
+          setFailure('unsupported');
         }
       });
     return () => {
-      cancelled = true;
-      handleRef.current?.dispose();
-      handleRef.current = null;
+      abort.abort();
+      started?.dispose();
+      setHandle(null);
+      setFailure(null);
+      setReadout([]);
       labels.replaceChildren();
     };
-  }, [name]);
+  }, [scene.name]);
 
   useEffect(() => {
-    handleRef.current?.setPlaying(playing);
-  }, [playing, state]);
+    handle?.setPlaying(playing);
+  }, [handle, playing]);
 
   useEffect(() => {
-    handleRef.current?.focus(focus);
-  }, [focus, state]);
+    handle?.focus(focus);
+  }, [handle, focus]);
 
   useEffect(() => {
-    handleRef.current?.setShown(shown);
-  }, [shown, state]);
+    handle?.setShown(shown);
+  }, [handle, shown]);
 
   return (
-    <div className="scene" data-state={state}>
+    <div className="scene" data-state={handle ? 'running' : (failure ?? 'loading')}>
       <canvas ref={canvasRef} className="scene-canvas" role="img" aria-label={description} />
       <div ref={labelsRef} className="scene-labels" aria-hidden="true" />
-      {state === 'running' && (
+      {handle && (
         <div className="scene-hud">
           {showReadout ? (
             <p className="scene-readout" aria-hidden="true">
