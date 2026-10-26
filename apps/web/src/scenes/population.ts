@@ -19,7 +19,7 @@ export const learningCurve: [number, number][] = [
   [21, 0.718],
 ];
 export const oracle = 0.77;
-export const matchesPerDay = 3;
+const matchesPerDay = 3;
 
 export function correlationOn(day: number): number {
   for (let i = 0; i < learningCurve.length - 1; i += 1) {

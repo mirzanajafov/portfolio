@@ -5,9 +5,9 @@ import { PrismaService } from '../prisma/prisma.service.js';
 const cleanupEveryMs = 60 * 60 * 1000;
 const keepMs = 2 * 24 * 60 * 60 * 1000;
 
-export type Verdict = { allowed: boolean; retryAfterSeconds: number };
+type Verdict = { allowed: boolean; retryAfterSeconds: number };
 
-export type Limit = { key: string; limit: number; windowSeconds: number };
+type Limit = { key: string; limit: number; windowSeconds: number };
 
 @Injectable()
 export class RateLimiter implements OnModuleInit, OnModuleDestroy {

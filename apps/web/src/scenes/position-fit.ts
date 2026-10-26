@@ -1,6 +1,6 @@
 export type Anchor = { x: number; y: number; distance: number };
-export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
-export type Point = { x: number; y: number };
+type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
+type Point = { x: number; y: number };
 
 const minRange = 0.1;
 const scalePrior = 0.5;

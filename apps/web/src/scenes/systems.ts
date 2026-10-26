@@ -134,7 +134,6 @@ export const createSystemsScene: SceneFactory = (hooks, data) => {
   return {
     scene,
     camera,
-    legend: [],
     focus(id) {
       focus = id;
       applyFocus();

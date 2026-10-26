@@ -1,4 +1,4 @@
-export type Projected = { x: number; y: number; z: number };
+type Projected = { x: number; y: number; z: number };
 
 export function labelPosition(
   projected: Projected,

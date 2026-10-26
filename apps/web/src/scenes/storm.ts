@@ -25,7 +25,7 @@ export const stormParameters = {
   queueFullMinutes: 25,
 };
 
-export type StormSeries = (typeof data.policies)[number];
+type StormSeries = (typeof data.policies)[number];
 
 export const stormData = data;
 
@@ -62,9 +62,7 @@ export const createStormScene: SceneFactory = (hooks) => {
     const frame = new LineSegments(cageGeometry, frameMaterial);
     frame.position.set(0, p.cageHeight / 2, 0);
     const floorMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.12 });
-    const floor = new Mesh(floorGeometry, floorMaterial);
-    floor.position.set(0, 0, 0);
-    root.add(frame, floor);
+    root.add(frame, new Mesh(floorGeometry, floorMaterial));
 
     const slots = Array.from({ length: data.machine.processLimit }, (_, slot) => {
       const material = new MeshBasicMaterial();

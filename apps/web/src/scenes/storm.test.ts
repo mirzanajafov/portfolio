@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createStormScene, stormData, stormParameters, stormSample } from './storm';
 import type { SceneHooks } from './types';
 
-const hooks = {
-  renderer: undefined,
+const hooks: SceneHooks = {
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+};
 
 const box = stormData.policies.find((series) => series.id === 'box')!;
 const pool = stormData.policies.find((series) => series.id === 'pool')!;

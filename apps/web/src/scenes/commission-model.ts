@@ -2,7 +2,7 @@ export const families = ['I', 'II', 'III', 'IV', 'V'];
 
 export type Seat = 'up' | 'down' | 'frozen' | 'out';
 export type LinkState = 'open' | 'slow' | 'one-way' | 'cut';
-export type Heartbeat = 'answered' | 'unanswered' | 'lost' | 'none';
+type Heartbeat = 'answered' | 'unanswered' | 'lost' | 'none';
 
 type Link = { from: number; to: number };
 

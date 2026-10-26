@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { SceneHooks } from './types';
 import { createFloorScene } from './floor';
 
-const hooks = {
-  renderer: undefined,
+const hooks: SceneHooks = {
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+};
 
 describe('the floor scene', () => {
   it('runs the estimator Marauder runs, and lands in the error range the benchmark measured', () => {

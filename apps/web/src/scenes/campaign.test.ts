@@ -8,12 +8,11 @@ import {
 } from './campaign';
 import type { SceneHooks } from './types';
 
-const hooks = {
-  renderer: undefined,
+const hooks: SceneHooks = {
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+};
 
 const total = (pick: (run: (typeof campaignData.runs)[number]) => number) =>
   campaignData.runs.reduce((sum, run) => sum + pick(run), 0);

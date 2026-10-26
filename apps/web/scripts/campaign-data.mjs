@@ -56,7 +56,6 @@ const runs = campaignDirs.flatMap(runsOf).sort((a, b) => a.startedAt.localeCompa
 const start = Date.parse(runs[0].startedAt);
 
 const data = {
-  start: runs[0].startedAt,
   runs: runs.map((run) => ({
     minute: Math.round((Date.parse(run.startedAt) - start) / 6000) / 10,
     seed: run.seed,
@@ -78,7 +77,6 @@ const data = {
     return {
       id,
       guard,
-      harness: JSON.parse(readFileSync(join(resultsDir, dir, 'run.json'), 'utf8')).mode ?? 'ledger',
       runs: mutantRuns.length,
       caughtIn: first < 0 ? null : first + 1,
       caughtBy,

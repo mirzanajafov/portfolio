@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { PlayerHandle, SceneName } from '@/scenes/player';
-import type { LegendItem } from '@/scenes/types';
 
-export function webglAvailable(): boolean {
+function webglAvailable(): boolean {
   try {
     const canvas = document.createElement('canvas');
     return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
@@ -53,15 +52,13 @@ function useMotionChoice(): boolean | null {
 export function ScenePlayer({
   name,
   description,
-  showLegend = false,
   showReadout = true,
   data,
-  focus: controlledFocus,
+  focus = null,
   shown = true,
 }: {
   name: SceneName;
   description: string;
-  showLegend?: boolean;
   showReadout?: boolean;
   data?: unknown;
   focus?: string | null;
@@ -74,9 +71,6 @@ export function ScenePlayer({
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
   const [readout, setReadout] = useState<string[]>([]);
-  const [legend, setLegend] = useState<LegendItem[]>([]);
-  const [ownFocus, setFocus] = useState<string | null>(null);
-  const focus = controlledFocus === undefined ? ownFocus : controlledFocus;
   const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
 
@@ -97,7 +91,6 @@ export function ScenePlayer({
       .then(({ play }) =>
         play(name, canvas, labels, {
           onReadout: setReadout,
-          onLegend: setLegend,
           data: dataRef.current,
         }),
       )
@@ -153,21 +146,6 @@ export function ScenePlayer({
             <button type="button" className="scene-button" onClick={() => chooseMotion(!playing)}>
               {playing ? 'Pause motion' : 'Play motion'}
             </button>
-            {showLegend && legend.length > 0 && (
-              <div className="scene-legend" role="group" aria-label="Follow one project">
-                {legend.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="scene-button"
-                    aria-pressed={focus === item.id}
-                    onClick={() => setFocus(focus === item.id ? null : item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -9,10 +9,6 @@ export type AskEvent =
   | { type: 'withheld'; reason: GateReason }
   | { type: 'done' };
 
-export function refusal(email: string): string {
-  return `I don't have a source for that, so I won't guess. Ask me directly at ${email}.`;
-}
-
 @Injectable()
 export class AskService {
   constructor(
@@ -30,11 +26,7 @@ export class AskService {
         .map((id) => this.knowledge.get(id)?.source)
         .filter((source): source is Source => source !== undefined);
       const sourceCount = sources.length === draft.sourceIds.length ? sources.length : 0;
-      const verdict = gateSentence(
-        { text: draft.text, sourceCount, fixed: draft.fixed },
-        question,
-        characters,
-      );
+      const verdict = gateSentence({ text: draft.text, sourceCount }, question, characters);
       if (!verdict.ok) {
         yield { type: 'withheld', reason: verdict.reason };
         continue;
@@ -44,7 +36,11 @@ export class AskService {
       yield { type: 'sentence', text: verdict.text, sources };
     }
     if (!answered && !signal.aborted) {
-      yield { type: 'sentence', text: refusal(this.email), sources: [] };
+      yield {
+        type: 'sentence',
+        text: `I don't have a source for that, so I won't guess. Ask me directly at ${this.email}.`,
+        sources: [],
+      };
     }
     yield { type: 'done' };
   }

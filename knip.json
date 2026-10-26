@@ -1,16 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreIssues": {
-    "apps/api/evals/evals.ts": ["exports", "types"],
-    "apps/api/src/ask/ask.controller.ts": ["exports"],
-    "apps/api/src/ask/keyword-engine.ts": ["exports"],
-    "apps/api/src/config/env.ts": ["exports"],
-    "apps/web/src/components/scene-player.tsx": ["exports"],
-    "apps/web/src/lib/ask-events.ts": ["exports"],
-    "apps/web/src/scenes/systems-graph.ts": ["types"],
-    "content/src/scaffold.ts": ["exports"],
-    "content/src/schema.ts": ["exports"]
-  },
   "workspaces": {
     "apps/api": {
       "ignoreDependencies": ["@prisma/client"]

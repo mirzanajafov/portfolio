@@ -1,6 +1,6 @@
 export type GateReason = 'unsupported' | 'echo' | 'denied' | 'too-long';
 
-export type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
+type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 
 export const limits = {
   echoRun: 8,
@@ -49,17 +49,14 @@ export function longestSharedRun(a: string, b: string): number {
 }
 
 export function gateSentence(
-  sentence: { text: string; sourceCount: number; fixed?: boolean },
+  sentence: { text: string; sourceCount: number },
   question: string,
   charactersSoFar: number,
 ): GateVerdict {
-  const text = stripMarkup(sentence.text);
-  if (sentence.fixed) {
-    return { ok: true, text };
-  }
   if (sentence.sourceCount === 0) {
     return { ok: false, reason: 'unsupported' };
   }
+  const text = stripMarkup(sentence.text);
   if (longestSharedRun(text, question) >= limits.echoRun) {
     return { ok: false, reason: 'echo' };
   }

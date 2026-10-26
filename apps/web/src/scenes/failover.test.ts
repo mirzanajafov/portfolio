@@ -9,12 +9,11 @@ import {
 } from './failover';
 import type { SceneHooks } from './types';
 
-const hooks = {
-  renderer: undefined,
+const hooks: SceneHooks = {
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+};
 
 const probes = failoverData.lanes.find((lane) => lane.id === 'probes')!;
 const all = failoverData.lanes.find((lane) => lane.id === 'all')!;
@@ -38,10 +37,8 @@ describe("the failover data taken from PortalGun's crash run", () => {
   });
 
   it("loses what PortalGun's README says: 1,560 with probes only, all in the first 1.5 s, and none with everything on", () => {
-    expect(probes.lost).toBe(1560);
     expect(sum(probes.failed)).toBe(1560);
     expect(sum(binsBetween(probes.failed, 0, 1500))).toBe(1560);
-    expect(all.lost).toBe(0);
     expect(sum(all.failed)).toBe(0);
   });
 

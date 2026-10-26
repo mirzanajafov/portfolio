@@ -1,7 +1,6 @@
 export type DraftSentence = {
   text: string;
   sourceIds: string[];
-  fixed?: boolean;
 };
 
 export interface AnswerEngine {

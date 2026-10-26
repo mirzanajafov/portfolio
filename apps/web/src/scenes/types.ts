@@ -1,4 +1,4 @@
-import type { Camera, Color, Scene, WebGLRenderer } from 'three';
+import type { Camera, Color, Scene } from 'three';
 
 export type Palette = {
   bg: Color;
@@ -10,10 +10,7 @@ export type Palette = {
   signal: Color;
 };
 
-export type LegendItem = { id: string; label: string };
-
 export type SceneHooks = {
-  renderer: WebGLRenderer;
   label: (text: string, kind?: 'signal' | 'node') => HTMLElement;
   place: (element: HTMLElement, x: number, y: number, z: number) => void;
   size: () => { width: number; height: number };
@@ -26,7 +23,6 @@ export type SceneInstance = {
   render: (time: number, dt?: number) => void;
   setColors: (palette: Palette) => void;
   readout: () => string[];
-  legend?: LegendItem[];
   focus?: (id: string | null) => void;
   dispose: () => void;
 };

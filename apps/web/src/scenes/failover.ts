@@ -23,7 +23,7 @@ import { seeded } from './random';
 import { formatNumber } from './readout';
 import type { Palette, SceneFactory } from './types';
 
-export const failoverParameters = {
+const failoverParameters = {
   pace: [
     { until: -400, speed: 2 },
     { until: 2000, speed: 0.25 },
@@ -40,7 +40,7 @@ export const failoverParameters = {
   startMs: 300,
 };
 
-export type FailoverLane = (typeof data.lanes)[number];
+type FailoverLane = (typeof data.lanes)[number];
 
 export const failoverData = data;
 

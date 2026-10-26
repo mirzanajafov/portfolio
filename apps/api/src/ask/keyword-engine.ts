@@ -51,27 +51,14 @@ type Indexed = {
   length: number;
 };
 
-export type KeywordOptions = {
-  k1: number;
-  b: number;
-  keywordWeight: number;
-  summaryWeight: number;
-  minScore: number;
-  minMatchedTerms: number;
-  relative: number;
-  maxSentences: number;
-};
-
-export const defaultKeywordOptions: KeywordOptions = {
-  k1: 1.2,
-  b: 0.75,
-  keywordWeight: 0.5,
-  summaryWeight: 0.5,
-  minScore: 2.5,
-  minMatchedTerms: 2,
-  relative: 0.6,
-  maxSentences: 2,
-};
+const bm25K1 = 1.2;
+const bm25B = 0.75;
+const keywordWeight = 0.5;
+const summaryWeight = 0.5;
+const minScore = 2.5;
+const minMatchedTerms = 2;
+const shareOfTopScore = 0.6;
+const maxSentences = 2;
 
 type Ranked = { document: KnowledgeDocument; score: number; matched: number };
 
@@ -81,10 +68,7 @@ export class KeywordAnswerEngine implements AnswerEngine {
   private readonly idf: Map<string, number>;
   private readonly averageLength: number;
 
-  constructor(
-    private readonly knowledge: Knowledge,
-    private readonly options: KeywordOptions = defaultKeywordOptions,
-  ) {
+  constructor(private readonly knowledge: Knowledge) {
     this.indexed = knowledge.documents.map((document) => {
       const frequency = new Map<string, number>();
       const text = tokenize(document.text);
@@ -93,7 +77,7 @@ export class KeywordAnswerEngine implements AnswerEngine {
       }
       for (const token of new Set(tokenize(document.keywords))) {
         if (!frequency.has(token)) {
-          frequency.set(token, options.keywordWeight);
+          frequency.set(token, keywordWeight);
         }
       }
       return { document, frequency, length: text.length };
@@ -126,10 +110,8 @@ export class KeywordAnswerEngine implements AnswerEngine {
     return mentioned;
   }
 
-  rank(question: string): Ranked[] {
-    const query = new Set(tokenize(question));
+  private rank(query: Set<string>): Ranked[] {
     const projects = this.mentionedProjects(query);
-    const { k1, b, summaryWeight } = this.options;
     return this.indexed
       .filter(
         ({ document }) =>
@@ -144,8 +126,8 @@ export class KeywordAnswerEngine implements AnswerEngine {
             continue;
           }
           matched += 1;
-          const norm = tf + k1 * (1 - b + (b * length) / this.averageLength);
-          score += ((this.idf.get(token) ?? 0) * (tf * (k1 + 1))) / norm;
+          const norm = tf + bm25K1 * (1 - bm25B + (bm25B * length) / this.averageLength);
+          score += ((this.idf.get(token) ?? 0) * (tf * (bm25K1 + 1))) / norm;
         }
         if (document.id.endsWith('/summary')) {
           score *= summaryWeight;
@@ -156,19 +138,19 @@ export class KeywordAnswerEngine implements AnswerEngine {
       .sort((x, y) => y.score - x.score);
   }
 
-  choose(question: string): KnowledgeDocument[] {
-    const terms = new Set(tokenize(question)).size;
-    const needed = Math.min(this.options.minMatchedTerms, terms);
-    const ranked = this.rank(question).filter(({ matched }) => matched >= needed);
+  private choose(question: string): KnowledgeDocument[] {
+    const query = new Set(tokenize(question));
+    const needed = Math.min(minMatchedTerms, query.size);
+    const ranked = this.rank(query).filter(({ matched }) => matched >= needed);
     const top = ranked[0];
-    if (!top || top.score < this.options.minScore) {
+    if (!top || top.score < minScore) {
       return [];
     }
     const subject = top.document.project ?? 'about-me';
     return ranked
       .filter(({ document }) => (document.project ?? 'about-me') === subject)
-      .filter(({ score }) => score >= top.score * this.options.relative)
-      .slice(0, this.options.maxSentences)
+      .filter(({ score }) => score >= top.score * shareOfTopScore)
+      .slice(0, maxSentences)
       .map(({ document }) => document);
   }
 

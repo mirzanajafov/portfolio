@@ -47,7 +47,7 @@ export const cvSchema = z.strictObject({
   languages: z.array(z.strictObject({ name: z.string().min(1), level: z.string().min(1) })).min(1),
 });
 
-export const factSchema = z.strictObject({
+const factSchema = z.strictObject({
   id: slugSchema,
   text: z.string().min(1).max(240),
   kind: z.enum(['measured', 'parameter', 'design']),
@@ -130,7 +130,7 @@ export const projectSchema = z
     }
   });
 
-export const sceneNames = [
+const sceneNames = [
   'systems',
   'floor',
   'population',
@@ -158,7 +158,7 @@ export const caseStudySchema = z.strictObject({
   next: z.string().min(1).max(600),
 });
 
-export const evalSchema = z.strictObject({
+const evalSchema = z.strictObject({
   question: z.string().min(1),
   expects: z.array(slugSchema).min(1),
 });

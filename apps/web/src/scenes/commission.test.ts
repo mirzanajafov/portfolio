@@ -12,9 +12,8 @@ import type { Palette, SceneHooks } from './types';
 
 function sceneHooks(width: number) {
   const labels: HTMLElement[] = [];
-  const hooks = {
-    renderer: undefined,
-    label: (text: string) => {
+  const hooks: SceneHooks = {
+    label: (text) => {
       const label = document.createElement('span');
       label.textContent = text;
       labels.push(label);
@@ -22,7 +21,7 @@ function sceneHooks(width: number) {
     },
     place: () => undefined,
     size: () => ({ width, height: 800 }),
-  } as unknown as SceneHooks;
+  };
   return { hooks, labels };
 }
 
