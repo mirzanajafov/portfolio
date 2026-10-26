@@ -46,6 +46,8 @@ describe('Ask', () => {
       '/api/ask',
       expect.objectContaining({ body: JSON.stringify({ question: 'How does Matchium work?' }) }),
     );
+    expect(await screen.findByRole('button', { name: 'Ask' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('asks a suggested question with one click', async () => {

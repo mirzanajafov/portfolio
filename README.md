@@ -55,7 +55,7 @@ The browser never talks to the API. It posts to `/api/ask` on the Next server, w
 
 Questions are rate limited per caller (20 per 10 minutes, 100 a day) and overall (2,000 a day, which is mostly there for when a paid model sits behind it). The counters live in Postgres, one `INSERT ... ON CONFLICT DO UPDATE ... RETURNING count` per limit, so any number of API instances agree without Redis. The caller is an HMAC of the IP address keyed with a secret and the date: the limits work within a day, a stored key can't follow anyone from one day to the next, and the address itself is never written down. The API only believes `X-Forwarded-For` from proxies it trusts by subnet, and a test checks that a caller can't dodge the limit by inventing addresses.
 
-Every question is logged with what was cited and what the gate withheld, and deleted after 30 days. That log is how I'll find out where the answers fail, which matters more than anything I can think of in advance. The page says so next to the box.
+Every question that gets an answer or a refusal is logged with what was cited and what the gate withheld, and deleted after 30 days. A question the engine fails on mid-answer isn't, because the log only says what visitors were told, and the server log has the error. That log is how I'll find out where the answers fail, which matters more than anything I can think of in advance. The page says so next to the box.
 
 ## The CV and link previews
 
