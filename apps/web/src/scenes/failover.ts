@@ -14,17 +14,17 @@ import {
   TorusGeometry,
   Vector3,
 } from 'three';
+import { coloredInstances } from './colored-instances';
 import {
   countsBetween,
   failoverData,
   failoverEnd,
-  faultAt,
   type Fate,
   fates,
+  faultAt,
   laneAt,
   stateOfA,
 } from './failover-model';
-import { coloredInstances } from './colored-instances';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatNumber } from './readout';

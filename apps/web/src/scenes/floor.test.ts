@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFloorScene } from './floor';
-import { createFloor, floorParameters } from './floor-model';
+import { createFloor } from './floor-model';
 import { seeded } from './random';
 import { testHooks } from './test-hooks';
 
@@ -34,7 +34,7 @@ describe('the floor model', () => {
 });
 
 describe('the floor scene', () => {
-  it('labels the receivers and each tag with its error, and counts the fitted batches', () => {
+  it('labels each tag with its error and reports the mean of those errors', () => {
     const { hooks, labels } = testHooks();
     const scene = createFloorScene(hooks);
     for (let frame = 0; frame < 60; frame += 1) {
@@ -43,15 +43,33 @@ describe('the floor scene', () => {
     scene.render(1, 1 / 60);
     const texts = labels.map((label) => label.textContent);
     expect(texts.slice(0, 5)).toEqual(['R1', 'R2', 'R3', 'R4', 'R5']);
-    expect(texts.slice(5)).toHaveLength(floorParameters.tags);
-    for (const text of texts.slice(5)) {
-      expect(text).toMatch(/^tag [0-9a-f]{4} · ±\d+\.\d m$/);
+    const errors = texts.slice(5).map((text) => {
+      const match = /^tag [0-9a-f]{4} · ±(\d+\.\d) m$/.exec(text);
+      expect(match, text).not.toBeNull();
+      return Number(match?.[1]);
+    });
+    expect(errors).toHaveLength(6);
+    const [, batches = '', error = ''] = scene.readout();
+    expect(batches).toContain('log-distance fit · 6 batches of 150 ms');
+    const reported = Number(/^estimate error now (\d+\.\d{2}) m$/.exec(error)?.[1]);
+    const mean = errors.reduce((sum, value) => sum + value, 0) / errors.length;
+    expect(Math.abs(reported - mean)).toBeLessThan(0.055);
+  });
+
+  it('writes a tag label before placing it, so the label is kept in frame by its new width', () => {
+    const { hooks } = testHooks();
+    const placed: string[] = [];
+    const scene = createFloorScene({
+      ...hooks,
+      place: (label) => {
+        placed.push(label.textContent);
+      },
+    });
+    scene.render(0, 1 / 60);
+    const tags = placed.filter((text) => text.startsWith('tag '));
+    expect(tags).toHaveLength(6);
+    for (const text of tags) {
+      expect(text).toContain('±');
     }
-    const [, batches, error] = scene.readout();
-    const fitted = Math.floor(1000 / floorParameters.flushMs);
-    expect(batches).toContain(
-      `log-distance fit · ${fitted} batches of ${floorParameters.flushMs} ms`,
-    );
-    expect(error).toMatch(/^estimate error now \d+\.\d{2} m$/);
   });
 });

@@ -37,18 +37,18 @@ function countUpTo(seconds: number, appears: (index: number) => number, total: n
 export function campaignAt(seconds: number) {
   const shownRuns = countUpTo(seconds, runAppears, runCount);
   const shownMutants = countUpTo(seconds, mutantAppears, campaignData.mutants.length);
-  const shown = campaignData.runs.slice(0, shownRuns);
-  const total = (pick: (run: Run) => number) => shown.reduce((sum, run) => sum + pick(run), 0);
+  const runsSoFar = campaignData.runs.slice(0, shownRuns);
+  const mutantsSoFar = campaignData.mutants.slice(0, shownMutants);
+  const total = (pick: (run: Run) => number) => runsSoFar.reduce((sum, run) => sum + pick(run), 0);
   return {
     shownRuns,
     shownMutants,
-    run: shown.at(-1) ?? firstRun,
-    mutant: campaignData.mutants[shownMutants - 1],
+    run: runsSoFar.at(-1) ?? firstRun,
+    mutant: mutantsSoFar.at(-1),
     journeys: total((run) => run.journeys),
     kills: total((run) => run.kills),
     crashes: total((run) => run.postgres + run.kafka),
     violations: total((run) => run.violations),
-    caught: campaignData.mutants.slice(0, shownMutants).filter((mutant) => mutant.caughtIn !== null)
-      .length,
+    caught: mutantsSoFar.filter((mutant) => mutant.caughtIn !== null).length,
   };
 }

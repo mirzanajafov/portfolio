@@ -1,5 +1,5 @@
-import stormData from './storm-data.json';
 import { commonLength, sampleAt } from './series';
+import stormData from './storm-data.json';
 
 export { stormData };
 
