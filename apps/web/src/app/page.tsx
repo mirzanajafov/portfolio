@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { content, type Project } from '@portfolio/content';
-import { Ask } from '@/components/ask';
+import { Ask } from '@/ask/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';

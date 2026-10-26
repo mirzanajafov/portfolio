@@ -49,8 +49,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
   const scene = new Scene();
   const camera = new PerspectiveCamera(36, 1, 0.1, 500);
   const random = seeded(3);
-  const cardsOverStage =
-    typeof window === 'undefined' ? null : window.matchMedia('(max-width: 860px)');
+  const cardsOverStage = window.matchMedia('(max-width: 860px)');
 
   const geometries = {
     server: new SphereGeometry(sizes.server, 28, 20),
@@ -198,7 +197,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
       const ease = 1 - Math.exp(-(dt ?? 0.016) * 2.6);
       cameraPosition.lerp(wantedPosition, ease);
       cameraTarget.lerp(wantedTarget, ease);
-      const covered = cardsOverStage?.matches ?? false;
+      const covered = cardsOverStage.matches;
       const far = pullBack(camera.aspect, focus !== null);
       offset.copy(cameraPosition).sub(cameraTarget);
       if (!focus) {

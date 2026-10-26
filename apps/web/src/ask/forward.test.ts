@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { forwardAsk } from './forward-ask';
+import { forwardAsk } from './forward';
 
 const ask = (body: string, headers: Record<string, string> = {}) =>
   new Request('http://site/api/ask', { method: 'POST', body, headers });

@@ -28,15 +28,24 @@ class FakeObserver {
   observe(target: Element) {
     this.watcher.targets.push(target);
   }
+  unobserve(target: Element) {
+    this.watcher.targets = this.watcher.targets.filter((element) => element !== target);
+  }
   disconnect() {
     this.watcher.targets = [];
   }
 }
 
-function cross(attribute: 'stop' | 'scene', id: string, isIntersecting: boolean) {
+function elementOf(kind: 'stop' | 'scene', id: string): Element | null {
+  const step = document.getElementById(id);
+  return kind === 'stop' ? step : (step?.querySelector('.tour-scene-zone') ?? null);
+}
+
+function cross(kind: 'stop' | 'scene', id: string, isIntersecting: boolean) {
+  const element = elementOf(kind, id);
   act(() => {
     for (const { callback, targets } of watchers) {
-      const target = targets.find((element) => (element as HTMLElement).dataset[attribute] === id);
+      const target = targets.find((observed) => observed === element);
       if (target) {
         callback(
           [{ target, isIntersecting } as unknown as IntersectionObserverEntry],
@@ -124,7 +133,7 @@ describe('SystemsTour', () => {
     expect(links[1]).toHaveTextContent('TM PostKeeps working offline');
     for (const link of links) {
       const stop = document.getElementById(link.getAttribute('href')!.slice(1));
-      expect(stop).toHaveAttribute('data-stop', stop?.id);
+      expect(stop).toHaveClass('tour-step');
       expect(within(stop!).getByRole('article')).toBeInTheDocument();
     }
   });
@@ -164,8 +173,8 @@ describe('SystemsTour', () => {
     expect(observed).toEqual([screen.getByRole('article', { name: 'Matchium' })]);
     arriveAt('matchium');
     const card = observed[0]!;
-    card.getBoundingClientRect = () => ({ height: 401.4 }) as DOMRect;
-    act(() => measure([{ target: card } as unknown as ResizeObserverEntry], {} as ResizeObserver));
+    const entry = { target: card, borderBoxSize: [{ blockSize: 401.4, inlineSize: 320 }] };
+    act(() => measure([entry as unknown as ResizeObserverEntry], {} as ResizeObserver));
     const layer = screen.getByTestId('scene-population').parentElement!;
     expect(layer.style.getPropertyValue('--card-height')).toBe('401px');
   });

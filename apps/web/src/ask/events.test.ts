@@ -1,6 +1,6 @@
 import type { AskEvent } from '@portfolio/content/ask';
-import { describe, expect, it } from 'vitest';
-import { readEvents } from './ask-events';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readEvents } from './events';
 
 function streamOf(...chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -24,6 +24,10 @@ async function collect(stream: ReadableStream<Uint8Array>): Promise<AskEvent[]> 
 
 const sentence = { type: 'sentence', text: 'It works.', sources: [{ id: 'a', label: 'A' }] };
 const block = (value: unknown) => `event: x\ndata: ${JSON.stringify(value)}\n\n`;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('readEvents', () => {
   it('reads every event from a stream', async () => {
@@ -63,10 +67,14 @@ describe('readEvents', () => {
     expect(await collect(stream)).toEqual([{ ...sentence, text: 'Bakı · ü' }]);
   });
 
-  it('skips events it does not understand instead of failing the whole answer', async () => {
+  it('skips events it does not understand and says so, instead of failing the whole answer', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const events = await collect(
       streamOf('data: not json\n\n', block({ type: 'mystery' }), block(sentence)),
     );
     expect(events).toEqual([sentence]);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledWith(expect.any(String), 'not json', expect.any(SyntaxError));
+    expect(warn).toHaveBeenCalledWith(expect.any(String), '{"type":"mystery"}', expect.any(Error));
   });
 });

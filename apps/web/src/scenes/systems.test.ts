@@ -1,14 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createSystemsScene } from './systems';
 import { testHooks } from './test-hooks';
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
 describe('the systems map', () => {
   it('runs without apps and sends no requests', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: false }));
     const scene = createSystemsScene(testHooks().hooks, []);
     const drawn = scene.scene.children.length;
     for (let i = 0; i < 40; i += 1) {

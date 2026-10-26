@@ -12,11 +12,16 @@ function parseBlock(block: string): AskEvent | undefined {
   let json: unknown;
   try {
     json = JSON.parse(data);
-  } catch {
+  } catch (error) {
+    console.warn('skipped an answer event that is not JSON', data, error);
     return undefined;
   }
   const parsed = askEventSchema.safeParse(json);
-  return parsed.success ? parsed.data : undefined;
+  if (!parsed.success) {
+    console.warn('skipped an answer event this page does not understand', data, parsed.error);
+    return undefined;
+  }
+  return parsed.data;
 }
 
 export async function* readEvents(stream: ReadableStream<Uint8Array>): AsyncGenerator<AskEvent> {
