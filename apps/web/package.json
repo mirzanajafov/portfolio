@@ -6,12 +6,12 @@
     "dev": "next dev -p 3200",
     "build": "next build",
     "start": "next start -p 3200",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc -p scripts",
     "test": "vitest run",
-    "storm-data": "node scripts/storm-data.mjs",
-    "failover-data": "node scripts/failover-data.mjs",
-    "campaign-data": "node scripts/campaign-data.mjs",
-    "commission-data": "node scripts/commission-data.mjs"
+    "storm-data": "node scripts/storm-data.ts",
+    "failover-data": "node scripts/failover-data.ts",
+    "campaign-data": "node scripts/campaign-data.ts",
+    "commission-data": "node scripts/commission-data.ts"
   },
   "dependencies": {
     "@portfolio/content": "workspace:*",
@@ -37,6 +37,7 @@
     "pdfjs-dist": "6.3.289",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "zod": "4.6.5"
   }
 }

@@ -5,6 +5,6 @@ export default function setup(): void {
   const { parsed } = config({ path: '.env.test', quiet: true, processEnv: {} });
   execSync('pnpm exec prisma migrate deploy', {
     env: { ...process.env, ...parsed },
-    stdio: 'ignore',
+    stdio: 'pipe',
   });
 }
