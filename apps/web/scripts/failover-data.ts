@@ -98,5 +98,5 @@ const data = {
 
 writeFileSync(outPath, `${JSON.stringify(data)}\n`);
 console.log(
-  `wrote ${outPath}: ${lanes.map((l) => `${l.id} ${l.requests.length} bins, ${l.failed.reduce((a, b) => a + b, 0)} lost`).join('; ')}`,
+  `wrote ${outPath}: ${lanes.map((l) => `${l.id} ${l.requests.length} bins with ${l.failed.reduce((a, b) => a + b, 0)} lost`).join(', ')}`,
 );

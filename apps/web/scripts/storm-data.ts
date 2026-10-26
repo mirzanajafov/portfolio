@@ -76,5 +76,5 @@ const data = {
 
 writeFileSync(outPath, `${JSON.stringify(data)}\n`);
 console.log(
-  `wrote ${outPath}: ${data.policies.map((p) => `${p.id} ${p.processes.length} s, peak ${Math.max(...p.processes)} processes, ${p.spawns.at(-1) ?? 0} spawns`).join('; ')}`,
+  `wrote ${outPath}: ${data.policies.map((p) => `${p.id} over ${p.processes.length} s with a peak of ${Math.max(...p.processes)} processes and ${p.spawns.at(-1) ?? 0} spawns`).join(', ')}`,
 );
