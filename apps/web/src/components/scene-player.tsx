@@ -66,7 +66,7 @@ export function ScenePlayer({
   const labelsRef = useRef<HTMLDivElement>(null);
   const [handle, setHandle] = useState<PlayerHandle | null>(null);
   const reducedMotion = useReducedMotion();
-  const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
+  const [failure, setFailure] = useState<'unsupported' | null>(null);
   const [readout, setReadout] = useState<string[]>([]);
   const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
@@ -100,18 +100,17 @@ export function ScenePlayer({
         }
         started = next;
         setHandle(next);
-        setState('running');
       })
       .catch(() => {
         if (!abort.signal.aborted) {
-          setState('unsupported');
+          setFailure('unsupported');
         }
       });
     return () => {
       abort.abort();
       started?.dispose();
       setHandle(null);
-      setState('loading');
+      setFailure(null);
       setReadout([]);
       labels.replaceChildren();
     };
@@ -130,10 +129,10 @@ export function ScenePlayer({
   }, [handle, shown]);
 
   return (
-    <div className="scene" data-state={state}>
+    <div className="scene" data-state={handle ? 'running' : (failure ?? 'loading')}>
       <canvas ref={canvasRef} className="scene-canvas" role="img" aria-label={description} />
       <div ref={labelsRef} className="scene-labels" aria-hidden="true" />
-      {state === 'running' && (
+      {handle && (
         <div className="scene-hud">
           {showReadout ? (
             <p className="scene-readout" aria-hidden="true">

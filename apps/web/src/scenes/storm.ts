@@ -35,14 +35,14 @@ const poolSeries = data.policies.find((series) => series.id === 'pool');
 if (data.policies.length !== 2 || !boxSeries || !poolSeries) {
   throw new Error('the storm data needs the box and the pool');
 }
-const seriesOf = (policy: StormSeries) => [
-  policy.processes,
-  policy.running,
-  policy.goodput,
-  policy.spawns,
-  policy.backlogSeconds,
+const samplesOf = (series: StormSeries) => [
+  series.processes,
+  series.running,
+  series.goodput,
+  series.spawns,
+  series.backlogSeconds,
 ];
-const stormSeconds = commonLength([...seriesOf(boxSeries), ...seriesOf(poolSeries)]);
+const stormSeconds = commonLength([...samplesOf(boxSeries), ...samplesOf(poolSeries)]);
 const processCounts = [...boxSeries.processes, ...poolSeries.processes];
 if (processCounts.some((count) => !Number.isInteger(count) || count > data.machine.processLimit)) {
   throw new Error('the storm data needs whole process counts that fit in the machine');
