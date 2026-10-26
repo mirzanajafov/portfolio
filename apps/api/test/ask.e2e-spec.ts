@@ -227,11 +227,20 @@ describe('POST /ask when the engine fails', () => {
     await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
   });
 
-  it.each(['How does Matchium work?', 'What is your favourite colour?'])(
-    'cuts the answer off, so the page shows an error, and leaves it out of the question log: %s',
-    async (question) => {
-      await expect(ask(app, question)).rejects.toThrow();
-      expect(await prisma.askLog.count({ where: { question } })).toBe(0);
-    },
-  );
+  async function expectNoRow(question: string) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(await prisma.askLog.count({ where: { question } })).toBe(0);
+  }
+
+  it('ends the answer without a done event when the engine fails after the first sentence, and logs nothing', async () => {
+    const response = await ask(app, 'How does Matchium work?').expect(200);
+    expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta', 'sentence']);
+    await expectNoRow('How does Matchium work?');
+  });
+
+  it('ends the answer without a done event when the engine fails before saying anything, and logs nothing', async () => {
+    const response = await ask(app, 'What is your favourite colour?').expect(200);
+    expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta']);
+    await expectNoRow('What is your favourite colour?');
+  });
 });

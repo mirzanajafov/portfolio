@@ -67,11 +67,9 @@ export class AskController {
         }
         res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
       }
-    } catch (error) {
-      res.destroy();
-      throw error;
+    } finally {
+      res.end();
     }
-    res.end();
     await this.askLog.record({
       client,
       question,
