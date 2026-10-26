@@ -51,6 +51,7 @@
 }
 
 @theme inline {
+  --color-*: initial;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-fg: var(--fg);
