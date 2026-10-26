@@ -33,11 +33,24 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   };
 }
 
-function SectionTitle({ id, children }: { id: string; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  className,
+  children,
+}: {
+  id: string;
+  title: string;
+  className: string;
+  children: ReactNode;
+}) {
   return (
-    <h2 id={id} className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
+    <section aria-labelledby={id} className={className}>
+      <h2 id={id} className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
+        {title}
+      </h2>
       {children}
-    </h2>
+    </section>
   );
 }
 
@@ -105,10 +118,9 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </div>
       </header>
 
-      <section aria-labelledby="problem" className="flex flex-col gap-3">
-        <SectionTitle id="problem">Why I built it</SectionTitle>
+      <Section id="problem" title="Why I built it" className="flex flex-col gap-3">
         <p className="max-w-[65ch] text-xl leading-relaxed">{caseStudy.problem}</p>
-      </section>
+      </Section>
 
       {caseStudy.demo && caseStudy.demoCaption && (
         <figure className="flex flex-col gap-3">
@@ -121,8 +133,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </figure>
       )}
 
-      <section aria-labelledby="decisions" className="flex flex-col gap-10">
-        <SectionTitle id="decisions">Decisions</SectionTitle>
+      <Section id="decisions" title="Decisions" className="flex flex-col gap-10">
         {caseStudy.decisions.map((decision) => (
           <article key={decision.title} className="flex flex-col gap-4">
             <h3 className="text-2xl font-bold tracking-tight">{decision.title}</h3>
@@ -136,17 +147,15 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             )}
           </article>
         ))}
-      </section>
+      </Section>
 
-      <section aria-labelledby="proof" className="flex flex-col gap-3">
-        <SectionTitle id="proof">How I know it works</SectionTitle>
+      <Section id="proof" title="How I know it works" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.proof}</p>
-      </section>
+      </Section>
 
-      <section aria-labelledby="next" className="flex flex-col gap-3">
-        <SectionTitle id="next">What I would do next</SectionTitle>
+      <Section id="next" title="What I would do next" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
-      </section>
+      </Section>
 
       <footer className="border-t border-line pt-8 text-muted">
         <Link className="underline underline-offset-4" href="/">

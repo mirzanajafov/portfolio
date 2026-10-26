@@ -1,12 +1,10 @@
 import Link from 'next/link';
-import { content, type Project } from '@portfolio/content';
+import { content, type Profile, type Project } from '@portfolio/content';
 import { Ask } from '@/ask/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
 import { siteUrl } from '@/lib/site';
-
-const pill = 'rounded-full border border-line bg-surface px-5 py-2.5';
 
 function toStop(project: Project): TourStop {
   const { headline } = project;
@@ -24,6 +22,22 @@ function toStop(project: Project): TourStop {
     privateSource: project.visibility === 'private',
     demo: demo && demoCaption ? { scene: demo, caption: demoCaption } : undefined,
   };
+}
+
+function ProfileLinks({ links, className }: { links: Profile['links']; className: string }) {
+  return (
+    <>
+      <Link className={className} href="/cv">
+        CV
+      </Link>
+      <a className={className} href={links.github}>
+        GitHub
+      </a>
+      <a className={className} href={links.linkedin}>
+        LinkedIn
+      </a>
+    </>
+  );
 }
 
 export default function Home() {
@@ -69,15 +83,10 @@ export default function Home() {
             <a className="rounded-full bg-fg px-5 py-2.5 text-bg" href={`mailto:${links.email}`}>
               Email me
             </a>
-            <Link className={pill} href="/cv">
-              CV
-            </Link>
-            <a className={pill} href={links.github}>
-              GitHub
-            </a>
-            <a className={pill} href={links.linkedin}>
-              LinkedIn
-            </a>
+            <ProfileLinks
+              links={links}
+              className="rounded-full border border-line bg-surface px-5 py-2.5"
+            />
           </nav>
         </div>
         <p
@@ -122,15 +131,7 @@ export default function Home() {
             .
           </p>
           <nav aria-label="Elsewhere" className="flex gap-5">
-            <Link className="underline underline-offset-4 hover:text-fg" href="/cv">
-              CV
-            </Link>
-            <a className="underline underline-offset-4 hover:text-fg" href={links.github}>
-              GitHub
-            </a>
-            <a className="underline underline-offset-4 hover:text-fg" href={links.linkedin}>
-              LinkedIn
-            </a>
+            <ProfileLinks links={links} className="underline underline-offset-4 hover:text-fg" />
           </nav>
         </footer>
       </div>
