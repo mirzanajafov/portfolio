@@ -1,35 +1,11 @@
-import { createServer, type Socket } from 'node:net';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
 import { askEventSchema, questionMaxLength, type AskEvent } from '@portfolio/content/ask';
 import request from 'supertest';
-import {
-  afterAll,
-  afterEach,
-  assert,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  onTestFinished,
-} from 'vitest';
-import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.setup.js';
-import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
-import { CONTENT } from '../src/ask/knowledge.js';
-import { ClockService } from '../src/common/clock.service.js';
-import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { fixtureContent } from './content.fixture.js';
-
-class FixedClock extends ClockService {
-  current = new Date('2026-10-02T12:00:00Z');
-  override now(): Date {
-    return this.current;
-  }
-}
+import { FixedClock, startApp } from './start-app.js';
 
 type Event = { event: string; data: AskEvent };
 
@@ -49,25 +25,6 @@ function sentencesOf(events: Event[]) {
   return events.flatMap(({ data }) => (data.type === 'sentence' ? [data] : []));
 }
 
-async function startApp(overrides: Record<string, string> = {}, engine?: AnswerEngine) {
-  const clock = new FixedClock();
-  let builder = Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(ENV)
-    .useValue(parseEnv({ ...process.env, ...overrides }))
-    .overrideProvider(ClockService)
-    .useValue(clock)
-    .overrideProvider(CONTENT)
-    .useValue(fixtureContent);
-  if (engine) {
-    builder = builder.overrideProvider(ANSWER_ENGINE).useValue(engine);
-  }
-  const moduleRef = await builder.compile();
-  const app = moduleRef.createNestApplication<NestExpressApplication>();
-  configureApp(app);
-  await app.init();
-  return { app, clock, prisma: app.get(PrismaService) };
-}
-
 async function loggedRows(prisma: PrismaService, question: string) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const rows = await prisma.askLog.findMany({ where: { question } });
@@ -78,37 +35,6 @@ async function loggedRows(prisma: PrismaService, question: string) {
   }
   return [];
 }
-
-async function silentDatabase() {
-  const sockets = new Set<Socket>();
-  const server = createServer((socket) => sockets.add(socket));
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  assert(address !== null && typeof address === 'object');
-  onTestFinished(() => {
-    for (const socket of sockets) {
-      socket.destroy();
-    }
-    server.close();
-  });
-  return `postgresql://portfolio:portfolio@127.0.0.1:${address.port}/portfolio`;
-}
-
-describe('GET /health', () => {
-  it('reports healthy while the database answers', async () => {
-    const { app } = await startApp();
-    onTestFinished(() => app.close());
-    await request(app.getHttpServer()).get('/health').expect(200, { status: 'ok' });
-  });
-
-  it('answers 503 within seconds when the database stops answering', async () => {
-    const { app } = await startApp({ DATABASE_URL: await silentDatabase() });
-    onTestFinished(() => app.close());
-    const started = performance.now();
-    await request(app.getHttpServer()).get('/health').expect(503);
-    expect(performance.now() - started).toBeLessThan(10_000);
-  }, 20_000);
-});
 
 const ask = (app: NestExpressApplication, question: string, ip = '203.0.113.7') =>
   request(app.getHttpServer()).post('/ask').set('X-Forwarded-For', ip).send({ question });
