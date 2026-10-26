@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScenePlayer } from './scene-player';
 
 function handle() {
@@ -18,6 +18,10 @@ const play = vi.fn(async () => {
 beforeEach(() => {
   handles.length = 0;
   play.mockClear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 vi.mock('@/scenes/player', () => ({ play }));

@@ -1,3 +1,5 @@
+import { MathUtils } from 'three';
+
 export type Anchor = { x: number; y: number; distance: number };
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 type Point = { x: number; y: number };
@@ -13,10 +15,6 @@ const iterations = 40;
 
 export function rssiToDistance(rssi: number, txPower: number, exponent: number): number {
   return Math.min(1000, Math.max(minRange, 10 ** ((txPower - rssi) / (10 * exponent))));
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function determinant([a, b, c]: Mat3): number {
@@ -76,8 +74,8 @@ export function fitPosition(anchors: Anchor[], bounds: Bounds): Point {
   if (weight === 0) {
     return { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
   }
-  x = clamp(x / weight, bounds.minX, bounds.maxX);
-  y = clamp(y / weight, bounds.minY, bounds.maxY);
+  x = MathUtils.clamp(x / weight, bounds.minX, bounds.maxX);
+  y = MathUtils.clamp(y / weight, bounds.minY, bounds.maxY);
   if (anchors.length < 3) {
     return { x, y };
   }
@@ -126,9 +124,9 @@ export function fitPosition(anchors: Anchor[], bounds: Bounds): Point {
     if (!step) {
       break;
     }
-    const nx = clamp(x + step[0], bounds.minX, bounds.maxX);
-    const ny = clamp(y + step[1], bounds.minY, bounds.maxY);
-    const nk = clamp(k + step[2], 0.5, 1.5);
+    const nx = MathUtils.clamp(x + step[0], bounds.minX, bounds.maxX);
+    const ny = MathUtils.clamp(y + step[1], bounds.minY, bounds.maxY);
+    const nk = MathUtils.clamp(k + step[2], 0.5, 1.5);
     const next = cost(terms, nx, ny, nk, prior);
     if (next < current) {
       x = nx;

@@ -29,6 +29,10 @@ describe('the systems graph', () => {
     expect(links.filter((link) => link === 'server > app')).toHaveLength(apps.length);
     expect(links.filter((link) => link === 'app > part')).toHaveLength(parts.length);
     expect(links).toHaveLength(apps.length + parts.length);
+    for (const edge of graph.edges) {
+      expect(graph.nodes).toContain(edge.from);
+      expect(graph.nodes).toContain(edge.to);
+    }
     for (const edge of graph.edges.filter((candidate) => candidate.to.kind === 'part')) {
       expect(edge.to.app).toBe(edge.from.id);
       expect(graph.edges.some((candidate) => candidate.to === edge.from)).toBe(true);

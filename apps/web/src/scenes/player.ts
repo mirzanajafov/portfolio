@@ -56,6 +56,7 @@ export async function play(
   },
 ): Promise<PlayerHandle> {
   const { onReadout, signal } = options;
+  signal.throwIfAborted();
   const create = await load(spec);
   signal.throwIfAborted();
   const renderer = new WebGLRenderer({

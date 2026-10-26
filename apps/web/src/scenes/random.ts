@@ -15,7 +15,7 @@ export function gaussian(random: () => number): number {
 }
 
 export function pick<T>(random: () => number, items: readonly T[], among = items.length): T {
-  if (among < 1 || among > items.length) {
+  if (!Number.isInteger(among) || among < 1 || among > items.length) {
     throw new RangeError(`cannot pick among ${among} of ${items.length} items`);
   }
   const item = items[Math.floor(random() * among)];

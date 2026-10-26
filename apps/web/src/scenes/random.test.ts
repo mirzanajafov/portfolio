@@ -9,6 +9,8 @@ describe('pick', () => {
 
   it('refuses to pick among none, or among more items than there are', () => {
     expect(() => pick(() => 0, ['a'], 0)).toThrow(RangeError);
+    expect(() => pick(() => 0, ['a', 'b'], 1.5)).toThrow(RangeError);
+    expect(() => pick(() => 0, ['a'], Number.NaN)).toThrow(RangeError);
     expect(() => pick(() => 0, ['a'], 2)).toThrow(RangeError);
     expect(() => pick(() => 0, [])).toThrow(RangeError);
   });
