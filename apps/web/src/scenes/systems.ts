@@ -12,7 +12,7 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
-import { pick, seeded } from './random';
+import { seeded } from './random';
 import {
   buildGraph,
   focusPose,
@@ -92,7 +92,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
   const edgeMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.45 });
   scene.add(new LineSegments(edgeGeometry, edgeMaterial));
 
-  let pulses: Pulse[] = [];
+  const pulses: Pulse[] = [];
   let palette: Palette | null = null;
   let focus: string | null = null;
   let spawnIn = 0;
@@ -130,7 +130,10 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
     if (!palette) {
       return;
     }
-    const route = pick(random, routes);
+    const route = routes[Math.floor(random() * routes.length)];
+    if (!route) {
+      return;
+    }
     const next = route.parts[Math.floor(random() * route.parts.length)];
     const mesh = new Mesh(
       geometries.pulse,
@@ -172,25 +175,27 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
         spawnIn = 0.06 + random() * 0.12;
         spawn();
       }
-      pulses = pulses.filter((pulse) => {
+      let kept = 0;
+      for (const pulse of pulses) {
         pulse.t += dt * pulse.speed;
         start.fromArray(pulse.edge.from.position);
         end.fromArray(pulse.edge.to.position);
         pulse.mesh.position.lerpVectors(start, end, Math.min(pulse.t, 1));
         pulse.mesh.material.opacity = inFocus(pulse.edge.app) ? 1 : 0.06;
-        if (pulse.t < 1) {
-          return true;
-        }
-        if (pulse.next) {
+        if (pulse.t >= 1 && pulse.next) {
           pulse.edge = pulse.next;
           pulse.next = undefined;
           pulse.t = 0;
-          return true;
         }
-        scene.remove(pulse.mesh);
-        pulse.mesh.material.dispose();
-        return false;
-      });
+        if (pulse.t < 1) {
+          pulses[kept] = pulse;
+          kept += 1;
+        } else {
+          scene.remove(pulse.mesh);
+          pulse.mesh.material.dispose();
+        }
+      }
+      pulses.length = kept;
     },
     render(time, dt) {
       const ease = 1 - Math.exp(-(dt ?? 0.016) * 2.6);

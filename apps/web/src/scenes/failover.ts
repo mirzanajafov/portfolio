@@ -50,6 +50,13 @@ if (!firstLane) {
   throw new Error('the failover data has no lanes');
 }
 const bins = firstLane.requests.length;
+if (
+  data.lanes.some((lane) =>
+    [lane.requests, lane.served, lane.failed, lane.retried].some((bin) => bin.length !== bins),
+  )
+) {
+  throw new Error('every failover lane needs a value for every bin');
+}
 const endMs = data.fromMs + bins * data.binMs;
 
 export function speedAt(ms: number): number {

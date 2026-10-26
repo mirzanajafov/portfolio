@@ -279,7 +279,10 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       const now = campaignAt(seconds);
 
       runTiles.count = now.runs;
-      data.runs.slice(0, now.runs).forEach((run, index) => {
+      for (const [index, run] of data.runs.entries()) {
+        if (index >= now.runs) {
+          break;
+        }
         const { x, z } = runPosition(index);
         const age = seconds - runAppears(index);
         const grow = ease(age / 0.35) * clearing;
@@ -293,7 +296,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
           }
           runTiles.setColorAt(index, color);
         }
-      });
+      }
       runTiles.instanceMatrix.needsUpdate = true;
       if (runTiles.instanceColor) {
         runTiles.instanceColor.needsUpdate = true;
