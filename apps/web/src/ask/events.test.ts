@@ -1,5 +1,5 @@
 import type { AskEvent } from '@portfolio/content/ask';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readEvents } from './events';
 
 function streamOf(...chunks: string[]): ReadableStream<Uint8Array> {
@@ -24,6 +24,10 @@ async function collect(stream: ReadableStream<Uint8Array>): Promise<AskEvent[]> 
 
 const sentence = { type: 'sentence', text: 'It works.', sources: [{ id: 'a', label: 'A' }] };
 const block = (value: unknown) => `event: x\ndata: ${JSON.stringify(value)}\n\n`;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('readEvents', () => {
   it('reads every event from a stream', async () => {
@@ -72,6 +76,5 @@ describe('readEvents', () => {
     expect(warn).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledWith(expect.any(String), 'not json', expect.any(SyntaxError));
     expect(warn).toHaveBeenCalledWith(expect.any(String), '{"type":"mystery"}', expect.any(Error));
-    warn.mockRestore();
   });
 });

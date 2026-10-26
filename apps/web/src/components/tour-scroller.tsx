@@ -1,11 +1,11 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import type { DemoName } from '@portfolio/content';
 import { ScenePlayer } from '@/components/scene-player';
+import type { TourStop } from '@/components/systems-tour';
 import type { GraphApp } from '@/scenes/systems-graph';
 
-type ScrollStop = { id: string; demo?: { scene: DemoName; caption: string }; card: ReactNode };
+type ScrollStop = { id: string; headingId: string; demo?: TourStop['demo']; card: ReactNode };
 
 const settleMs = 500;
 
@@ -28,10 +28,12 @@ function crossings(entries: IntersectionObserverEntry[], ids: ReadonlyMap<Elemen
 
 export function TourScroller({
   apps,
+  titleId,
   overview,
   stops,
 }: {
   apps: GraphApp[];
+  titleId: string;
   overview: ReactNode;
   stops: ScrollStop[];
 }) {
@@ -45,19 +47,21 @@ export function TourScroller({
   const demoCards = useRef(new Map<Element, string>());
 
   useEffect(() => {
-    const observers = [...demoCards.current].map(([card, id]) => {
-      const observer = new ResizeObserver(() => {
-        const height = Math.round(card.getBoundingClientRect().height);
-        setCards((previous) =>
-          previous[id] === height ? previous : { ...previous, [id]: height },
-        );
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries.flatMap(({ target }): [string, number][] => {
+        const id = demoCards.current.get(target);
+        return id === undefined ? [] : [[id, Math.round(target.getBoundingClientRect().height)]];
       });
-      observer.observe(card);
-      return observer;
+      setCards((previous) =>
+        measured.every(([id, height]) => previous[id] === height)
+          ? previous
+          : { ...previous, ...Object.fromEntries(measured) },
+      );
     });
-    return () => {
-      observers.forEach((observer) => observer.disconnect());
-    };
+    demoCards.current.forEach((_, card) => {
+      observer.observe(card);
+    });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -127,7 +131,7 @@ export function TourScroller({
   const covered = showing !== null && settled === showing;
 
   return (
-    <section aria-labelledby="built" className="tour">
+    <section aria-labelledby={titleId} className="tour">
       <div className="tour-stage">
         <ScenePlayer
           scene={{ name: 'systems', apps }}
@@ -170,12 +174,11 @@ export function TourScroller({
         >
           <div className="tour-card">{overview}</div>
         </li>
-        {stops.map(({ id, demo, card }) => (
+        {stops.map(({ id, headingId, demo, card }) => (
           <li
             key={id}
             ref={(element) => track(steps.current, id, element)}
             id={id}
-            data-stop={id}
             className="tour-step"
             data-active={active === id}
           >
@@ -184,12 +187,11 @@ export function TourScroller({
                 ref={(element) => track(zones.current, id, element)}
                 aria-hidden="true"
                 className="tour-scene-zone"
-                data-scene={id}
               />
             )}
             <article
               ref={demo ? (element) => track(demoCards.current, id, element) : undefined}
-              aria-labelledby={`stop-${id}`}
+              aria-labelledby={headingId}
               className="tour-card"
             >
               {card}

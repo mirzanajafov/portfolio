@@ -7,8 +7,8 @@ coverage/
 .env
 .env.*
 !.env.example
-!.env.test
-!.env.development
+!apps/api/.env.test
+!apps/web/.env.development
 next-env.d.ts
 content/src/.generated/
 apps/api/src/generated/

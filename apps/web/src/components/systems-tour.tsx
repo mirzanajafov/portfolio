@@ -22,11 +22,13 @@ export type TourStop = {
 
 type Intro = { title: string; body: string };
 
+const titleId = 'built';
+
 function Overview({ intro, stops }: { intro: Intro; stops: TourStop[] }) {
   return (
     <>
       <h2
-        id="built"
+        id={titleId}
         className="text-[clamp(30px,4vw,48px)] leading-none font-extrabold tracking-tight"
       >
         {intro.title}
@@ -51,12 +53,12 @@ function Overview({ intro, stops }: { intro: Intro; stops: TourStop[] }) {
   );
 }
 
-function StopCard({ stop }: { stop: TourStop }) {
+function StopCard({ stop, headingId }: { stop: TourStop; headingId: string }) {
   return (
     <>
       <ViewTransition name={`project-${stop.id}`} share="morph" default="none">
         <h3
-          id={`stop-${stop.id}`}
+          id={headingId}
           className="text-[clamp(28px,3.4vw,42px)] leading-none font-extrabold tracking-tight"
         >
           {stop.name}
@@ -121,12 +123,17 @@ export function SystemsTour({
   return (
     <TourScroller
       apps={apps}
+      titleId={titleId}
       overview={<Overview intro={intro} stops={stops} />}
-      stops={stops.map((stop) => ({
-        id: stop.id,
-        demo: stop.demo,
-        card: <StopCard stop={stop} />,
-      }))}
+      stops={stops.map((stop) => {
+        const headingId = `stop-${stop.id}`;
+        return {
+          id: stop.id,
+          headingId,
+          demo: stop.demo,
+          card: <StopCard stop={stop} headingId={headingId} />,
+        };
+      })}
     />
   );
 }

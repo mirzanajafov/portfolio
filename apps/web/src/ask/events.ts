@@ -9,12 +9,19 @@ function parseBlock(block: string): AskEvent | undefined {
   if (!data) {
     return undefined;
   }
+  let json: unknown;
   try {
-    return askEventSchema.parse(JSON.parse(data));
+    json = JSON.parse(data);
   } catch (error) {
-    console.warn('skipped an answer event this page does not understand', data, error);
+    console.warn('skipped an answer event that is not JSON', data, error);
     return undefined;
   }
+  const parsed = askEventSchema.safeParse(json);
+  if (!parsed.success) {
+    console.warn('skipped an answer event this page does not understand', data, parsed.error);
+    return undefined;
+  }
+  return parsed.data;
 }
 
 export async function* readEvents(stream: ReadableStream<Uint8Array>): AsyncGenerator<AskEvent> {

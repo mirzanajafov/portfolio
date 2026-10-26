@@ -12,7 +12,15 @@ function useWebgl(): boolean {
   return useSyncExternalStore(subscribeToNothing, webglAvailable, () => true);
 }
 
-function sceneState(running: boolean, webgl: boolean, failed: boolean) {
+function sceneState({
+  running,
+  webgl,
+  failed,
+}: {
+  running: boolean;
+  webgl: boolean;
+  failed: boolean;
+}) {
   if (running) {
     return 'running';
   }
@@ -91,7 +99,7 @@ export function ScenePlayer({
   useEffect(() => {
     const canvas = canvasRef.current;
     const labels = labelsRef.current;
-    if (!canvas || !labels || !webgl) {
+    if (!canvas || !labels || !webglAvailable()) {
       return;
     }
     const abort = new AbortController();
@@ -119,7 +127,7 @@ export function ScenePlayer({
       setFailed(false);
       setReadout([]);
     };
-  }, [scene.name, webgl]);
+  }, [scene.name]);
 
   useEffect(() => {
     handle?.setPlaying(playing);
@@ -134,7 +142,7 @@ export function ScenePlayer({
   }, [handle, shown]);
 
   return (
-    <div className="scene" data-state={sceneState(handle !== null, webgl, failed)}>
+    <div className="scene" data-state={sceneState({ running: handle !== null, webgl, failed })}>
       <canvas ref={canvasRef} className="scene-canvas" role="img" aria-label={description} />
       <div ref={labelsRef} className="scene-labels" aria-hidden="true" />
       {handle && (
