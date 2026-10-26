@@ -63,6 +63,8 @@ const data = {
     kills: sum(run.kills.random) + sum(run.kills.failpoints),
     postgres: run.postgres.kills,
     kafka: run.kafka.kills,
+    network: sum(run.toxics),
+    forged: sum(run.forged),
     violations: run.violations.length,
   })),
   mutants: mutants.map(({ id, dir, guard }) => {

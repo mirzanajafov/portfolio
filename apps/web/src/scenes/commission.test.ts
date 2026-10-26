@@ -52,6 +52,7 @@ describe("the lab run taken from FiveFamilies' results", () => {
       faults: 187,
       ops: 287516,
       linearizable: 6,
+      sameState: 6,
     });
   });
 

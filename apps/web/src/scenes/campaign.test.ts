@@ -23,6 +23,8 @@ describe("the campaign data taken from Car Wash Ledger's chaos results", () => {
     expect(total((run) => run.journeys)).toBe(135048);
     expect(total((run) => run.kills)).toBe(8792);
     expect(total((run) => run.postgres + run.kafka)).toBe(876);
+    expect(total((run) => run.network)).toBe(2253);
+    expect(total((run) => run.forged)).toBe(9108);
     expect(total((run) => run.violations)).toBe(0);
   });
 

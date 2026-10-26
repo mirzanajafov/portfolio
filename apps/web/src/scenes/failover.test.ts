@@ -47,7 +47,7 @@ describe("the failover data taken from PortalGun's crash run", () => {
       sum(binsBetween(probes.failed, 0, 1500)) / sum(binsBetween(probes.requests, 0, 1500));
     expect(down).toBeGreaterThan(0.45);
     expect(down).toBeLessThan(0.6);
-    expect(probes.events[0]).toMatchObject({ state: 'unhealthy' });
+    expect(probes.events[0]).toMatchObject({ state: 'unhealthy', reason: 'probes' });
     expect(probes.events[0]!.atMs).toBeGreaterThan(1400);
     expect(all.events[0]!.state).toBe('ejected');
     expect(all.events[0]!.atMs).toBeLessThan(10);

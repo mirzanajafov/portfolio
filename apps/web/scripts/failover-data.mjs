@@ -40,6 +40,7 @@ function extract({ id, cell, label }) {
       events: events.map((e) => ({
         atMs: Math.round((e.unixNano - fault.injectAt) / 1e5) / 10,
         state: e.state,
+        reason: e.reason,
       })),
       requests: bins.map((b) => b.requests),
       served: bins.map((b) => b.target),
