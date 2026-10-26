@@ -4,14 +4,16 @@ import { SystemsTour, type TourStop } from './systems-tour';
 
 vi.mock('@/components/scene-player', () => ({
   ScenePlayer: ({
-    name,
+    scene,
     focus,
     shown = true,
   }: {
-    name: string;
+    scene: { name: string };
     focus?: string | null;
     shown?: boolean;
-  }) => <div data-testid={`scene-${name}`} data-focus={focus ?? 'overview'} data-shown={shown} />,
+  }) => (
+    <div data-testid={`scene-${scene.name}`} data-focus={focus ?? 'overview'} data-shown={shown} />
+  ),
 }));
 
 type Watcher = { callback: IntersectionObserverCallback; targets: Element[] };

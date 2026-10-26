@@ -8,7 +8,7 @@ export type GraphNode = {
   position: [number, number, number];
 };
 
-type GraphEdge = { from: string; to: string; app: string };
+type GraphEdge = { from: GraphNode; to: GraphNode; app: string };
 
 type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; apps: GraphApp[] };
 
@@ -20,24 +20,34 @@ function partId(app: string, part: string): string {
 }
 
 export function buildGraph(apps: GraphApp[]): Graph {
-  const nodes: GraphNode[] = [
-    { id: 'server', kind: 'server', label: 'my server', position: [0, 0, 0] },
-  ];
+  const server: GraphNode = {
+    id: 'server',
+    kind: 'server',
+    label: 'my server',
+    position: [0, 0, 0],
+  };
+  const nodes = [server];
   const edges: GraphEdge[] = [];
   apps.forEach((app, index) => {
     const angle = (index / apps.length) * Math.PI * 2 - Math.PI / 2;
     const ax = Math.cos(angle) * ringRadius;
     const az = Math.sin(angle) * ringRadius;
     const ay = index % 2 === 0 ? 0.8 : -0.8;
-    nodes.push({ id: app.id, kind: 'app', label: app.name, app: app.id, position: [ax, ay, az] });
-    edges.push({ from: 'server', to: app.id, app: app.id });
+    const appNode: GraphNode = {
+      id: app.id,
+      kind: 'app',
+      label: app.name,
+      app: app.id,
+      position: [ax, ay, az],
+    };
+    nodes.push(appNode);
+    edges.push({ from: server, to: appNode, app: app.id });
     const parts = [...new Set(app.stack)];
     parts.forEach((part, partIndex) => {
       const spread = parts.length === 1 ? 0 : (partIndex / (parts.length - 1) - 0.5) * 2.4;
       const partAngle = angle + spread;
-      const id = partId(app.id, part);
-      nodes.push({
-        id,
+      const partNode: GraphNode = {
+        id: partId(app.id, part),
         kind: 'part',
         label: part,
         app: app.id,
@@ -46,8 +56,9 @@ export function buildGraph(apps: GraphApp[]): Graph {
           ay + (partIndex % 3) - 1,
           az + Math.sin(partAngle) * partRadius,
         ],
-      });
-      edges.push({ from: app.id, to: id, app: app.id });
+      };
+      nodes.push(partNode);
+      edges.push({ from: appNode, to: partNode, app: app.id });
     });
   });
   return { nodes, edges, apps };

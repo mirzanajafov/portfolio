@@ -129,7 +129,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
       {caseStudy.demo && caseStudy.demoCaption && (
         <figure className="flex flex-col gap-3">
           <div className="relative h-[clamp(420px,62vh,620px)] overflow-hidden rounded-2xl border border-[var(--line)]">
-            <ScenePlayer name={caseStudy.demo} description={caseStudy.demoCaption} />
+            <ScenePlayer scene={{ name: caseStudy.demo }} description={caseStudy.demoCaption} />
           </div>
           <figcaption className="max-w-[65ch] text-sm text-[var(--muted)]">
             {caseStudy.demoCaption}

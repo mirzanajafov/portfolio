@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { PlayerHandle, SceneName } from '@/scenes/player';
+import type { PlayerHandle, SceneSpec } from '@/scenes/player';
 
 function webglAvailable(): boolean {
   try {
@@ -50,24 +50,22 @@ function useMotionChoice(): boolean | null {
 }
 
 export function ScenePlayer({
-  name,
+  scene,
   description,
   showReadout = true,
-  data,
   focus = null,
   shown = true,
 }: {
-  name: SceneName;
+  scene: SceneSpec;
   description: string;
   showReadout?: boolean;
-  data?: unknown;
   focus?: string | null;
   shown?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<PlayerHandle | null>(null);
-  const dataRef = useRef(data);
+  const sceneRef = useRef(scene);
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
   const [readout, setReadout] = useState<string[]>([]);
@@ -88,12 +86,7 @@ export function ScenePlayer({
         }
         return import('@/scenes/player');
       })
-      .then(({ play }) =>
-        play(name, canvas, labels, {
-          onReadout: setReadout,
-          data: dataRef.current,
-        }),
-      )
+      .then(({ play }) => play(sceneRef.current, canvas, labels, setReadout))
       .then((handle) => {
         if (cancelled) {
           handle.dispose();
@@ -113,7 +106,7 @@ export function ScenePlayer({
       handleRef.current = null;
       labels.replaceChildren();
     };
-  }, [name]);
+  }, [scene.name]);
 
   useEffect(() => {
     handleRef.current?.setPlaying(playing);

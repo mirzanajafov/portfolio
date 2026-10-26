@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { type CSSProperties, ViewTransition, useEffect, useRef, useState } from 'react';
-import type { SceneName, UsedProject } from '@portfolio/content';
+import type { DemoName, UsedProject } from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
@@ -18,7 +18,7 @@ export type TourStop = {
   code?: string;
   caseStudy?: string;
   privateSource?: boolean;
-  demo?: { scene: SceneName; caption: string };
+  demo?: { scene: DemoName; caption: string };
 };
 
 const settleMs = 500;
@@ -133,8 +133,7 @@ export function SystemsTour({
     <section aria-labelledby="built" className="tour">
       <div className="tour-stage">
         <ScenePlayer
-          name="systems"
-          data={apps}
+          scene={{ name: 'systems', apps }}
           focus={active}
           shown={!covered}
           showReadout={false}
@@ -158,7 +157,7 @@ export function SystemsTour({
                 }
               >
                 <ScenePlayer
-                  name={stop.demo.scene}
+                  scene={{ name: stop.demo.scene }}
                   description={stop.demo.caption}
                   shown={showing === stop.id}
                 />

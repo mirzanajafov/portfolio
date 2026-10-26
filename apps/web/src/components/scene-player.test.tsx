@@ -16,7 +16,7 @@ describe('ScenePlayer', () => {
   it('describes the scene for screen readers and stays quiet when there is no WebGL', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     const { container } = render(
-      <ScenePlayer name="systems" description="A graph of my systems" />,
+      <ScenePlayer scene={{ name: 'systems', apps: [] }} description="A graph of my systems" />,
     );
     expect(screen.getByRole('img', { name: 'A graph of my systems' })).toBeInTheDocument();
     await waitFor(() =>
@@ -28,13 +28,20 @@ describe('ScenePlayer', () => {
 
   it('pauses every scene on the page from any one button, and stops drawing a hidden one', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
-    const systems = <ScenePlayer key="systems" name="systems" description="A graph" />;
+    const systems = (
+      <ScenePlayer key="systems" scene={{ name: 'systems', apps: [] }} description="A graph" />
+    );
     const { rerender } = render(<>{systems}</>);
     await screen.findByRole('button', { name: 'Pause motion' });
     rerender(
       <>
         {systems}
-        <ScenePlayer key="population" name="population" description="People" shown={false} />
+        <ScenePlayer
+          key="population"
+          scene={{ name: 'population' }}
+          description="People"
+          shown={false}
+        />
       </>,
     );
     await waitFor(() =>

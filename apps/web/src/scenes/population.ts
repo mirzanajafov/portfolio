@@ -1,13 +1,15 @@
 import {
-  BufferAttribute,
+  type BufferAttribute,
   BufferGeometry,
   Color,
+  Float32BufferAttribute,
   LineBasicMaterial,
   LineSegments,
   PerspectiveCamera,
   Points,
   PointsMaterial,
   Scene,
+  Vector3,
 } from 'three';
 import { gaussian, seeded } from './random';
 import type { SceneFactory } from './types';
@@ -22,57 +24,60 @@ export const oracle = 0.77;
 const matchesPerDay = 3;
 
 export function correlationOn(day: number): number {
-  for (let i = 0; i < learningCurve.length - 1; i += 1) {
-    const [d0, c0] = learningCurve[i]!;
-    const [d1, c1] = learningCurve[i + 1]!;
-    if (day <= d1) {
+  let previous: [number, number] | undefined;
+  for (const point of learningCurve) {
+    const [d1, c1] = point;
+    if (previous && day <= d1) {
+      const [d0, c0] = previous;
       return c0 + (c1 - c0) * Math.max(0, (day - d0) / (d1 - d0));
     }
+    previous = point;
   }
-  return learningCurve[learningCurve.length - 1]![1];
+  return previous ? previous[1] : 0;
 }
 
 export function blurOn(day: number): number {
   return 3.2 * (1 - correlationOn(day) / oracle) + 0.08;
 }
 
-export function greedyMatch(
-  points: Float32Array,
-  count: number,
-  capacity: number,
-): [number, number][] {
-  const neighbours = 6;
-  const candidates: [number, number, number][] = [];
-  for (let i = 0; i < count; i += 1) {
-    const best: [number, number][] = [];
-    const x = points[i * 3]!;
-    const y = points[i * 3 + 1]!;
-    const z = points[i * 3 + 2]!;
-    for (let j = 0; j < count; j += 1) {
-      if (j === i) continue;
-      const dx = points[j * 3]! - x;
-      const dy = points[j * 3 + 1]! - y;
-      const dz = points[j * 3 + 2]! - z;
-      const distance = dx * dx + dy * dy + dz * dz;
-      if (best.length < neighbours) {
-        best.push([distance, j]);
-        best.sort((a, b) => a[0] - b[0]);
-      } else if (distance < best[neighbours - 1]![0]) {
-        best[neighbours - 1] = [distance, j];
-        best.sort((a, b) => a[0] - b[0]);
+export function greedyMatch(points: BufferAttribute, capacity: number): [number, number][] {
+  const neighbors = 6;
+  const candidates: { distance: number; i: number; j: number }[] = [];
+  const from = new Vector3();
+  const to = new Vector3();
+  for (let i = 0; i < points.count; i += 1) {
+    from.fromBufferAttribute(points, i);
+    const best: { distance: number; j: number }[] = [];
+    for (let j = 0; j < points.count; j += 1) {
+      if (j === i) {
+        continue;
+      }
+      const distance = from.distanceToSquared(to.fromBufferAttribute(points, j));
+      const worst = best[neighbors - 1];
+      if (worst && distance >= worst.distance) {
+        continue;
+      }
+      if (worst) {
+        best.pop();
+      }
+      best.push({ distance, j });
+      best.sort((a, b) => a.distance - b.distance);
+    }
+    for (const { distance, j } of best) {
+      if (i < j) {
+        candidates.push({ distance, i, j });
       }
     }
-    for (const [distance, j] of best) {
-      if (i < j) candidates.push([distance, i, j]);
-    }
   }
-  candidates.sort((a, b) => a[0] - b[0]);
-  const load = new Uint8Array(count);
+  candidates.sort((a, b) => a.distance - b.distance);
+  const load = new Map<number, number>();
   const pairs: [number, number][] = [];
-  for (const [, i, j] of candidates) {
-    if (load[i]! < capacity && load[j]! < capacity) {
-      load[i]! += 1;
-      load[j]! += 1;
+  for (const { i, j } of candidates) {
+    const loadI = load.get(i) ?? 0;
+    const loadJ = load.get(j) ?? 0;
+    if (loadI < capacity && loadJ < capacity) {
+      load.set(i, loadI + 1);
+      load.set(j, loadJ + 1);
       pairs.push([i, j]);
     }
   }
@@ -85,28 +90,34 @@ export const createPopulationScene: SceneFactory = (hooks) => {
   const camera = new PerspectiveCamera(40, 1, 0.1, 500);
   const random = seeded(42);
 
-  const projection = Array.from({ length: 3 }, () =>
-    Array.from({ length: 8 }, () => gaussian(random)),
-  );
-  const truth = new Float32Array(count * 3);
-  const direction = new Float32Array(count * 3);
-  const shown = new Float32Array(count * 3);
-  const firstTrait = new Float32Array(count);
-  for (let i = 0; i < count; i += 1) {
-    const traits = Array.from({ length: 8 }, () => gaussian(random));
-    firstTrait[i] = traits[0]!;
-    for (let axis = 0; axis < 3; axis += 1) {
-      let value = 0;
-      for (let k = 0; k < 8; k += 1) value += projection[axis]![k]! * traits[k]!;
-      truth[i * 3 + axis] = value * 2.1;
-      direction[i * 3 + axis] = gaussian(random);
+  const toneAxis = new Vector3();
+  const otherAxes = Array.from({ length: 7 }, () => new Vector3());
+  for (const component of [0, 1, 2]) {
+    for (const axis of [toneAxis, ...otherAxes]) {
+      axis.setComponent(component, gaussian(random));
     }
   }
+  const truth = new Float32BufferAttribute(count * 3, 3);
+  const direction = new Float32BufferAttribute(count * 3, 3);
+  const tones = new Float32Array(count);
+  const person = new Vector3();
+  for (let i = 0; i < count; i += 1) {
+    const tone = gaussian(random);
+    person.copy(toneAxis).multiplyScalar(tone);
+    for (const axis of otherAxes) {
+      person.addScaledVector(axis, gaussian(random));
+    }
+    person.multiplyScalar(2.1);
+    truth.setXYZ(i, person.x, person.y, person.z);
+    direction.setXYZ(i, gaussian(random), gaussian(random), gaussian(random));
+    tones[i] = tone;
+  }
 
+  const shown = new Float32BufferAttribute(count * 3, 3);
+  const colors = new Float32BufferAttribute(count * 3, 3);
   const pointGeometry = new BufferGeometry();
-  pointGeometry.setAttribute('position', new BufferAttribute(shown, 3));
-  const colours = new Float32Array(count * 3);
-  pointGeometry.setAttribute('color', new BufferAttribute(colours, 3));
+  pointGeometry.setAttribute('position', shown);
+  pointGeometry.setAttribute('color', colors);
   const pointMaterial = new PointsMaterial({
     size: 0.34,
     vertexColors: true,
@@ -114,9 +125,9 @@ export const createPopulationScene: SceneFactory = (hooks) => {
   });
   scene.add(new Points(pointGeometry, pointMaterial));
 
-  const linePositions = new Float32Array(count * matchesPerDay * 2 * 3);
+  const lines = new Float32BufferAttribute(count * matchesPerDay * 2 * 3, 3);
   const lineGeometry = new BufferGeometry();
-  lineGeometry.setAttribute('position', new BufferAttribute(linePositions, 3));
+  lineGeometry.setAttribute('position', lines);
   const lineMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.3 });
   scene.add(new LineSegments(lineGeometry, lineMaterial));
 
@@ -127,37 +138,38 @@ export const createPopulationScene: SceneFactory = (hooks) => {
   let pairs: [number, number][] = [];
 
   const updateShown = () => {
-    for (let i = 0; i < count * 3; i += 1) shown[i] = truth[i]! + direction[i]! * blur;
-    pointGeometry.attributes.position!.needsUpdate = true;
+    for (let i = 0; i < count; i += 1) {
+      shown.setXYZ(
+        i,
+        truth.getX(i) + direction.getX(i) * blur,
+        truth.getY(i) + direction.getY(i) * blur,
+        truth.getZ(i) + direction.getZ(i) * blur,
+      );
+    }
+    shown.needsUpdate = true;
   };
   const writeLines = () => {
-    let offset = 0;
-    for (const [i, j] of pairs) {
-      for (const index of [i, j]) {
-        linePositions[offset++] = shown[index * 3]!;
-        linePositions[offset++] = shown[index * 3 + 1]!;
-        linePositions[offset++] = shown[index * 3 + 2]!;
-      }
-    }
+    pairs.forEach(([i, j], index) => {
+      lines.setXYZ(index * 2, shown.getX(i), shown.getY(i), shown.getZ(i));
+      lines.setXYZ(index * 2 + 1, shown.getX(j), shown.getY(j), shown.getZ(j));
+    });
     lineGeometry.setDrawRange(0, pairs.length * 2);
-    lineGeometry.attributes.position!.needsUpdate = true;
+    lines.needsUpdate = true;
   };
   updateShown();
-  pairs = greedyMatch(shown, count, matchesPerDay);
+  pairs = greedyMatch(shown, matchesPerDay);
   writeLines();
 
   return {
     scene,
     camera,
     setColors(palette) {
-      const colour = new Color();
-      for (let i = 0; i < count; i += 1) {
-        colour.copy(palette.signal).lerp(palette.accent, 1 / (1 + Math.exp(-firstTrait[i]! * 1.4)));
-        colours[i * 3] = colour.r;
-        colours[i * 3 + 1] = colour.g;
-        colours[i * 3 + 2] = colour.b;
-      }
-      pointGeometry.attributes.color!.needsUpdate = true;
+      const color = new Color();
+      tones.forEach((tone, i) => {
+        color.copy(palette.signal).lerp(palette.accent, 1 / (1 + Math.exp(-tone * 1.4)));
+        colors.setXYZ(i, color.r, color.g, color.b);
+      });
+      colors.needsUpdate = true;
       lineMaterial.color.copy(palette.muted);
     },
     step(dt) {
@@ -166,8 +178,10 @@ export const createPopulationScene: SceneFactory = (hooks) => {
         dayClock = 0;
         day = day >= 21 ? 1 : day + 1;
         blurTarget = blurOn(day);
-        if (day === 1) blur = blurTarget;
-        pairs = greedyMatch(shown, count, matchesPerDay);
+        if (day === 1) {
+          blur = blurTarget;
+        }
+        pairs = greedyMatch(shown, matchesPerDay);
       }
       blur += (blurTarget - blur) * Math.min(1, dt * 2.2);
       updateShown();

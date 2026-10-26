@@ -21,6 +21,7 @@ import data from './failover-data.json';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatNumber } from './readout';
+import { sampleAt } from './series';
 import type { Palette, SceneFactory } from './types';
 
 const failoverParameters = {
@@ -28,8 +29,8 @@ const failoverParameters = {
     { until: -400, speed: 2 },
     { until: 2000, speed: 0.25 },
     { until: 29600, speed: 6 },
-    { until: Infinity, speed: 2 },
   ],
+  finalSpeed: 2,
   dotsPerSecond: 42,
   maxDots: 200,
   flight: 0.95,
@@ -44,48 +45,57 @@ type FailoverLane = (typeof data.lanes)[number];
 
 export const failoverData = data;
 
-const bins = data.lanes[0]!.requests.length;
+const bins = Math.min(...data.lanes.map((lane) => lane.requests.length));
 const endMs = data.fromMs + bins * data.binMs;
 
 export function speedAt(ms: number): number {
-  return failoverParameters.pace.find((p) => ms < p.until)!.speed;
+  const { pace, finalSpeed } = failoverParameters;
+  return pace.find((step) => ms < step.until)?.speed ?? finalSpeed;
 }
 
 function binAt(ms: number): number {
   return Math.min(bins - 1, Math.max(0, Math.floor((ms - data.fromMs) / data.binMs)));
 }
 
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
+
 export function laneAt(lane: FailoverLane, ms: number) {
   const position = Math.min(bins, Math.max(0, (ms - data.fromMs) / data.binMs));
-  let lost = 0;
-  let retried = 0;
-  for (let i = 0; i < Math.floor(position); i += 1) {
-    lost += lane.failed[i]!;
-    retried += lane.retried[i]!;
-  }
+  const whole = Math.floor(position);
+  let lost = sum(lane.failed.slice(0, whole));
+  let retried = sum(lane.retried.slice(0, whole));
   const bin = binAt(ms);
-  const part = position - Math.floor(position);
+  const part = position - whole;
   if (part > 0) {
-    lost += lane.failed[bin]! * part;
-    retried += lane.retried[bin]! * part;
+    lost += sampleAt(lane.failed, bin) * part;
+    retried += sampleAt(lane.retried, bin) * part;
   }
-  const requests = Math.max(1, lane.requests[bin]!);
+  const requests = Math.max(1, sampleAt(lane.requests, bin));
+  const toA = sampleAt(lane.served, bin) + sampleAt(lane.failed, bin) + sampleAt(lane.retried, bin);
   return {
     lost: Math.floor(lost),
     retried: Math.floor(retried),
-    toA: (lane.served[bin]! + lane.failed[bin]! + lane.retried[bin]!) / requests,
+    toA: toA / requests,
   };
 }
 
 export function stateOfA(lane: FailoverLane, ms: number): 'up' | 'picked' | 'out' | 'back' {
-  if (ms < 0) return 'up';
+  if (ms < 0) {
+    return 'up';
+  }
   const last = lane.events.filter((e) => e.atMs <= ms).at(-1);
   const out = last !== undefined && (last.state === 'ejected' || last.state === 'unhealthy');
-  if (ms < data.clearMs) return out ? 'out' : 'picked';
+  if (ms < data.clearMs) {
+    return out ? 'out' : 'picked';
+  }
   return out ? 'out' : 'back';
 }
 
-type Fate = 'served' | 'failed' | 'retried' | 'other';
+const fates = ['served', 'failed', 'retried', 'other'] as const;
+
+type Fate = (typeof fates)[number];
 
 const nothingOwed = (): Record<Fate, number> => ({
   served: 0.5,
@@ -100,13 +110,13 @@ function countsBetween(lane: FailoverLane, from: number, to: number): Record<Fat
     const start = data.fromMs + bin * data.binMs;
     const overlap = Math.max(0, Math.min(to, start + data.binMs) - Math.max(from, start));
     const share = overlap / data.binMs;
-    const served = lane.served[bin]!;
-    const failed = lane.failed[bin]!;
-    const retried = lane.retried[bin]!;
+    const served = sampleAt(lane.served, bin);
+    const failed = sampleAt(lane.failed, bin);
+    const retried = sampleAt(lane.retried, bin);
     counts.served += served * share;
     counts.failed += failed * share;
     counts.retried += retried * share;
-    counts.other += Math.max(0, lane.requests[bin]! - served - failed - retried) * share;
+    counts.other += Math.max(0, sampleAt(lane.requests, bin) - served - failed - retried) * share;
   }
   return counts;
 }
@@ -122,7 +132,11 @@ type Dot = {
   alarm: boolean;
 };
 
-const portalX = [-3.4, 0, 3.4];
+const dimensions = [
+  { name: 'a', x: -3.4 },
+  { name: 'b', x: 0 },
+  { name: 'c', x: 3.4 },
+] as const;
 const portalZ = -1.7;
 const gateway = new Vector3(0, 1.0, 2.3);
 const lostSpot = { x: -4.2, z: 2.3 };
@@ -167,7 +181,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     gatewayLines.position.copy(gatewayMesh.position);
     root.add(floor, frame, gatewayMesh, gatewayLines);
 
-    const portals = portalX.map((x) => {
+    const portals = dimensions.map(({ x }) => {
       const ringMaterial = new MeshBasicMaterial();
       const ring = new Mesh(ringGeometry, ringMaterial);
       ring.rotation.x = -Math.PI / 2;
@@ -193,9 +207,12 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     dotMesh.instanceMatrix.setUsage(DynamicDrawUsage);
     dotMesh.frustumCulled = false;
     const white = new Color(1, 1, 1);
-    for (let i = 0; i < p.maxDots; i += 1) dotMesh.setColorAt(i, white);
+    for (let i = 0; i < p.maxDots; i += 1) {
+      dotMesh.setColorAt(i, white);
+    }
     dotMesh.count = 0;
     root.add(dotMesh);
+    const dots: Dot[] = [];
 
     return {
       lane,
@@ -211,10 +228,10 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       baseMaterial,
       dotMesh,
       dotMaterial,
-      dots: [] as Dot[],
+      dots,
       owed: nothingOwed(),
       title: hooks.label(lane.label, 'node'),
-      names: data.dimensions.map((name) => hooks.label(name)),
+      names: dimensions.map(({ name, x }) => ({ x, label: hooks.label(name) })),
       gatewayLabel: hooks.label('gateway'),
     };
   });
@@ -226,19 +243,23 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   const spot = new Vector3();
   const scaleVector = new Vector3();
 
-  const portalCenter = (portal: number) => {
+  const eitherHealthy = (): 1 | 2 => (random() < 0.5 ? 1 : 2);
+
+  const portalCenter = (portal: 0 | 1 | 2) => {
     const angle = random() * Math.PI * 2;
     const reach = random() * p.portalRadius * 0.55;
     return new Vector3(
-      portalX[portal]! + Math.cos(angle) * reach,
+      dimensions[portal].x + Math.cos(angle) * reach,
       0.05,
       portalZ + Math.sin(angle) * reach,
     );
   };
 
   const spawn = (target: (typeof lanes)[number], fate: Fate) => {
-    if (target.dots.length >= p.maxDots) return;
-    const portal = fate === 'other' ? (random() < 0.5 ? 1 : 2) : 0;
+    if (target.dots.length >= p.maxDots) {
+      return;
+    }
+    const portal = fate === 'other' ? eitherHealthy() : 0;
     target.dots.push({
       fate,
       phase: 'fly',
@@ -257,7 +278,9 @@ export const createFailoverScene: SceneFactory = (hooks) => {
 
   const advance = (dot: Dot, dt: number, height: number): boolean => {
     dot.t += dt;
-    if (dot.t < dot.duration) return true;
+    if (dot.t < dot.duration) {
+      return true;
+    }
     if (dot.phase === 'fly' && dot.fate === 'failed') {
       dot.phase = 'lost';
       dot.alarm = true;
@@ -273,7 +296,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       dot.t = 0;
       dot.duration = p.hop;
       dot.from = dot.to;
-      dot.to = portalCenter(random() < 0.5 ? 1 : 2);
+      dot.to = portalCenter(eitherHealthy());
       dot.arc = 1.4;
       return true;
     }
@@ -319,7 +342,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       const perRequest = p.dotsPerSecond / (data.rate * speed);
       for (const lane of lanes) {
         const counts = countsBetween(lane.lane, from, clock);
-        for (const fate of ['served', 'failed', 'retried', 'other'] as Fate[]) {
+        for (const fate of fates) {
           lane.owed[fate] += counts[fate] * perRequest;
           while (lane.owed[fate] >= 1) {
             lane.owed[fate] -= 1;
@@ -340,11 +363,15 @@ export const createFailoverScene: SceneFactory = (hooks) => {
           }
           matrix.makeScale(scaleVector.x, scaleVector.y, scaleVector.z).setPosition(spot);
           lane.dotMesh.setMatrixAt(i, matrix);
-          if (palette) lane.dotMesh.setColorAt(i, dot.alarm ? palette.accent : palette.signal);
+          if (palette) {
+            lane.dotMesh.setColorAt(i, dot.alarm ? palette.accent : palette.signal);
+          }
         });
         lane.dotMesh.count = lane.dots.length;
         lane.dotMesh.instanceMatrix.needsUpdate = true;
-        if (lane.dotMesh.instanceColor) lane.dotMesh.instanceColor.needsUpdate = true;
+        if (lane.dotMesh.instanceColor) {
+          lane.dotMesh.instanceColor.needsUpdate = true;
+        }
         lane.column.visible = height > 0.01;
         lane.column.scale.y = Math.max(0.001, height);
         lane.column.position.y = height / 2;
@@ -366,16 +393,22 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         const now = laneAt(lane.lane, clock);
         const state = stateOfA(lane.lane, clock);
         const down = clock >= 0 && clock < data.clearMs;
-        const shares = [now.toA, (1 - now.toA) / 2, (1 - now.toA) / 2];
         lane.portals.forEach((portal, index) => {
-          portal.glow += (0.06 + shares[index]! * 0.6 - portal.glow) * ease;
+          const share = index === 0 ? now.toA : (1 - now.toA) / 2;
+          portal.glow += (0.06 + share * 0.6 - portal.glow) * ease;
           portal.discMaterial.opacity = portal.glow;
-          if (!palette) return;
+          if (!palette) {
+            return;
+          }
           const broken = index === 0 && down;
           const out = index === 0 && state === 'out';
-          portal.ringMaterial.color.copy(
-            broken ? palette.accent : out && !down ? palette.muted : palette.signal,
-          );
+          let ring = palette.signal;
+          if (broken) {
+            ring = palette.accent;
+          } else if (out && !down) {
+            ring = palette.muted;
+          }
+          portal.ringMaterial.color.copy(ring);
           portal.discMaterial.color.copy(broken ? palette.accent : palette.signal);
         });
         const lost = `${formatNumber(now.lost)} lost`;
@@ -392,16 +425,20 @@ export const createFailoverScene: SceneFactory = (hooks) => {
           above ? 1.8 : 0,
           z + (above ? laneBox.minZ : laneBox.maxZ),
         );
-        lane.names.forEach((label, index) => {
+        for (const name of lane.names) {
           if (wide) {
-            hooks.place(label, x + portalX[index]!, 0.2, z + portalZ - p.portalRadius - 0.2);
+            hooks.place(name.label, x + name.x, 0.2, z + portalZ - p.portalRadius - 0.2);
           } else {
-            hooks.place(label, x + portalX[index]! - p.portalRadius - 0.45, 0, z + portalZ);
+            hooks.place(name.label, x + name.x - p.portalRadius - 0.45, 0, z + portalZ);
           }
-          if (tiny) label.style.display = 'none';
-        });
+          if (tiny) {
+            name.label.style.display = 'none';
+          }
+        }
         hooks.place(lane.gatewayLabel, x + gateway.x + 2.4, 0.3, z + gateway.z);
-        if (narrow) lane.gatewayLabel.style.display = 'none';
+        if (narrow) {
+          lane.gatewayLabel.style.display = 'none';
+        }
       }
       fitCamera(camera, wide, Math.sin(time * 0.05) * p.swing, top);
     },
@@ -410,14 +447,8 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       const seconds = Math.abs(clock / 1000).toFixed(speed < 1 ? 2 : 1);
       const at = `${clock < 0 ? '−' : '+'}${seconds} s`;
       const pace = speed < 1 ? `slowed ${Math.round(1 / speed)}×` : `${speed}× speed`;
-      const what =
-        clock < 0
-          ? `three dimensions, ${formatNumber(data.rate)} requests a second`
-          : clock < data.clearMs
-            ? 'dimension a refuses every connection'
-            : `a is back after ${Math.round(data.clearMs / 1000)} s`;
       return [
-        `${at} · ${what} · ${pace}`,
+        `${at} · ${phaseOf(clock)} · ${pace}`,
         ...lanes.map(({ lane }) => {
           const now = laneAt(lane, clock);
           const retried = lane.id === 'probes' ? '' : ` · ${now.retried} retried`;
@@ -428,7 +459,9 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     dispose() {
       for (const lane of lanes) {
         lane.title.remove();
-        lane.names.forEach((label) => label.remove());
+        for (const name of lane.names) {
+          name.label.remove();
+        }
         lane.gatewayLabel.remove();
         lane.floorMaterial.dispose();
         lane.frameMaterial.dispose();
@@ -460,17 +493,35 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   };
 };
 
+function phaseOf(clock: number): string {
+  if (clock < 0) {
+    return `three dimensions, ${formatNumber(data.rate)} requests a second`;
+  }
+  if (clock < data.clearMs) {
+    return 'dimension a refuses every connection';
+  }
+  return `a is back after ${Math.round(data.clearMs / 1000)} s`;
+}
+
 function stateText(state: ReturnType<typeof stateOfA>, down: boolean): string | null {
-  if (state === 'picked') return 'down, still picked';
-  if (state === 'out') return down ? 'down, taken out' : 'up, still out';
-  if (state === 'back') return 'back, slow start';
+  if (state === 'picked') {
+    return 'down, still picked';
+  }
+  if (state === 'out') {
+    return down ? 'down, taken out' : 'up, still out';
+  }
+  if (state === 'back') {
+    return 'back, slow start';
+  }
   return null;
 }
 
 function laneOffset(index: number, wide: boolean) {
   const side = index === 0 ? -1 : 1;
   const middle = (laneBox.minX + laneBox.maxX) / 2;
-  if (wide) return { x: side * ((laneBox.maxX - laneBox.minX) / 2 + 1) - middle, z: 0 };
+  if (wide) {
+    return { x: side * ((laneBox.maxX - laneBox.minX) / 2 + 1) - middle, z: 0 };
+  }
   return { x: -middle, z: side * ((laneBox.maxZ - laneBox.minZ) / 2 + 1.1) };
 }
 
@@ -487,7 +538,9 @@ function corners(wide: boolean): Vector3[] {
         new Vector3(x + offset.x, captionAbove ? 3.8 : 1.5, laneBox.minZ + offset.z),
         new Vector3(x + offset.x, laneBox.height, laneBox.maxZ + offset.z),
       );
-      if (!captionAbove) points.push(new Vector3(x + offset.x, 0, laneBox.maxZ + 2 + offset.z));
+      if (!captionAbove) {
+        points.push(new Vector3(x + offset.x, 0, laneBox.maxZ + 2 + offset.z));
+      }
     }
   }
   return points;

@@ -42,7 +42,9 @@ export function frame(
     let high = Infinity;
     for (const { along, across, height } of measured) {
       const reach = (distance - along) * tan;
-      if (reach <= 0 || across > reach * aspect * margins.side) return null;
+      if (reach <= 0 || across > reach * aspect * margins.side) {
+        return null;
+      }
       low = Math.max(low, height - reach * margins.top);
       high = Math.min(high, height + reach * margins.bottom);
     }
@@ -52,8 +54,11 @@ export function frame(
   let far = 1000;
   for (let i = 0; i < 40; i += 1) {
     const middle = (near + far) / 2;
-    if (shiftAt(middle) === null) near = middle;
-    else far = middle;
+    if (shiftAt(middle) === null) {
+      near = middle;
+    } else {
+      far = middle;
+    }
   }
   return { distance: far, shift: shiftAt(far) ?? 0 };
 }

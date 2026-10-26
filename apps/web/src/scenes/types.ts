@@ -27,4 +27,4 @@ export type SceneInstance = {
   dispose: () => void;
 };
 
-export type SceneFactory = (hooks: SceneHooks, data?: unknown) => SceneInstance;
+export type SceneFactory<TInput = void> = (hooks: SceneHooks, input: TInput) => SceneInstance;
