@@ -146,9 +146,10 @@ export async function contentOf({
   try {
     await writeFile(join(root, 'profile.yaml'), stringify(profile));
     await writeFile(join(root, 'cv.yaml'), stringify(cv));
+    await mkdir(join(root, 'projects'));
     for (const { slug, project, evals, caseStudy } of projects) {
       const folder = join(root, 'projects', slug);
-      await mkdir(folder, { recursive: true });
+      await mkdir(folder);
       await writeFile(join(folder, 'project.yaml'), stringify(project));
       await writeFile(join(folder, 'evals.yaml'), stringify(evals));
       if (caseStudy) {
