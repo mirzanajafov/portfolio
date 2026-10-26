@@ -34,10 +34,11 @@ describe('the real content', () => {
   });
 
   it.each(projectsWithCaseStudy.map((project) => [project.slug, project.name]))(
-    'renders the case study of %s',
+    'renders the case study of %s with no phone number',
     async (slug, name) => {
-      render(await CaseStudyPage({ params: Promise.resolve({ slug }) }));
+      const { container } = render(await CaseStudyPage({ params: Promise.resolve({ slug }) }));
       expect(screen.getByRole('heading', { level: 1, name })).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(phoneNumber);
     },
   );
 });
