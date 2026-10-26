@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { questionMaxLength } from './ask.ts';
 
 export const slugSchema = z
   .string()
@@ -151,7 +152,7 @@ export const caseStudySchema = z.strictObject({
 });
 
 const evalSchema = z.strictObject({
-  question: z.string().min(1),
+  question: z.string().min(1).max(questionMaxLength),
   expects: z.array(slugSchema).min(1),
 });
 

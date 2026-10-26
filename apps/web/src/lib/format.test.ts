@@ -3,9 +3,9 @@ import {
   factKindLabel,
   formatMonth,
   formatPeriod,
-  roleKindLabel,
   languagesLine,
   linkText,
+  roleKindLabel,
   rolePlace,
 } from './format';
 

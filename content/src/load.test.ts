@@ -323,6 +323,16 @@ describe('loadContent', () => {
     ]);
   });
 
+  it('rejects an eval question longer than the Ask box takes, since the first one becomes a suggestion', async () => {
+    await putProject('alpha', project(2), [
+      ...evals,
+      { question: 'x'.repeat(301), expects: ['fast'] },
+    ]);
+    expect(await issues()).toEqual([
+      expect.objectContaining({ file: 'projects/alpha/evals.yaml', path: '3.question' }),
+    ]);
+  });
+
   it('asks for at least three eval questions', async () => {
     await putProject('alpha', project(2), evals.slice(0, 2));
     expect(await issues()).toEqual([

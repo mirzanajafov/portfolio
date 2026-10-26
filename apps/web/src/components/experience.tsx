@@ -1,5 +1,5 @@
 import type { Role } from '@portfolio/content';
-import { formatPeriod, roleKindLabel, roleKey, rolePlace } from '@/lib/format';
+import { formatPeriod, roleKey, roleKindLabel, rolePlace } from '@/lib/format';
 
 export function RoleHeading({ role }: { role: Role }) {
   const label = roleKindLabel(role.kind);

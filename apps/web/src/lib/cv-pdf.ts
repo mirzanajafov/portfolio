@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import type { Content, Role } from '@portfolio/content';
 import { fontPath } from './fonts';
-import { formatPeriod, roleKindLabel, languagesLine, linkText, rolePlace } from './format';
+import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
 import { palette } from './palette';
 import { siteUrl } from './site';
 
