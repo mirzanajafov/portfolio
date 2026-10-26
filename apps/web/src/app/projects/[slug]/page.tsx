@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ViewTransition } from 'react';
+import { type ReactNode, ViewTransition } from 'react';
 import {
   content,
   findProjectWithCaseStudy,
@@ -10,6 +10,7 @@ import {
 } from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
+import { StackList } from '@/components/stack-list';
 import { factKindLabel } from '@/lib/format';
 
 type Params = { slug: string };
@@ -32,12 +33,33 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   };
 }
 
+function Section({
+  id,
+  title,
+  className,
+  children,
+}: {
+  id: string;
+  title: string;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className={className}>
+      <h2 id={id} className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 function FactLine({ fact }: { fact: Fact }) {
   const { href } = fact.source;
   return (
-    <li className="flex flex-col gap-1 border-l-2 border-[var(--accent)] pl-4">
+    <li className="flex flex-col gap-1 border-l-2 border-accent pl-4">
       <span>{fact.text}</span>
-      <span className="font-mono text-xs text-[var(--muted)]">
+      <span className="font-mono text-xs text-muted">
         {factKindLabel(fact.kind)}
         {' · '}
         {href ? (
@@ -62,7 +84,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-14 px-4 py-10 sm:px-8 sm:py-14">
-      <nav aria-label="Breadcrumb" className="font-mono text-sm text-[var(--muted)]">
+      <nav aria-label="Breadcrumb" className="font-mono text-sm text-muted">
         <Link className="underline underline-offset-4" href="/">
           {content.profile.name}
         </Link>
@@ -76,21 +98,12 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             {project.name}
           </h1>
         </ViewTransition>
-        <p className="text-xl text-[var(--soft)]">{project.hook}</p>
-        <ul
-          aria-label="Built with"
-          className="flex flex-wrap gap-2 font-mono text-xs text-[var(--muted)]"
-        >
-          {project.stack.map((tool) => (
-            <li key={tool} className="rounded-full border border-[var(--line)] px-3 py-1">
-              {tool}
-            </li>
-          ))}
-        </ul>
+        <p className="text-xl text-soft">{project.hook}</p>
+        <StackList stack={project.stack} />
         <ProjectUses uses={project.uses} />
         <div className="flex flex-wrap gap-4">
           <a
-            className="font-medium text-[var(--accent)] underline underline-offset-4"
+            className="font-medium text-accent underline underline-offset-4"
             href={project.links.live}
           >
             Live
@@ -100,39 +113,27 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
               Code
             </a>
           ) : (
-            <span className="text-sm text-[var(--muted)]">Source available on request</span>
+            <span className="text-sm text-muted">Source available on request</span>
           )}
         </div>
       </header>
 
-      <section aria-labelledby="problem" className="flex flex-col gap-3">
-        <h2
-          id="problem"
-          className="font-mono text-xs tracking-[0.12em] text-[var(--muted)] uppercase"
-        >
-          Why I built it
-        </h2>
+      <Section id="problem" title="Why I built it" className="flex flex-col gap-3">
         <p className="max-w-[65ch] text-xl leading-relaxed">{caseStudy.problem}</p>
-      </section>
+      </Section>
 
       {caseStudy.demo && caseStudy.demoCaption && (
         <figure className="flex flex-col gap-3">
-          <div className="relative h-[clamp(420px,62vh,620px)] overflow-hidden rounded-2xl border border-[var(--line)]">
+          <div className="relative h-[clamp(420px,62vh,620px)] overflow-hidden rounded-2xl border border-line">
             <ScenePlayer scene={{ name: caseStudy.demo }} description={caseStudy.demoCaption} />
           </div>
-          <figcaption className="max-w-[65ch] text-sm text-[var(--muted)]">
+          <figcaption className="max-w-[65ch] text-sm text-muted">
             {caseStudy.demoCaption}
           </figcaption>
         </figure>
       )}
 
-      <section aria-labelledby="decisions" className="flex flex-col gap-10">
-        <h2
-          id="decisions"
-          className="font-mono text-xs tracking-[0.12em] text-[var(--muted)] uppercase"
-        >
-          Decisions
-        </h2>
+      <Section id="decisions" title="Decisions" className="flex flex-col gap-10">
         {caseStudy.decisions.map((decision) => (
           <article key={decision.title} className="flex flex-col gap-4">
             <h3 className="text-2xl font-bold tracking-tight">{decision.title}</h3>
@@ -146,26 +147,17 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
             )}
           </article>
         ))}
-      </section>
+      </Section>
 
-      <section aria-labelledby="proof" className="flex flex-col gap-3">
-        <h2
-          id="proof"
-          className="font-mono text-xs tracking-[0.12em] text-[var(--muted)] uppercase"
-        >
-          How I know it works
-        </h2>
+      <Section id="proof" title="How I know it works" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.proof}</p>
-      </section>
+      </Section>
 
-      <section aria-labelledby="next" className="flex flex-col gap-3">
-        <h2 id="next" className="font-mono text-xs tracking-[0.12em] text-[var(--muted)] uppercase">
-          What I would do next
-        </h2>
+      <Section id="next" title="What I would do next" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
-      </section>
+      </Section>
 
-      <footer className="border-t border-[var(--line)] pt-8 text-[var(--muted)]">
+      <footer className="border-t border-line pt-8 text-muted">
         <Link className="underline underline-offset-4" href="/">
           Back to everything I built
         </Link>

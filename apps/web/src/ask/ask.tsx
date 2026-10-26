@@ -80,12 +80,12 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
         <h2 id="ask" className="text-3xl font-semibold tracking-tight">
           Ask about me
         </h2>
-        <p className="max-w-2xl text-sm text-[var(--muted)]">
+        <p className="max-w-2xl text-sm text-muted">
           Answers come only from my CV and my project notes, with the source under every sentence,
           and it says so when it doesn&apos;t know. For now a keyword matcher picks the sentences,
           and a language model and my own voice come later.
         </p>
-        <p className="max-w-2xl text-xs text-[var(--muted)]">
+        <p className="max-w-2xl text-xs text-muted">
           I keep questions for {askLogDays} days to see where the answers fail, then they are
           deleted. Your IP address is never stored, only a keyed hash that changes every day and is
           used for rate limiting.
@@ -103,12 +103,12 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
           maxLength={questionMaxLength}
           autoComplete="off"
           placeholder="Ask about my work"
-          className="min-w-0 flex-1 rounded-full border border-[var(--line)] bg-transparent px-5 py-3 outline-none focus:border-[var(--accent)]"
+          className="min-w-0 flex-1 rounded-full border border-line bg-transparent px-5 py-3 outline-none focus:border-accent"
         />
         <button
           type="submit"
           disabled={state.status === 'asking' || question.trim() === ''}
-          className="shrink-0 rounded-full bg-[var(--fg)] px-5 py-3 text-[var(--bg)] disabled:opacity-50 sm:px-6"
+          className="shrink-0 rounded-full bg-fg px-5 py-3 text-bg disabled:opacity-50 sm:px-6"
         >
           {state.status === 'asking' ? 'Thinking…' : 'Ask'}
         </button>
@@ -123,7 +123,7 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
                   setQuestion(suggestion);
                   void ask(suggestion);
                 }}
-                className="rounded-full border border-[var(--line)] px-3 py-1.5 text-left text-sm text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--fg)]"
+                className="rounded-full border border-line px-3 py-1.5 text-left text-sm text-muted hover:border-accent hover:text-fg"
               >
                 {suggestion}
               </button>
@@ -134,12 +134,12 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
       <div aria-live="polite" className="flex flex-col gap-4">
         {state.status !== 'idle' && (
           <>
-            <p className="text-sm text-[var(--muted)]">You asked: {state.asked}</p>
+            <p className="text-sm text-muted">You asked: {state.asked}</p>
             {state.sentences.map((sentence, index) => (
               <div key={index} className="flex flex-col gap-1">
                 <p className="text-lg leading-relaxed">{sentence.text}</p>
                 {sentence.sources.length > 0 && (
-                  <p className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                  <p className="flex flex-wrap gap-2 text-xs text-muted">
                     <span>Source:</span>
                     {sentence.sources.map((source) =>
                       source.href ? (

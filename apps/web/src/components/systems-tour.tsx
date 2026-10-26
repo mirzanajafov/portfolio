@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ViewTransition } from 'react';
 import type { Fact, UsedProject } from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
+import { StackList } from '@/components/stack-list';
 import { TourScroller, type TourDemo } from '@/components/tour-scroller';
 import { factKindLabel } from '@/lib/format';
 import type { GraphApp } from '@/scenes/systems-graph';
@@ -33,7 +34,7 @@ function Overview({ intro, stops }: { intro: Intro; stops: TourStop[] }) {
       >
         {intro.title}
       </h2>
-      <p className="text-lg leading-relaxed text-[var(--muted)]">{intro.body}</p>
+      <p className="text-lg leading-relaxed text-muted">{intro.body}</p>
       <nav aria-label="Projects">
         <ol className="tour-index">
           {stops.map((stop, index) => (
@@ -64,30 +65,21 @@ function StopCard({ stop, headingId }: { stop: TourStop; headingId: string }) {
           {stop.name}
         </h3>
       </ViewTransition>
-      <p className="tour-hook text-lg text-[var(--soft)]">{stop.hook}</p>
+      <p className="tour-hook text-lg text-soft">{stop.hook}</p>
       <p className="tour-fact leading-relaxed">
         {stop.fact.text}
         {stop.fact.kind === 'parameter' && (
-          <span className="ml-2 rounded-full border border-[var(--line)] px-2 py-0.5 align-middle font-mono text-[11px] whitespace-nowrap text-[var(--muted)]">
+          <span className="ml-2 rounded-full border border-line px-2 py-0.5 align-middle font-mono text-[11px] whitespace-nowrap text-muted">
             {factKindLabel(stop.fact.kind)}
           </span>
         )}
       </p>
-      <ul
-        aria-label="Built with"
-        className="tour-stack flex flex-wrap gap-2 font-mono text-xs text-[var(--muted)]"
-      >
-        {stop.stack.map((tool) => (
-          <li key={tool} className="rounded-full border border-[var(--line)] px-3 py-1">
-            {tool}
-          </li>
-        ))}
-      </ul>
+      <StackList stack={stop.stack} className="tour-stack" />
       <ProjectUses uses={stop.uses} className="tour-uses" />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {stop.caseStudy && (
           <Link
-            className="font-medium text-[var(--accent)] underline underline-offset-4"
+            className="font-medium text-accent underline underline-offset-4"
             href={stop.caseStudy}
           >
             Case study
@@ -104,7 +96,7 @@ function StopCard({ stop, headingId }: { stop: TourStop; headingId: string }) {
           </a>
         )}
         {stop.privateSource && (
-          <span className="text-sm text-[var(--muted)]">Source available on request</span>
+          <span className="text-sm text-muted">Source available on request</span>
         )}
       </div>
     </>
