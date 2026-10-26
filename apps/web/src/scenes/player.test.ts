@@ -1,32 +1,40 @@
 import { describe, expect, it, vi } from 'vitest';
 import { play } from './player';
 
-function start(signal: AbortSignal) {
+const loaded = vi.hoisted(() => new Set<string>());
+
+vi.mock('./population', async (importOriginal) => {
+  loaded.add('population');
+  return importOriginal();
+});
+
+function start(name: 'floor' | 'population', signal: AbortSignal) {
   const canvas = document.createElement('canvas');
   const getContext = vi.spyOn(canvas, 'getContext');
-  const started = play({ name: 'floor' }, canvas, document.createElement('div'), {
+  const starting = play({ name }, canvas, document.createElement('div'), {
     onReadout: () => undefined,
     signal,
     playing: true,
     shown: true,
   });
-  return { started, getContext };
+  return { starting, getContext };
 }
 
 describe('play', () => {
-  it('stops a superseded scene before it touches the canvas', async () => {
+  it('stops a superseded scene before it fetches the scene or touches the canvas', async () => {
     const abort = new AbortController();
     abort.abort();
-    const { started, getContext } = start(abort.signal);
-    await expect(started).rejects.toMatchObject({ name: 'AbortError' });
+    const { starting, getContext } = start('population', abort.signal);
+    await expect(starting).rejects.toMatchObject({ name: 'AbortError' });
+    expect(loaded.has('population')).toBe(false);
     expect(getContext).not.toHaveBeenCalled();
   });
 
   it('stops a scene that is superseded while its code is still loading', async () => {
     const abort = new AbortController();
-    const { started, getContext } = start(abort.signal);
+    const { starting, getContext } = start('floor', abort.signal);
     abort.abort();
-    await expect(started).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(starting).rejects.toMatchObject({ name: 'AbortError' });
     expect(getContext).not.toHaveBeenCalled();
   });
 });
