@@ -32,7 +32,6 @@ function extract({ id, cell, label }) {
     throw new Error(`${cell}: the bins fail ${failed} requests, the run lost ${result.lost}`);
   }
   return {
-    lost: failed,
     rate: generator.rate,
     clearMs: Math.round((fault.clearAt - fault.injectAt) / 1e6),
     lane: {
@@ -64,5 +63,5 @@ const data = {
 
 writeFileSync(outPath, `${JSON.stringify(data)}\n`);
 console.log(
-  `wrote ${outPath}: ${runsUsed.map((run) => `${run.lane.id} ${run.lane.requests.length} bins, ${run.lost} lost`).join('; ')}`,
+  `wrote ${outPath}: ${lanes.map((l) => `${l.id} ${l.requests.length} bins, ${l.failed.reduce((a, b) => a + b, 0)} lost`).join('; ')}`,
 );

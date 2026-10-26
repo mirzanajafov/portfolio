@@ -1,6 +1,6 @@
 export type GateReason = 'unsupported' | 'echo' | 'denied' | 'too-long';
 
-export type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
+type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 
 export const limits = {
   echoRun: 8,

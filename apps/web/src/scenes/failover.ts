@@ -40,7 +40,7 @@ const failoverParameters = {
   startMs: 300,
 };
 
-export type FailoverLane = (typeof data.lanes)[number];
+type FailoverLane = (typeof data.lanes)[number];
 
 export const failoverData = data;
 

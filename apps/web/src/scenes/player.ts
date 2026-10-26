@@ -15,7 +15,7 @@ const factories: Record<SceneName, () => Promise<SceneFactory>> = {
   commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
 
-export type PlayerOptions = {
+type PlayerOptions = {
   onReadout: (lines: string[]) => void;
   data?: unknown;
 };

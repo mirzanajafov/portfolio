@@ -1,6 +1,6 @@
 import { type PerspectiveCamera, Vector3 } from 'three';
 
-export type Margins = { top: number; side: number; bottom: number };
+type Margins = { top: number; side: number; bottom: number };
 
 const worldUp = new Vector3(0, 1, 0);
 

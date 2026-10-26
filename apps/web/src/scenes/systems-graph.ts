@@ -10,7 +10,7 @@ export type GraphNode = {
 
 type GraphEdge = { from: string; to: string; app: string };
 
-export type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; apps: GraphApp[] };
+type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; apps: GraphApp[] };
 
 const ringRadius = 12;
 const partRadius = 3.6;

@@ -11,7 +11,7 @@ const colours = {
   line: '#2d2b27',
 };
 
-export type Card = {
+type Card = {
   eyebrow: string;
   title: string;
   subtitle: string;

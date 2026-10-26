@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export type Weight = 400 | 600 | 800;
+type Weight = 400 | 600 | 800;
 
 const directory = join(process.cwd(), 'src', 'assets', 'fonts');
 

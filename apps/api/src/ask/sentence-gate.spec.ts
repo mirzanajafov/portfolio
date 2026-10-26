@@ -50,7 +50,7 @@ describe('gateSentence', () => {
     expect(gateSentence(sourced(text), 'question', 0)).toEqual({ ok: false, reason: 'denied' });
   });
 
-  it('strips markup before anything else sees it', () => {
+  it('strips markup before the echo, deny-list and length checks', () => {
     expect(gateSentence(sourced('Hello <break time="3s"/> <b>world</b>'), 'q', 0)).toEqual({
       ok: true,
       text: 'Hello world',
