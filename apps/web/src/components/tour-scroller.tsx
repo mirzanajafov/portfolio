@@ -1,8 +1,8 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { ScenePlayer } from '@/components/scene-player';
 import type { DemoName } from '@portfolio/content';
+import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
 
 export type TourDemo = { scene: DemoName; caption: string };
