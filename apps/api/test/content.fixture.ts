@@ -43,6 +43,21 @@ export const fixtureContent = await contentOf({
         }),
       ],
     }),
+    aProject({
+      slug: 'gateway',
+      name: 'Gateway',
+      order: 3,
+      hook: 'Routes traffic to the right service',
+      summary: 'A proxy that handles every incoming request for the other services.',
+      headline: 'retries',
+      facts: [
+        aFact({
+          id: 'retries',
+          text: 'It handles every request and retries failed requests twice.',
+          source: { file: 'README.md' },
+        }),
+      ],
+    }),
   ],
   cv: aCv({
     experience: [
