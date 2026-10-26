@@ -88,6 +88,10 @@ describe('POST /ask against a real database', () => {
     await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
   });
 
+  it('reports healthy while the database answers', async () => {
+    await request(app.getHttpServer()).get('/health').expect(200, { status: 'ok' });
+  });
+
   it('streams an answer as server-sent events, with the source of every sentence', async () => {
     const response = await ask(app, 'How does Tuner decide which questions to ask each user?')
       .expect(200)

@@ -6,7 +6,6 @@ import tseslint from 'typescript-eslint';
 
 const notPassingYet = {
   curly: ['apps/web/scripts/{campaign,failover,storm}-data.mjs'],
-  '@typescript-eslint/no-unsafe-argument': ['apps/api/src/health/health.controller.spec.ts'],
 };
 
 export default defineConfig(
