@@ -1,4 +1,4 @@
-import type { Fact, Project, Role } from '@portfolio/content';
+import type { Cv, Role } from '@portfolio/content';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -27,14 +27,20 @@ export function kindLabel(kind: Role['kind']): string | null {
   return kindLabels[kind];
 }
 
+export function rolePlace(role: Pick<Role, 'location' | 'remote'>): string {
+  return role.remote ? `${role.location} (remote)` : role.location;
+}
+
 export function roleKey(role: Pick<Role, 'company' | 'role' | 'from'>): string {
   return `${role.company ?? role.role}-${role.from}`;
 }
 
-export function headlineFact(project: Project): Fact {
-  const fact = project.facts.find((candidate) => candidate.id === project.headline);
-  if (!fact) {
-    throw new Error(`${project.slug} has no fact called ${project.headline}`);
-  }
-  return fact;
+export function languagesLine(languages: Cv['languages']): string {
+  return languages
+    .map((language) => `${language.name} (${language.level.toLowerCase()})`)
+    .join(', ');
+}
+
+export function linkText(url: string): string {
+  return url.replace(/^https:\/\/(www\.)?/, '');
 }

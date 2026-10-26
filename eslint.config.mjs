@@ -11,12 +11,8 @@ const notPassingYet = {
     `${scenes}/{campaign,failover,storm}.test.ts`,
     'apps/web/scripts/{campaign,failover,storm}-data.mjs',
     'apps/web/src/components/systems-tour.tsx',
-    'apps/web/src/lib/cv-pdf.ts',
   ],
-  'no-nested-ternary': [
-    'apps/web/src/app/projects/\\[slug\\]/page.tsx',
-    'apps/web/src/components/systems-tour.tsx',
-  ],
+  'no-nested-ternary': ['apps/web/src/components/systems-tour.tsx'],
   '@typescript-eslint/no-deprecated': ['apps/web/src/components/ask.tsx'],
   '@typescript-eslint/no-empty-function': ['apps/web/src/components/systems-tour.test.tsx'],
   '@typescript-eslint/no-floating-promises': ['apps/web/src/components/systems-tour.test.tsx'],

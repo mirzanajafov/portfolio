@@ -1,4 +1,4 @@
-export type GateReason = 'unsupported' | 'empty' | 'echo' | 'denied' | 'too-long';
+import type { GateReason } from '@portfolio/content/ask';
 
 type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 

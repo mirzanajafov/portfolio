@@ -9,18 +9,12 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { askRequestSchema, type AskRequest } from '@portfolio/content/ask';
 import { performance } from 'node:perf_hooks';
-import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
-
-const askRequestSchema = z.strictObject({
-  question: z.string().trim().min(1).max(300),
-});
-
-type AskRequest = z.infer<typeof askRequestSchema>;
 
 @Controller('ask')
 export class AskController {

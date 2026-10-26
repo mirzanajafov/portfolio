@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { type CSSProperties, ViewTransition, useEffect, useRef, useState } from 'react';
-import type { DemoName, UsedProject } from '@portfolio/content';
+import type { DemoName, Fact, UsedProject } from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
 import type { GraphApp } from '@/scenes/systems-graph';
@@ -11,7 +11,7 @@ export type TourStop = {
   id: string;
   name: string;
   hook: string;
-  fact?: { text: string; kind: 'measured' | 'parameter' | 'design' };
+  fact?: Pick<Fact, 'text' | 'kind'>;
   stack: string[];
   uses: UsedProject[];
   live?: string;

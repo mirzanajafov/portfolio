@@ -100,13 +100,6 @@ export const projectSchema = z
       }
       used.add(use.project);
     });
-    if (!ids.has(project.headline)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'headline must be the id of a fact',
-        path: ['headline'],
-      });
-    }
     if (project.visibility === 'public' && !project.links.repo) {
       ctx.addIssue({
         code: 'custom',
@@ -160,13 +153,21 @@ export const evalsSchema = z.array(evalSchema).min(3, 'write at least three ques
 export type Profile = z.infer<typeof profileSchema>;
 export type Cv = z.infer<typeof cvSchema>;
 export type Role = Cv['experience'][number];
-export type Fact = z.infer<typeof factSchema>;
 export type EvalQuestion = z.infer<typeof evalSchema>;
-export type CaseStudy = z.infer<typeof caseStudySchema>;
 export type DemoName = (typeof demoNames)[number];
+
+type FactFile = z.infer<typeof factSchema>;
+export type Fact = FactFile & { source: FactFile['source'] & { href?: string } };
+
+type CaseStudyFile = z.infer<typeof caseStudySchema>;
+type Decision = Omit<CaseStudyFile['decisions'][number], 'facts'> & { facts: Fact[] };
+export type CaseStudy = Omit<CaseStudyFile, 'decisions'> & { decisions: Decision[] };
+
 export type UsedProject = { slug: string; name: string; for: string };
-export type UnlinkedProject = z.infer<typeof projectSchema> & {
+export type UnlinkedProject = Omit<z.infer<typeof projectSchema>, 'headline' | 'facts'> & {
   slug: string;
+  headline: Fact;
+  facts: Fact[];
   evals: EvalQuestion[];
   caseStudy?: CaseStudy;
 };

@@ -1,5 +1,5 @@
 import type { Role } from '@portfolio/content';
-import { formatPeriod, kindLabel, roleKey } from '@/lib/format';
+import { formatPeriod, kindLabel, roleKey, rolePlace } from '@/lib/format';
 
 export function RoleHeading({ role }: { role: Role }) {
   const label = kindLabel(role.kind);
@@ -17,10 +17,7 @@ export function RoleHeading({ role }: { role: Role }) {
       <p className="flex flex-wrap items-center gap-x-2 text-sm text-[var(--muted)]">
         <span>{formatPeriod(role)}</span>
         <span aria-hidden="true">·</span>
-        <span>
-          {role.location}
-          {role.remote && ' (remote)'}
-        </span>
+        <span>{rolePlace(role)}</span>
         {label && (
           <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-xs">
             {label}

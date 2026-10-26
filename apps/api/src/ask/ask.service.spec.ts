@@ -1,12 +1,14 @@
+import type { AskEvent } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
-import { AskService, type AskEvent, type AskOutcome } from './ask.service.js';
+import { AskService, type AskOutcome } from './ask.service.js';
 import { Knowledge } from './knowledge.js';
 
 const knowledge = new Knowledge(
   [
     {
       id: 'demo/fast',
+      kind: 'fact',
       project: 'demo',
       text: 'It answers in 40 ms.',
       keywords: 'demo',

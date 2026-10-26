@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./ask": {
+      "types": "./dist/ask.d.ts",
+      "default": "./dist/ask.js"
     }
   },
   "scripts": {

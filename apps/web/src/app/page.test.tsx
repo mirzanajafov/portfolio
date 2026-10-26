@@ -50,10 +50,9 @@ describe('home page', () => {
   it('never dresses a design parameter up as a measurement', () => {
     render(<Home />);
     for (const project of content.projects) {
-      const headline = project.facts.find((fact) => fact.id === project.headline);
       const card = screen.getByRole('article', { name: project.name });
       const label = within(card).queryByText('design parameter');
-      if (headline?.kind === 'parameter') {
+      if (project.headline.kind === 'parameter') {
         expect(label, project.name).toBeInTheDocument();
       } else {
         expect(label, project.name).toBeNull();

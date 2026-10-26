@@ -126,6 +126,28 @@ describe('loadContent', () => {
     expect(content.projects.find((p) => p.slug === 'beta')?.caseStudy).toBeUndefined();
   });
 
+  it('hands out the headline and the facts behind each decision, not their ids', async () => {
+    await put('projects/alpha/case-study.yaml', caseStudy);
+    const alpha = (await loadContent(root)).projects.find((p) => p.slug === 'alpha');
+    expect(alpha?.headline).toMatchObject({ id: 'fast', text: 'It is fast.' });
+    expect(alpha?.caseStudy?.decisions.map((d) => d.facts.map((f) => f.text))).toEqual([
+      ['It is fast.'],
+      ['It is small.'],
+    ]);
+  });
+
+  it("links a fact to its file in a public repo and leaves a private project's facts unlinked", async () => {
+    await putProject(
+      'beta',
+      project(1, { visibility: 'private', links: { live: 'https://example.com' }, knowledge: [] }),
+    );
+    const sources = (await loadContent(root)).projects.map((p) => [p.slug, p.headline.source]);
+    expect(sources).toEqual([
+      ['beta', { file: 'README.md' }],
+      ['alpha', { file: 'README.md', href: 'https://github.com/test/project/blob/main/README.md' }],
+    ]);
+  });
+
   it('backs every number in a case study with a fact of the same project', async () => {
     await put('projects/alpha/case-study.yaml', {
       ...caseStudy,

@@ -11,6 +11,7 @@ import {
   slugSchema,
   type Content,
   type Cv,
+  type Fact,
   type Project,
   type UnlinkedProject,
   type Role,
@@ -46,7 +47,11 @@ async function readYaml(root: string, file: string, issues: ContentIssue[]): Pro
   try {
     return { ok: true, value: parse(text) };
   } catch (error) {
-    issues.push({ file, path: '', message: `not valid YAML: ${(error as Error).message}` });
+    issues.push({
+      file,
+      path: '',
+      message: `not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
+    });
     return { ok: false };
   }
 }
@@ -83,6 +88,22 @@ function newestFirst(roles: Role[]): Role[] {
   return [...roles].sort((a, b) => b.from.localeCompare(a.from));
 }
 
+function factsOf(project: z.infer<typeof projectSchema>): Map<string, Fact> {
+  const { repo } = project.links;
+  return new Map(
+    project.facts.map((fact) => [
+      fact.id,
+      {
+        ...fact,
+        source: {
+          ...fact.source,
+          href: repo ? `${repo}/blob/main/${fact.source.file}` : undefined,
+        },
+      },
+    ]),
+  );
+}
+
 async function loadProject(
   root: string,
   slug: string,
@@ -105,10 +126,10 @@ async function loadProject(
   if (!project || !evals) {
     return undefined;
   }
-  const factIds = new Set(project.facts.map((fact) => fact.id));
+  const facts = factsOf(project);
   evals.forEach((question, index) => {
     question.expects.forEach((id, at) => {
-      if (!factIds.has(id)) {
+      if (!facts.has(id)) {
         issues.push({
           file: evalsFile,
           path: `${index}.expects.${at}`,
@@ -117,9 +138,19 @@ async function loadProject(
       }
     });
   });
+  const headline = facts.get(project.headline);
+  if (!headline) {
+    issues.push({
+      file: projectFile,
+      path: 'headline',
+      message: 'headline must be the id of a fact',
+    });
+    return undefined;
+  }
+  const loaded = { ...project, slug, headline, facts: [...facts.values()], evals };
   const caseStudyFile = `${dir}/case-study.yaml`;
   if (!(await exists(join(root, caseStudyFile)))) {
-    return { ...project, slug, evals };
+    return loaded;
   }
   const caseStudy = check(
     caseStudySchema,
@@ -127,25 +158,32 @@ async function loadProject(
     caseStudyFile,
     issues,
   );
-  caseStudy?.decisions.forEach((decision, index) => {
-    decision.facts.forEach((id, at) => {
-      if (!factIds.has(id)) {
-        issues.push({
-          file: caseStudyFile,
-          path: `decisions.${index}.facts.${at}`,
-          message: `"${id}" is not a fact of this project`,
-        });
-      }
-    });
-  });
-  if (caseStudy && Boolean(caseStudy.demo) !== Boolean(caseStudy.demoCaption)) {
+  if (!caseStudy) {
+    return loaded;
+  }
+  if (Boolean(caseStudy.demo) !== Boolean(caseStudy.demoCaption)) {
     issues.push({
       file: caseStudyFile,
       path: 'demoCaption',
       message: 'a demo needs a caption that says what it shows, and a caption needs a demo',
     });
   }
-  return caseStudy ? { ...project, slug, evals, caseStudy } : { ...project, slug, evals };
+  const decisions = caseStudy.decisions.map((decision, index) => ({
+    ...decision,
+    facts: decision.facts.flatMap((id, at) => {
+      const fact = facts.get(id);
+      if (fact) {
+        return [fact];
+      }
+      issues.push({
+        file: caseStudyFile,
+        path: `decisions.${index}.facts.${at}`,
+        message: `"${id}" is not a fact of this project`,
+      });
+      return [];
+    }),
+  }));
+  return { ...loaded, caseStudy: { ...caseStudy, decisions } };
 }
 
 function resolveUses(

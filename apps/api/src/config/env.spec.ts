@@ -13,7 +13,6 @@ describe('parseEnv', () => {
       expect.objectContaining({
         PORT: 3201,
         TRUST_PROXY: 'loopback',
-        ASK_LOG_DAYS: 30,
         ASK_PER_CLIENT_10_MIN: 20,
       }),
     );

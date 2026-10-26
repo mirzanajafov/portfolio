@@ -129,7 +129,7 @@ export class KeywordAnswerEngine implements AnswerEngine {
           const norm = tf + bm25K1 * (1 - bm25B + (bm25B * length) / this.averageLength);
           score += ((this.idf.get(token) ?? 0) * (tf * (bm25K1 + 1))) / norm;
         }
-        if (document.id.endsWith('/summary')) {
+        if (document.kind === 'summary') {
           score *= summaryWeight;
         }
         return { document, score, matched };
@@ -146,9 +146,8 @@ export class KeywordAnswerEngine implements AnswerEngine {
     if (!top || top.score < minScore) {
       return [];
     }
-    const subject = top.document.project ?? 'about-me';
     return ranked
-      .filter(({ document }) => (document.project ?? 'about-me') === subject)
+      .filter(({ document }) => document.project === top.document.project)
       .filter(({ score }) => score >= top.score * shareOfTopScore)
       .slice(0, maxSentences)
       .map(({ document }) => document);

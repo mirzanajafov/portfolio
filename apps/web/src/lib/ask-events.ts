@@ -1,20 +1,4 @@
-import * as z from 'zod/mini';
-
-const sourceSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  href: z.optional(z.string()),
-});
-
-const askEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('meta'), engine: z.string() }),
-  z.object({ type: z.literal('sentence'), text: z.string(), sources: z.array(sourceSchema) }),
-  z.object({ type: z.literal('withheld'), reason: z.string() }),
-  z.object({ type: z.literal('done') }),
-]);
-
-export type AskSource = z.infer<typeof sourceSchema>;
-export type AskEvent = z.infer<typeof askEventSchema>;
+import { askEventSchema, type AskEvent } from '@portfolio/content/ask';
 
 function parseBlock(block: string): AskEvent | undefined {
   const data = block

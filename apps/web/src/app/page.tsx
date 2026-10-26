@@ -3,17 +3,17 @@ import { content, type Project } from '@portfolio/content';
 import { Ask } from '@/components/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
-import { headlineFact } from '@/lib/format';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
+import { siteUrl } from '@/lib/site';
 
 function toStop(project: Project): TourStop {
-  const fact = headlineFact(project);
+  const { headline } = project;
   const { demo, demoCaption } = project.caseStudy ?? {};
   return {
     id: project.slug,
     name: project.name,
     hook: project.hook,
-    fact: { text: fact.text, kind: fact.kind },
+    fact: { text: headline.text, kind: headline.kind },
     stack: project.stack,
     uses: project.uses,
     live: project.links.live,
@@ -37,7 +37,7 @@ export default function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: serializeJsonLd(personJsonLd(profile, 'https://najafov.dev')),
+          __html: serializeJsonLd(personJsonLd(profile, siteUrl)),
         }}
       />
 

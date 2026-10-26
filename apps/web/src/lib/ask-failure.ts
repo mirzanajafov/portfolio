@@ -1,8 +1,10 @@
+import { questionMaxLength } from '@portfolio/content/ask';
+
 export class AskFailure extends Error {}
 
 export function failureMessage(status: number, retryAfter: string | null, email: string): string {
   if (status === 400) {
-    return 'Keep it under 300 characters.';
+    return `Keep it under ${questionMaxLength} characters.`;
   }
   if (status === 429) {
     const seconds = Number(retryAfter);

@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import { questionMaxLength } from '@portfolio/content/ask';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -103,7 +104,7 @@ describe('POST /ask against a real database', () => {
   const invalid: [object, string][] = [
     [{}, 'no question'],
     [{ question: '   ' }, 'a blank question'],
-    [{ question: 'x'.repeat(301) }, 'a question over 300 characters'],
+    [{ question: 'x'.repeat(questionMaxLength + 1) }, 'a question over the length limit'],
     [{ question: 'hi', extra: true }, 'unexpected fields'],
   ];
 

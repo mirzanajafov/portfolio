@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { palette } from '@/lib/palette';
 
 const css = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
 
@@ -47,6 +48,13 @@ describe('palette', () => {
           );
         }
       }
+    },
+  );
+
+  it.each(['dark', 'light'] as const)(
+    'gives the OG cards, the CV PDF and the theme colour the same %s colours as the page',
+    (theme) => {
+      expect(themes[theme]).toMatchObject(palette[theme]);
     },
   );
 });

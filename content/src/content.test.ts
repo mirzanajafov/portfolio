@@ -14,11 +14,9 @@ describe('the real content', () => {
   it.each(content.projects.map((p) => [p.slug, p] as const))(
     '%s is complete enough for a card and for the eval set',
     (_slug, project) => {
-      const headline = project.facts.find((fact) => fact.id === project.headline);
-      expect(headline).toBeDefined();
       expect(project.evals.length).toBeGreaterThanOrEqual(3);
       const asked = new Set(project.evals.flatMap((question) => question.expects));
-      expect(asked.has(project.headline)).toBe(true);
+      expect(asked.has(project.headline.id)).toBe(true);
       if (project.visibility === 'private') {
         expect(project.links.repo).toBeUndefined();
         expect(project.knowledge).toEqual([]);

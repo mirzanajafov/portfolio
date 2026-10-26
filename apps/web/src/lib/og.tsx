@@ -1,15 +1,12 @@
 import { ImageResponse } from 'next/og';
 import { loadFont } from './fonts';
+import { linkText } from './format';
+import { palette } from './palette';
+import { siteUrl } from './site';
 
 export const ogSize = { width: 1200, height: 630 };
 
-const colours = {
-  bg: '#121110',
-  fg: '#ede9e2',
-  muted: '#a09a90',
-  accent: '#e8794a',
-  line: '#2d2b27',
-};
+const colours = palette.dark;
 
 type Card = {
   eyebrow: string;
@@ -36,7 +33,7 @@ export async function renderCard(card: Card): Promise<ImageResponse> {
         justifyContent: 'space-between',
         padding: '64px 72px',
         backgroundColor: colours.bg,
-        backgroundImage: `radial-gradient(circle at 82% 18%, rgba(232,121,74,0.2), rgba(18,17,16,0) 48%), linear-gradient(${colours.line} 1px, transparent 1px), linear-gradient(90deg, ${colours.line} 1px, transparent 1px)`,
+        backgroundImage: `radial-gradient(circle at 82% 18%, ${colours.accent}33, ${colours.bg}00 48%), linear-gradient(${colours.line} 1px, transparent 1px), linear-gradient(90deg, ${colours.line} 1px, transparent 1px)`,
         backgroundSize: '100% 100%, 72px 72px, 72px 72px',
         color: colours.fg,
         fontFamily: 'Schibsted Grotesk',
@@ -80,7 +77,9 @@ export async function renderCard(card: Card): Promise<ImageResponse> {
         }}
       >
         <div style={{ display: 'flex', maxWidth: 820 }}>{card.footer}</div>
-        <div style={{ display: 'flex', color: colours.fg, fontWeight: 600 }}>najafov.dev</div>
+        <div style={{ display: 'flex', color: colours.fg, fontWeight: 600 }}>
+          {linkText(siteUrl)}
+        </div>
       </div>
     </div>,
     {

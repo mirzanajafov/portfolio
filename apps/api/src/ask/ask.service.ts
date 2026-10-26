@@ -1,15 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { AskEvent, AskSource, GateReason } from '@portfolio/content/ask';
 import { ANSWER_ENGINE, type AnswerEngine } from './answer-engine.js';
-import { Knowledge, type Source } from './knowledge.js';
-import { gateSentence, type GateReason } from './sentence-gate.js';
+import { Knowledge } from './knowledge.js';
+import { gateSentence } from './sentence-gate.js';
 
 export const CONTACT_EMAIL = Symbol('CONTACT_EMAIL');
-
-export type AskEvent =
-  | { type: 'meta'; engine: string }
-  | { type: 'sentence'; text: string; sources: Source[] }
-  | { type: 'withheld'; reason: GateReason }
-  | { type: 'done' };
 
 export type AskOutcome = {
   engine: string;
@@ -53,7 +48,7 @@ export class AskService {
     for await (const draft of this.engine.answer(question, signal)) {
       const sources = draft.sourceIds
         .map((id) => this.knowledge.get(id)?.source)
-        .filter((source): source is Source => source !== undefined);
+        .filter((source): source is AskSource => source !== undefined);
       const sourceCount = sources.length === draft.sourceIds.length ? sources.length : 0;
       const verdict = gateSentence({ text: draft.text, sourceCount }, question, characters);
       if (!verdict.ok) {
