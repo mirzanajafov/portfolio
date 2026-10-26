@@ -66,6 +66,11 @@ describe('gateSentence', () => {
       ok: false,
       reason: 'echo',
     });
+    const marked = sourced(`<prosody rate="slow">${'x'.repeat(50)}</prosody>`);
+    expect(gateSentence(marked, 'q', limits.answerCharacters - 50)).toEqual({
+      ok: true,
+      text: 'x'.repeat(50),
+    });
   });
 
   it('stops the answer once it gets too long', () => {
