@@ -26,10 +26,12 @@ function parseEvents(body: string): Event[] {
   return body
     .split('\n\n')
     .filter(Boolean)
-    .map((block) => ({
-      event: /^event: (.*)$/m.exec(block)?.[1] ?? '',
-      data: askEventSchema.parse(JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? 'null')),
-    }));
+    .map((block) => {
+      const sent: unknown = JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? 'null');
+      const data = askEventSchema.parse(sent);
+      expect(data).toStrictEqual(sent);
+      return { event: /^event: (.*)$/m.exec(block)?.[1] ?? '', data };
+    });
 }
 
 function sentencesOf(events: Event[]) {
