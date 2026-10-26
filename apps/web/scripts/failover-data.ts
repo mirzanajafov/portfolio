@@ -82,11 +82,12 @@ function extract({ id, cell, label }: (typeof picks)[number]) {
   };
 }
 
-const [first, ...rest] = picks.map(extract);
+const picked = picks.map(extract);
+const [first] = picked;
 if (!first) {
   throw new Error('no runs were picked');
 }
-const lanes = [first, ...rest].map((run) => run.lane);
+const lanes = picked.map((run) => run.lane);
 const data = {
   rate: first.rate,
   binMs: 100,

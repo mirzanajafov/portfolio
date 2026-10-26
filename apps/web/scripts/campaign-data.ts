@@ -90,16 +90,15 @@ const data = {
   })),
   mutants: mutants.map(({ id, dir, guard }) => {
     const mutantRuns = runsOf(join(resultsDir, dir), mutantRunSchema);
-    const first = mutantRuns.findIndex((run) => run.violations.length > 0);
-    const caughtBy = [
-      ...new Set(mutantRuns[first]?.violations.map((violation) => violation.id)),
-    ].sort();
+    const caughtRun = mutantRuns.find((run) => run.violations.length > 0);
     return {
       id,
       guard,
       runs: mutantRuns.length,
-      caughtIn: first < 0 ? null : first + 1,
-      caughtBy,
+      caughtIn: caughtRun ? mutantRuns.indexOf(caughtRun) + 1 : null,
+      caughtBy: caughtRun
+        ? [...new Set(caughtRun.violations.map((violation) => violation.id))].sort()
+        : [],
     };
   }),
 };

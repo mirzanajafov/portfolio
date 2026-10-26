@@ -45,14 +45,15 @@ function extract({ id, policy, label }: (typeof picks)[number]) {
   if (!line) {
     throw new Error(`no cage/burst series for ${policy}`);
   }
-  const smoothed = line.samples.map((_, i) => {
-    const slice = line.samples.slice(Math.max(0, i - smoothing + 1), i + 1);
-    return slice.reduce((sum, s) => sum + s.goodput, 0) / slice.length;
+  const smoothed = line.samples.map((sample, i) => {
+    const recent = line.samples.slice(Math.max(0, i - smoothing + 1), i + 1);
+    return { sample, goodput: recent.reduce((sum, s) => sum + s.goodput, 0) / recent.length };
   });
-  const inSpan = line.samples.flatMap((sample, i) =>
-    sample.t > span.from && sample.t <= span.to ? [{ sample, goodput: smoothed[i] ?? 0 }] : [],
-  );
-  const firstIndex = line.samples.findIndex((sample) => sample.t > span.from);
+  const firstIndex = smoothed.findIndex(({ sample }) => sample.t > span.from);
+  if (firstIndex < 0) {
+    throw new Error(`no ${policy} samples after minute ${span.from / minute}`);
+  }
+  const inSpan = smoothed.slice(firstIndex).filter(({ sample }) => sample.t <= span.to);
   const spawnsBefore = line.samples[firstIndex - 1]?.spawns ?? 0;
   return {
     id,
