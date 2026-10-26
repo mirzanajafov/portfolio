@@ -51,10 +51,10 @@ export default function Home() {
             className="text-[clamp(56px,11vw,168px)] leading-[0.86] font-extrabold tracking-[-0.045em]"
           >
             <span className="intro-word">
-              <span style={{ ['--i' as string]: 0 }}>{first}</span>
+              <span>{first}</span>
             </span>{' '}
             <span className="intro-word">
-              <span style={{ ['--i' as string]: 1 }}>{last}</span>
+              <span>{last}</span>
             </span>
           </h1>
           <p className="intro-role text-[clamp(20px,2.6vw,30px)] font-medium text-[var(--soft)]">
