@@ -202,11 +202,13 @@ describe('POST /ask behind a proxy it does not trust', () => {
   });
 });
 
-describe('POST /ask when the engine fails mid-answer', () => {
+describe('POST /ask when the engine fails', () => {
   const failing: AnswerEngine = {
     name: 'failing',
-    async *answer() {
-      yield { text: 'It asks half the questions.', sourceIds: ['matchium/half-the-questions'] };
+    async *answer(question) {
+      if (question.includes('Matchium')) {
+        yield { text: 'It asks half the questions.', sourceIds: ['matchium/half-the-questions'] };
+      }
       throw new Error('the model went away');
     },
   };
@@ -225,9 +227,11 @@ describe('POST /ask when the engine fails mid-answer', () => {
     await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
   });
 
-  it('ends the stream and does not log the failure as a refusal', async () => {
-    const response = await ask(app, 'How does Matchium work?').expect(200);
-    expect(parseEvents(response.text).map((event) => event.event)).toEqual(['meta', 'sentence']);
-    expect(await prisma.askLog.count({ where: { question: 'How does Matchium work?' } })).toBe(0);
-  });
+  it.each(['How does Matchium work?', 'What is your favourite colour?'])(
+    'cuts the answer off, so the page shows an error, and leaves it out of the question log: %s',
+    async (question) => {
+      await expect(ask(app, question)).rejects.toThrow();
+      expect(await prisma.askLog.count({ where: { question } })).toBe(0);
+    },
+  );
 });
