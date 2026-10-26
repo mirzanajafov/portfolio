@@ -1,5 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import { content } from '@portfolio/content';
+import { phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
@@ -99,6 +100,6 @@ describe('the CV as a PDF', () => {
   it('carries the email, the site and no phone number', () => {
     expect(text).toContain(content.profile.links.email);
     expect(text).toContain('najafov.dev');
-    expect(text).not.toMatch(/\+994/);
+    expect(text).not.toMatch(phoneNumber);
   });
 });
