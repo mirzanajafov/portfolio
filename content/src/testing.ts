@@ -23,7 +23,7 @@ type ProfileFile = z.input<typeof profileSchema>;
 type CvFile = z.input<typeof cvSchema>;
 type RoleFile = CvFile['experience'][number];
 
-export type ProjectFolder = {
+type ProjectFolder = {
   slug: string;
   project: ProjectFile;
   evals: EvalsFile;
