@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
+import { questionMaxLength } from './ask.ts';
 import { ContentError, loadContent, type ContentIssue } from './load.ts';
 import { renderGenerated } from './generate.ts';
 
@@ -326,7 +327,7 @@ describe('loadContent', () => {
   it('rejects an eval question longer than the Ask box takes, since the first one becomes a suggestion', async () => {
     await putProject('alpha', project(2), [
       ...evals,
-      { question: 'x'.repeat(301), expects: ['fast'] },
+      { question: 'x'.repeat(questionMaxLength + 1), expects: ['fast'] },
     ]);
     expect(await issues()).toEqual([
       expect.objectContaining({ file: 'projects/alpha/evals.yaml', path: '3.question' }),
