@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
+import { aProject } from '@portfolio/content/testing';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskService } from '../src/ask/ask.service.js';
@@ -62,14 +63,13 @@ describe('runEvals', () => {
     ],
     new Map([['demo', 'Demo']]),
   );
-  const project = {
-    ...content.projects[0]!,
+  const project = aProject({
     slug: 'demo',
     evals: [
       { question: 'right', expects: ['fast'] },
       { question: 'wrong', expects: ['fast'] },
     ],
-  };
+  });
   const engine: AnswerEngine = {
     name: 'stub',
     async *answer(question) {
