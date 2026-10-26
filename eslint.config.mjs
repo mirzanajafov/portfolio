@@ -92,6 +92,10 @@ export default defineConfig(
     },
   },
   {
+    files: ['**/*.d.ts'],
+    rules: { '@typescript-eslint/consistent-type-definitions': 'off' },
+  },
+  {
     files: ['**/*.{js,mjs}'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.nodeBuiltin },
