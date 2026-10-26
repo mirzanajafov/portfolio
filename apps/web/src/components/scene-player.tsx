@@ -70,8 +70,9 @@ export function ScenePlayer({
   const [readout, setReadout] = useState<string[]>([]);
   const choice = useMotionChoice();
   const playing = choice ?? !reducedMotion;
-  const start = useEffectEvent((canvas: HTMLCanvasElement, labels: HTMLElement) =>
-    import('@/scenes/player').then(({ play }) => play(scene, canvas, labels, setReadout)),
+  const start = useEffectEvent(
+    (canvas: HTMLCanvasElement, labels: HTMLElement, signal: AbortSignal) =>
+      import('@/scenes/player').then(({ play }) => play(scene, canvas, labels, setReadout, signal)),
   );
 
   useEffect(() => {
@@ -80,20 +81,17 @@ export function ScenePlayer({
     if (!canvas || !labels) {
       return;
     }
-    let cancelled = false;
+    const abort = new AbortController();
     let started: PlayerHandle | null = null;
     Promise.resolve()
       .then(() => {
         if (!webglAvailable()) {
           throw new Error('no WebGL');
         }
-        return cancelled ? null : start(canvas, labels);
+        return start(canvas, labels, abort.signal);
       })
       .then((next) => {
-        if (!next) {
-          return;
-        }
-        if (cancelled) {
+        if (abort.signal.aborted) {
           next.dispose();
           return;
         }
@@ -102,12 +100,12 @@ export function ScenePlayer({
         setState('running');
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!abort.signal.aborted) {
           setState('unsupported');
         }
       });
     return () => {
-      cancelled = true;
+      abort.abort();
       started?.dispose();
       setHandle(null);
       setState('loading');

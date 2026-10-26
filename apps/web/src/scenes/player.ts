@@ -49,8 +49,10 @@ export async function play(
   canvas: HTMLCanvasElement,
   labels: HTMLElement,
   onReadout: (lines: string[]) => void,
+  signal: AbortSignal,
 ): Promise<PlayerHandle> {
   const create = await load(spec);
+  signal.throwIfAborted();
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,

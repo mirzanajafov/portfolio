@@ -29,12 +29,7 @@ const notPassingYet = {
   ],
   '@typescript-eslint/no-unnecessary-condition': ['apps/web/src/components/scene-player.tsx'],
   '@typescript-eslint/no-unsafe-argument': ['apps/api/src/health/health.controller.spec.ts'],
-  '@typescript-eslint/no-unsafe-assignment': ['apps/web/src/components/scene-player.test.tsx'],
-  '@typescript-eslint/no-unsafe-member-access': ['apps/web/src/components/scene-player.test.tsx'],
-  '@typescript-eslint/no-unsafe-return': [
-    'apps/web/src/app/palette.node.test.ts',
-    'apps/web/src/components/scene-player.test.tsx',
-  ],
+  '@typescript-eslint/no-unsafe-return': ['apps/web/src/app/palette.node.test.ts'],
   '@typescript-eslint/non-nullable-type-assertion-style': [
     'apps/web/src/app/page.test.tsx',
     'apps/web/src/app/projects/\\[slug\\]/page.test.tsx',

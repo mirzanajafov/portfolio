@@ -33,6 +33,7 @@ export const stormData = data;
 const boxSeries = data.policies.find((series) => series.id === 'box');
 const poolSeries = data.policies.find((series) => series.id === 'pool');
 if (
+  data.policies.length !== 2 ||
   !boxSeries ||
   !poolSeries ||
   [boxSeries, poolSeries].some((series) =>

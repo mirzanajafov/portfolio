@@ -1,14 +1,23 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScenePlayer } from './scene-player';
 
-const play = vi.fn(async () => ({
-  setPlaying: vi.fn(),
-  setShown: vi.fn(),
-  focus: vi.fn(),
-  dispose: vi.fn(),
-}));
+function handle() {
+  return { setPlaying: vi.fn(), setShown: vi.fn(), focus: vi.fn(), dispose: vi.fn() };
+}
+
+const handles: ReturnType<typeof handle>[] = [];
+
+const play = vi.fn(async () => {
+  const created = handle();
+  handles.push(created);
+  return created;
+});
+
+beforeEach(() => {
+  handles.length = 0;
+});
 
 vi.mock('@/scenes/player', () => ({ play }));
 
@@ -39,9 +48,11 @@ describe('ScenePlayer', () => {
         expect.anything(),
         expect.anything(),
         expect.anything(),
+        expect.anything(),
       );
     });
-    const storm = await play.mock.results.at(-1)?.value;
+    const [floor, storm] = handles;
+    expect(floor?.dispose).toHaveBeenCalled();
     await waitFor(() => {
       expect(storm?.setShown).toHaveBeenLastCalledWith(false);
     });
@@ -68,13 +79,15 @@ describe('ScenePlayer', () => {
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Pause motion' })).toHaveLength(2),
     );
-    const [first, second] = await Promise.all(play.mock.results.map((result) => result.value));
-    expect(first.setShown).toHaveBeenLastCalledWith(true);
-    expect(second.setShown).toHaveBeenLastCalledWith(false);
+    const [first, second] = handles;
+    await waitFor(() => {
+      expect(first?.setShown).toHaveBeenLastCalledWith(true);
+      expect(second?.setShown).toHaveBeenLastCalledWith(false);
+    });
 
     await userEvent.click(screen.getAllByRole('button', { name: 'Pause motion' })[0]!);
     expect(screen.getAllByRole('button', { name: 'Play motion' })).toHaveLength(2);
-    expect(first.setPlaying).toHaveBeenLastCalledWith(false);
-    expect(second.setPlaying).toHaveBeenLastCalledWith(false);
+    expect(first?.setPlaying).toHaveBeenLastCalledWith(false);
+    expect(second?.setPlaying).toHaveBeenLastCalledWith(false);
   });
 });
