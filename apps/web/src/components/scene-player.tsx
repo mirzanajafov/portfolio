@@ -3,7 +3,6 @@
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import type { PlayerHandle, SceneSpec } from '@/scenes/player';
 import { webglAvailable } from '@/scenes/webgl';
-import './scene-player.css';
 
 function subscribeToNothing(): () => void {
   return () => undefined;

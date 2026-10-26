@@ -1,6 +1,5 @@
 import type { Role } from '@portfolio/content';
 import { formatPeriod, roleKey, roleKindLabel, rolePlace } from '@/lib/format';
-import './experience.css';
 
 export function RoleHeading({ role }: { role: Role }) {
   const label = roleKindLabel(role.kind);

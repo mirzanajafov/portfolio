@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import './intro.css';
+@import '../components/systems-tour.css';
+@import '../components/experience.css';
+@import '../components/scene-player.css';
 
 @theme {
   --font-sans: var(--font-body), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;

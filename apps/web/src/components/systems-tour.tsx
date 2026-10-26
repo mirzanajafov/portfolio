@@ -6,7 +6,6 @@ import { StackList } from '@/components/stack-list';
 import { TourScroller, type TourDemo } from '@/components/tour-scroller';
 import { factKindLabel } from '@/lib/format';
 import type { GraphApp } from '@/scenes/systems-graph';
-import './systems-tour.css';
 
 export type TourStop = {
   id: string;

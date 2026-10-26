@@ -5,7 +5,6 @@ import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
 import { siteUrl } from '@/lib/site';
-import './intro.css';
 
 const pill = 'rounded-full border border-line bg-surface px-5 py-2.5';
 
