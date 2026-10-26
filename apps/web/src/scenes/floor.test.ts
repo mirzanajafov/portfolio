@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { createFloorScene } from './floor';
 import { createFloor } from './floor-model';
 import { seeded } from './random';
+import { testHooks } from './test-hooks';
 
 describe('the floor model', () => {
   it('runs the estimator Marauder runs, and lands in the error range the benchmark measured', () => {
@@ -18,10 +20,43 @@ describe('the floor model', () => {
     expect(median).toBeLessThan(2.5);
   });
 
-  it('fits a position from the readings once per batch', () => {
+  it('moves the estimates only when a batch of readings is fitted', () => {
     const floor = createFloor(seeded(7));
-    const batches = Array.from({ length: 60 }, () => floor.step(1 / 60)).filter(Boolean);
-    expect(batches).toHaveLength(floor.flushes());
-    expect(floor.flushes()).toBe(6);
+    const estimates = () => JSON.stringify(floor.tags.map((tag) => tag.estimate));
+    for (let frame = 0; frame < 120; frame += 1) {
+      const before = estimates();
+      const fitted = floor.step(1 / 60);
+      expect(estimates() !== before, `frame ${frame}`).toBe(fitted);
+    }
+    expect(floor.flushes()).toBe(13);
+    expect(floor.tags.every((tag) => tag.fitted)).toBe(true);
+  });
+});
+
+describe('the floor scene', () => {
+  it('labels the receivers and tags and reports the batches and the error of the model it draws', () => {
+    const { hooks, labels } = testHooks();
+    const scene = createFloorScene(hooks);
+    for (let frame = 0; frame < 60; frame += 1) {
+      scene.step(1 / 60, frame / 60);
+    }
+    scene.render(1, 1 / 60);
+    const model = createFloor(seeded(7));
+    for (let frame = 0; frame < 60; frame += 1) {
+      model.step(1 / 60);
+    }
+    expect(labels.map((label) => label.textContent)).toEqual([
+      'R1',
+      'R2',
+      'R3',
+      'R4',
+      'R5',
+      ...model.tags.map(
+        (tag) => `tag ${tag.id} · ±${tag.estimate.distanceTo(tag.truth).toFixed(1)} m`,
+      ),
+    ]);
+    const [, batches, error] = scene.readout();
+    expect(batches).toContain(`log-distance fit · ${model.flushes()} batches of 150 ms`);
+    expect(error).toBe(`estimate error now ${model.error().toFixed(2)} m`);
   });
 });

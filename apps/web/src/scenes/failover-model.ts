@@ -41,16 +41,23 @@ export function laneAt(lane: FailoverLane, ms: number) {
   };
 }
 
-export function stateOfA(lane: FailoverLane, ms: number): 'up' | 'picked' | 'out' | 'back' {
+export function faultAt(ms: number): 'before' | 'down' | 'cleared' {
   if (ms < 0) {
+    return 'before';
+  }
+  return ms < data.clearMs ? 'down' : 'cleared';
+}
+
+export function stateOfA(lane: FailoverLane, ms: number): 'up' | 'picked' | 'out' | 'back' {
+  const fault = faultAt(ms);
+  if (fault === 'before') {
     return 'up';
   }
   const last = lane.events.filter((e) => e.atMs <= ms).at(-1);
-  const out = last !== undefined && (last.state === 'ejected' || last.state === 'unhealthy');
-  if (ms < data.clearMs) {
-    return out ? 'out' : 'picked';
+  if (last !== undefined && (last.state === 'ejected' || last.state === 'unhealthy')) {
+    return 'out';
   }
-  return out ? 'out' : 'back';
+  return fault === 'down' ? 'picked' : 'back';
 }
 
 export const fates = ['served', 'failed', 'retried', 'other'] as const;

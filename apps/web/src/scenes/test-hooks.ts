@@ -1,4 +1,5 @@
 import { Color } from 'three';
+import { narrowWidth } from './player';
 import type { Palette, SceneHooks } from './types';
 
 const testPalette: Palette = {
@@ -11,7 +12,7 @@ const testPalette: Palette = {
   signal: new Color(),
 };
 
-export function testHooks({ width = 1200, height = 800 } = {}) {
+export function testHooks({ width = 1200 } = {}) {
   const labels: HTMLElement[] = [];
   const hooks: SceneHooks = {
     palette: testPalette,
@@ -25,8 +26,8 @@ export function testHooks({ width = 1200, height = 800 } = {}) {
       label.textContent = text;
     },
     place: () => undefined,
-    size: () => ({ width, height }),
-    narrow: () => width < 600,
+    size: () => ({ width, height: 800 }),
+    narrow: () => width < narrowWidth,
   };
   return { hooks, labels };
 }

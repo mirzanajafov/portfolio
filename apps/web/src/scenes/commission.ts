@@ -3,8 +3,10 @@ import {
   CircleGeometry,
   Color,
   DoubleSide,
+  DynamicDrawUsage,
   EdgesGeometry,
   Float32BufferAttribute,
+  InstancedMesh,
   LineBasicMaterial,
   LineSegments,
   Matrix4,
@@ -26,7 +28,6 @@ import {
   numeral,
 } from './commission-model';
 import { aim, viewFrom } from './framing';
-import { instances } from './instances';
 import { formatClock, formatNumber, plural } from './readout';
 import type { Palette, SceneFactory } from './types';
 
@@ -136,7 +137,9 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   linkGeometry.setAttribute('color', new Float32BufferAttribute(links.length * 6, 3));
 
   const donRing = new Mesh(donRingGeometry, donRingMaterial);
-  const pulses = instances(pulseGeometry, pulseMaterial, families.length - 1);
+  const pulses = new InstancedMesh(pulseGeometry, pulseMaterial, families.length - 1);
+  pulses.instanceMatrix.setUsage(DynamicDrawUsage);
+  pulses.frustumCulled = false;
   scene.add(
     new Mesh(tableGeometry, tableMaterial),
     new LineSegments(rimGeometry, rimMaterial),

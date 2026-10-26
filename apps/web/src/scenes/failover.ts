@@ -16,7 +16,8 @@ import {
 } from 'three';
 import {
   countsBetween,
-  failoverData as data,
+  failoverData,
+  faultAt,
   failoverEnd,
   type Fate,
   fates,
@@ -24,7 +25,7 @@ import {
   stateOfA,
 } from './failover-model';
 import { aim, frame, viewFrom } from './framing';
-import { instances } from './instances';
+import { coloredInstances } from './colored-instances';
 import { seeded } from './random';
 import { formatNumber } from './readout';
 import type { SceneFactory } from './types';
@@ -97,7 +98,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   const baseGeometry = new EdgesGeometry(new BoxGeometry(1.3, 0.001, 1.3));
   const dotGeometry = new BoxGeometry(0.24, 0.24, 0.24);
 
-  const lanes = data.lanes.map((lane, index) => {
+  const lanes = failoverData.lanes.map((lane, index) => {
     const root = new Group();
     scene.add(root);
     const centerX = (laneBox.minX + laneBox.maxX) / 2;
@@ -139,7 +140,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     base.position.set(lostSpot.x, 0.01, lostSpot.z);
     root.add(column, base);
 
-    const dotMesh = instances(dotGeometry, new MeshBasicMaterial(), p.maxDots);
+    const dotMesh = coloredInstances(dotGeometry, new MeshBasicMaterial(), p.maxDots);
     root.add(dotMesh);
     const dots: Dot[] = [];
 
@@ -238,7 +239,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   };
 
   const restart = () => {
-    clock = data.fromMs;
+    clock = failoverData.fromMs;
     for (const lane of lanes) {
       lane.dots = [];
       lane.owed = nothingOwed();
@@ -267,7 +268,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         restart();
         return;
       }
-      const perRequest = p.dotsPerSecond / (data.rate * speed);
+      const perRequest = p.dotsPerSecond / (failoverData.rate * speed);
       for (const lane of lanes) {
         const counts = countsBetween(lane.lane, from, clock);
         for (const fate of fates) {
@@ -318,7 +319,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         const { x, z } = lane.root.position;
         const now = laneAt(lane.lane, clock);
         const state = stateOfA(lane.lane, clock);
-        const down = clock >= 0 && clock < data.clearMs;
+        const down = faultAt(clock) === 'down';
         lane.portals.forEach((portal, index) => {
           const share = index === 0 ? now.toA : (1 - now.toA) / 2;
           portal.glow += (0.06 + share * 0.6 - portal.glow) * ease;
@@ -385,13 +386,14 @@ export const createFailoverScene: SceneFactory = (hooks) => {
 };
 
 function phaseOf(clock: number): string {
-  if (clock < 0) {
-    return `three dimensions, ${formatNumber(data.rate)} requests a second`;
+  const fault = faultAt(clock);
+  if (fault === 'before') {
+    return `three dimensions, ${formatNumber(failoverData.rate)} requests a second`;
   }
-  if (clock < data.clearMs) {
+  if (fault === 'down') {
     return 'dimension a refuses every connection';
   }
-  return `a is back after ${Math.round(data.clearMs / 1000)} s`;
+  return `a is back after ${Math.round(failoverData.clearMs / 1000)} s`;
 }
 
 function stateText(state: ReturnType<typeof stateOfA>, down: boolean): string | null {

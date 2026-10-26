@@ -10,7 +10,15 @@ import {
   Scene,
 } from 'three';
 import { pick, seeded } from './random';
-import { stormAt, stormData, stormSample, stormSeconds, stormSeries } from './storm-model';
+import {
+  burstAt,
+  stormAt,
+  stormData,
+  stormSample,
+  stormSeconds,
+  stormSeries,
+  type StormSeries,
+} from './storm-model';
 import type { SceneFactory } from './types';
 
 export const stormParameters = {
@@ -24,8 +32,6 @@ export const stormParameters = {
   gap: 6,
   queueFullMinutes: 25,
 };
-
-type Series = (typeof stormSeries)['box'];
 
 function slotScale(index: number, processes: number, running: number): number {
   if (index >= processes) {
@@ -49,7 +55,7 @@ export const createStormScene: SceneFactory = (hooks) => {
   const columnGeometry = new BoxGeometry(1.3, 1, 1.3);
   const floorGeometry = new BoxGeometry(p.cageWidth, 0.02, p.cageDepth);
 
-  const cageFor = (series: Series, index: number) => {
+  const cageFor = (series: StormSeries, index: number) => {
     const root = new Group();
     group.add(root);
     const frameMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.9 });
@@ -129,7 +135,7 @@ export const createStormScene: SceneFactory = (hooks) => {
         lastWhole = 0;
       }
       const whole = Math.floor(second);
-      const { burst } = stormAt(second);
+      const burst = burstAt(second);
       for (const cage of cages) {
         const now = stormSample(cage.series, whole);
         if (whole > lastWhole) {
@@ -186,7 +192,7 @@ export const createStormScene: SceneFactory = (hooks) => {
       } else {
         hooks.place(burstLabel, 0, p.cageHeight + 3.4, -p.cageDepth / 2);
       }
-      burstLabel.style.display = stormAt(second).burst ? '' : 'none';
+      burstLabel.style.display = burstAt(second) ? '' : 'none';
     },
     readout() {
       const { minute, load, box, pool } = stormAt(second);

@@ -20,6 +20,7 @@ import {
   campaignData,
   campaignLoop,
   campaignPace,
+  firstRun,
   holdEnd,
   mutantAppears,
   mutantsEnd,
@@ -27,7 +28,7 @@ import {
   type Run,
 } from './campaign-model';
 import { aim, viewFrom } from './framing';
-import { instances } from './instances';
+import { coloredInstances } from './colored-instances';
 import { seeded } from './random';
 import { formatClock, formatNumber, plural } from './readout';
 import type { SceneFactory } from './types';
@@ -131,14 +132,14 @@ export const createCampaignScene: SceneFactory = (hooks) => {
   mutantFrame.position.copy(mutantFloor.position);
 
   const shaded = () => new MeshBasicMaterial({ vertexColors: true });
-  const runTiles = instances(boxGeometry, shaded(), runs.length);
-  const mutantTiles = instances(boxGeometry, shaded(), mutants.length);
-  const sparkMesh = instances(
+  const runTiles = coloredInstances(boxGeometry, shaded(), runs.length);
+  const mutantTiles = coloredInstances(boxGeometry, shaded(), mutants.length);
+  const sparkMesh = coloredInstances(
     new BoxGeometry(0.14, 0.14, 0.14),
     new MeshBasicMaterial(),
     maxSparks,
   );
-  const ringMesh = instances(ringGeometry, new MeshBasicMaterial(), maxRings);
+  const ringMesh = coloredInstances(ringGeometry, new MeshBasicMaterial(), maxRings);
   scene.add(
     gridFloor,
     mutantFloor,
@@ -199,7 +200,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         sparks = [];
         rings = [];
         pendingRings = [];
-        burst(campaignAt(0).run, 0);
+        burst(firstRun, 0);
         return;
       }
       runs.forEach((run, index) => {
@@ -237,9 +238,9 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         seconds > holdEnd ? 1 - ease((seconds - holdEnd) / campaignPace.clearSeconds) : 1;
       const now = campaignAt(seconds);
 
-      runTiles.count = now.runs;
+      runTiles.count = now.shownRuns;
       for (const [index, run] of runs.entries()) {
-        if (index >= now.runs) {
+        if (index >= now.shownRuns) {
           break;
         }
         const { x, z } = runPosition(index);
@@ -255,9 +256,9 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         runTiles.setColorAt(index, color);
       }
 
-      mutantTiles.count = now.mutants;
+      mutantTiles.count = now.shownMutants;
       for (const [index, mutant] of mutants.entries()) {
-        if (index >= now.mutants) {
+        if (index >= now.shownMutants) {
           break;
         }
         const age = seconds - mutantAppears(index);
@@ -296,15 +297,15 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       hooks.write(
         gridTitle,
         narrow
-          ? `deployed code · ${now.runs} runs · ${now.violations} violations`
-          : `the deployed code · ${now.runs} of ${runs.length} runs · ${now.violations} violations`,
+          ? `deployed code · ${now.shownRuns} runs · ${now.violations} violations`
+          : `the deployed code · ${now.shownRuns} of ${runs.length} runs · ${now.violations} violations`,
       );
       hooks.place(gridTitle, 0, 1.5, gridBack);
       hooks.write(
         mutantTitle,
-        now.mutants === 0
+        now.shownMutants === 0
           ? 'one guard removed'
-          : `one guard removed · ${now.caught} of ${now.mutants} caught`,
+          : `one guard removed · ${now.caught} of ${now.shownMutants} caught`,
       );
       hooks.place(mutantTitle, 0, 0, mutantZ + 0.95);
       if (now.mutant && seconds <= holdEnd) {
@@ -314,7 +315,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
             ? `${now.mutant.id} · survived`
             : `${now.mutant.id} · ${now.mutant.caughtBy.join(' ')}`,
         );
-        hooks.place(mutantLabel, mutantX(now.mutants - 1), mutantHeight + 0.2, mutantZ);
+        hooks.place(mutantLabel, mutantX(now.shownMutants - 1), mutantHeight + 0.2, mutantZ);
       } else {
         mutantLabel.style.display = 'none';
       }
@@ -336,11 +337,11 @@ export const createCampaignScene: SceneFactory = (hooks) => {
             ? `${mutant.id}, ${mutant.guard}: survived ${mutant.runs} runs, as it should`
             : `${mutant.id}, ${mutant.guard}: caught by ${mutant.caughtBy.join(', ')} in run ${mutant.caughtIn}`,
           `the deployed code: ${runs.length} runs · ${formatNumber(now.journeys)} journeys · ${formatNumber(now.kills)} kills · ${now.violations} violations`,
-          `one guard removed: ${now.caught} of ${now.mutants} mutants caught`,
+          `one guard removed: ${now.caught} of ${now.shownMutants} mutants caught`,
         ];
       }
       return [
-        `run ${now.runs} of ${runs.length} · ${formatNumber(now.kills)} process kills so far · ${now.violations} violations`,
+        `run ${now.shownRuns} of ${runs.length} · ${formatNumber(now.kills)} process kills so far · ${now.violations} violations`,
         `${formatClock(run.minute)} into the night · seed ${run.seed} · ${run.journeys} journeys · ${run.kills} kills · ${plural(run.postgres + run.kafka, 'crash', 'crashes')}`,
         `so far: ${formatNumber(now.journeys)} journeys · ${formatNumber(now.crashes)} Postgres and Kafka crashes`,
       ];

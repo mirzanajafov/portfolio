@@ -49,7 +49,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
   const camera = new PerspectiveCamera(34, 1, 0.1, 400);
   const group = new Group();
   scene.add(group);
-  const random = seeded(7);
+  const random = seeded(11);
   let palette = hooks.palette;
 
   const wallPoints: number[] = [];
@@ -92,7 +92,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
     };
   });
 
-  const floor = createFloor(random);
+  const floor = createFloor(seeded(7));
   const dotGeometry = new SphereGeometry(0.42, 20, 16);
   const haloGeometry = new RingGeometry(0.55, 0.62, 40);
   const tags = floor.tags.map((tag) => {
@@ -136,7 +136,8 @@ export const createFloorScene: SceneFactory = (hooks) => {
       }
     },
     step(dt) {
-      if (floor.step(dt)) {
+      const fitted = floor.step(dt);
+      if (fitted) {
         for (const view of tags) {
           const trail = view.trailPositions.array;
           trail.copyWithin(3, 0, trail.length - 3);

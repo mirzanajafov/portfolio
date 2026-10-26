@@ -6,7 +6,7 @@ import {
   type MeshBasicMaterial,
 } from 'three';
 
-export function instances<G extends BufferGeometry>(
+export function coloredInstances<G extends BufferGeometry>(
   geometry: G,
   material: MeshBasicMaterial,
   count: number,

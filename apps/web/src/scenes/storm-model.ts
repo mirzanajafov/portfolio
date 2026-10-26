@@ -3,7 +3,7 @@ import { commonLength, sampleAt } from './series';
 
 export const stormData = data;
 
-type StormSeries = (typeof data.policies)[number];
+export type StormSeries = (typeof data.policies)[number];
 
 const box = data.policies.find((series) => series.id === 'box');
 const pool = data.policies.find((series) => series.id === 'pool');
@@ -36,11 +36,15 @@ export function stormSample(series: StormSeries, second: number) {
   };
 }
 
-export function stormAt(second: number) {
+export function burstAt(second: number): boolean {
   const minute = data.startMinute + second / 60;
-  const burst = minute >= data.burst.from && minute < data.burst.to;
+  return minute >= data.burst.from && minute < data.burst.to;
+}
+
+export function stormAt(second: number) {
+  const burst = burstAt(second);
   return {
-    minute: Math.floor(minute),
+    minute: Math.floor(data.startMinute + second / 60),
     burst,
     load: burst ? data.burst.load : data.baseLoad,
     box: stormSample(stormSeries.box, second),

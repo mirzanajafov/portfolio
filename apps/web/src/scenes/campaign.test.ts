@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createCampaignScene } from './campaign';
-import { campaignAt, campaignData, campaignLoop, campaignPace } from './campaign-model';
+import { campaignAt, campaignData, campaignLoop, campaignPace, type Run } from './campaign-model';
 import { testHooks } from './test-hooks';
 
 const { hooks } = testHooks();
 
-const total = (pick: (run: (typeof campaignData.runs)[number]) => number) =>
+const total = (pick: (run: Run) => number) =>
   campaignData.runs.reduce((sum, run) => sum + pick(run), 0);
 
 describe("the campaign data taken from Car Wash Ledger's chaos results", () => {
@@ -38,16 +38,16 @@ describe("the campaign data taken from Car Wash Ledger's chaos results", () => {
 
 describe('the campaign replay', () => {
   it('adds one run at a time, then the mutants', () => {
-    expect(campaignAt(0)).toMatchObject({ runs: 1, mutants: 0 });
+    expect(campaignAt(0)).toMatchObject({ shownRuns: 1, shownMutants: 0 });
     const lastRun = (campaignData.runs.length - 1) / campaignPace.runsPerSecond;
     expect(campaignAt(lastRun)).toMatchObject({
-      runs: 200,
-      mutants: 0,
+      shownRuns: 200,
+      shownMutants: 0,
       journeys: 135048,
       kills: 8792,
       violations: 0,
     });
-    expect(campaignAt(campaignLoop - 0.01)).toMatchObject({ mutants: 14, caught: 12 });
+    expect(campaignAt(campaignLoop - 0.01)).toMatchObject({ shownMutants: 14, caught: 12 });
   });
 });
 

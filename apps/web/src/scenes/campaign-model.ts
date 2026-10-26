@@ -4,10 +4,11 @@ export const campaignData = data;
 
 export type Run = (typeof data.runs)[number];
 
-const [firstRun] = data.runs;
-if (!firstRun) {
+const [first] = data.runs;
+if (!first) {
   throw new Error('the campaign data has no runs');
 }
+export const firstRun: Run = first;
 
 export const campaignPace = {
   runsPerSecond: 10,
@@ -33,20 +34,20 @@ function countUpTo(seconds: number, appears: (index: number) => number, total: n
   return count;
 }
 
-export const campaignAt = (seconds: number) => {
-  const runs = countUpTo(seconds, runAppears, runCount);
-  const mutants = countUpTo(seconds, mutantAppears, data.mutants.length);
-  const shown = data.runs.slice(0, runs);
+export function campaignAt(seconds: number) {
+  const shownRuns = countUpTo(seconds, runAppears, runCount);
+  const shownMutants = countUpTo(seconds, mutantAppears, data.mutants.length);
+  const shown = data.runs.slice(0, shownRuns);
   const total = (pick: (run: Run) => number) => shown.reduce((sum, run) => sum + pick(run), 0);
   return {
-    runs,
-    mutants,
+    shownRuns,
+    shownMutants,
     run: shown.at(-1) ?? firstRun,
-    mutant: data.mutants[mutants - 1],
+    mutant: data.mutants[shownMutants - 1],
     journeys: total((run) => run.journeys),
     kills: total((run) => run.kills),
     crashes: total((run) => run.postgres + run.kafka),
     violations: total((run) => run.violations),
-    caught: data.mutants.slice(0, mutants).filter((mutant) => mutant.caughtIn !== null).length,
+    caught: data.mutants.slice(0, shownMutants).filter((mutant) => mutant.caughtIn !== null).length,
   };
-};
+}

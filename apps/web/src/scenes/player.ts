@@ -16,7 +16,7 @@ const demos: Record<DemoName, () => Promise<SceneFactory>> = {
   commission: () => import('./commission').then((m) => m.createCommissionScene),
 };
 
-const narrowWidth = 600;
+export const narrowWidth = 600;
 
 async function load(spec: SceneSpec): Promise<SceneFactory> {
   if (spec.name === 'systems') {
@@ -47,73 +47,69 @@ function readPalette(element: HTMLElement): Palette {
   };
 }
 
-export async function play(
-  spec: SceneSpec,
+type PlayOptions = {
+  onReadout: (lines: string[]) => void;
+  signal: AbortSignal;
+  playing: boolean;
+  shown: boolean;
+};
+
+function mount(
+  create: SceneFactory,
   canvas: HTMLCanvasElement,
   labels: HTMLElement,
-  options: {
-    onReadout: (lines: string[]) => void;
-    signal: AbortSignal;
-    playing: boolean;
-    shown: boolean;
-  },
-): Promise<PlayerHandle> {
-  const { onReadout, signal } = options;
-  signal.throwIfAborted();
-  const create = await load(spec);
-  signal.throwIfAborted();
+  options: PlayOptions,
+): PlayerHandle {
   const host = canvas.parentElement ?? canvas;
   const projected = new Vector3();
-  const halfWidths = new WeakMap<HTMLElement, number>();
+  const halfWidths = new WeakMap<HTMLElement, { text: string | null; half: number }>();
   const halfWidth = (label: HTMLElement) => {
     const known = halfWidths.get(label);
-    if (known !== undefined) {
-      return known;
+    if (known?.text === label.textContent) {
+      return known.half;
     }
     const half = label.offsetWidth / 2;
     if (half > 0) {
-      halfWidths.set(label, half);
+      halfWidths.set(label, { text: label.textContent, half });
     }
     return half;
   };
 
-  let instance: SceneInstance;
-  try {
-    instance = create({
-      palette: readPalette(document.documentElement),
-      label(text, kind) {
-        const element = document.createElement('div');
-        element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
-        element.textContent = text;
-        labels.appendChild(element);
-        return element;
-      },
-      write(label, text) {
-        if (label.textContent !== text) {
-          label.textContent = text;
-          halfWidths.delete(label);
-        }
-      },
-      place(label, x, y, z) {
-        projected.set(x, y, z).project(instance.camera);
-        const spot = labelPosition(
-          projected,
-          host.clientWidth,
-          host.clientHeight,
-          halfWidth(label),
-        );
-        label.style.display = spot ? '' : 'none';
-        if (spot) {
-          label.style.left = `${spot.left}px`;
-          label.style.top = `${spot.top}px`;
-        }
-      },
-      size: () => ({ width: host.clientWidth, height: host.clientHeight }),
-      narrow: () => host.clientWidth < narrowWidth,
-    });
-  } catch (error) {
-    labels.replaceChildren();
-    throw error;
+  const palette = readPalette(document.documentElement);
+  const instance: SceneInstance = create({
+    palette,
+    label(text, kind) {
+      const element = document.createElement('div');
+      element.className = `scene-label${kind ? ` scene-label-${kind}` : ''}`;
+      element.textContent = text;
+      labels.appendChild(element);
+      return element;
+    },
+    write(label, text) {
+      if (label.textContent !== text) {
+        label.textContent = text;
+      }
+    },
+    place(label, x, y, z) {
+      projected.set(x, y, z).project(instance.camera);
+      const spot = labelPosition(projected, host.clientWidth, host.clientHeight, halfWidth(label));
+      label.style.display = spot ? '' : 'none';
+      if (spot) {
+        label.style.left = `${spot.left}px`;
+        label.style.top = `${spot.top}px`;
+      }
+    },
+    size: () => ({ width: host.clientWidth, height: host.clientHeight }),
+    narrow: () => host.clientWidth < narrowWidth,
+  });
+  const fitCamera = () => {
+    instance.camera.aspect = host.clientWidth / Math.max(1, host.clientHeight);
+    instance.camera.updateProjectionMatrix();
+  };
+  instance.setColors(palette);
+  fitCamera();
+  for (let i = 0; i < 40; i += 1) {
+    instance.step(0.05, i * 0.05);
   }
 
   const renderer = new WebGLRenderer({
@@ -122,22 +118,17 @@ export async function play(
     powerPreference: 'high-performance',
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  const applyColors = () => {
-    const palette = readPalette(document.documentElement);
-    renderer.setClearColor(palette.bg);
-    instance.setColors(palette);
-  };
+  renderer.setClearColor(palette.bg);
   const resize = () => {
     renderer.setSize(host.clientWidth, host.clientHeight, false);
-    instance.camera.aspect = host.clientWidth / Math.max(1, host.clientHeight);
-    instance.camera.updateProjectionMatrix();
+    fitCamera();
   };
-  applyColors();
   resize();
-
-  for (let i = 0; i < 40; i += 1) {
-    instance.step(0.05, i * 0.05);
-  }
+  const applyColors = () => {
+    const next = readPalette(document.documentElement);
+    renderer.setClearColor(next.bg);
+    instance.setColors(next);
+  };
 
   let { playing, shown } = options;
   let visible = true;
@@ -158,7 +149,7 @@ export async function play(
       renderer.render(instance.scene, instance.camera);
       if (now - readoutAt > 250) {
         readoutAt = now;
-        onReadout(instance.readout());
+        options.onReadout(instance.readout());
       }
     }
     frame = requestAnimationFrame(draw);
@@ -200,4 +191,21 @@ export async function play(
       labels.replaceChildren();
     },
   };
+}
+
+export async function play(
+  spec: SceneSpec,
+  canvas: HTMLCanvasElement,
+  labels: HTMLElement,
+  options: PlayOptions,
+): Promise<PlayerHandle> {
+  options.signal.throwIfAborted();
+  const create = await load(spec);
+  options.signal.throwIfAborted();
+  try {
+    return mount(create, canvas, labels, options);
+  } catch (error) {
+    labels.replaceChildren();
+    throw error;
+  }
 }
