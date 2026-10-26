@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
-import { Clock } from '../src/common/clock.js';
+import { Clock } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 

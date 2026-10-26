@@ -2,7 +2,7 @@ export type GateReason = 'unsupported' | 'echo' | 'denied' | 'too-long';
 
 type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 
-export const limits = {
+export const gateThresholds = {
   echoRun: 8,
   answerCharacters: 700,
 };
@@ -57,13 +57,13 @@ export function gateSentence(
     return { ok: false, reason: 'unsupported' };
   }
   const text = stripMarkup(sentence.text);
-  if (longestSharedRun(text, question) >= limits.echoRun) {
+  if (longestSharedRun(text, question) >= gateThresholds.echoRun) {
     return { ok: false, reason: 'echo' };
   }
   if (denied.some((pattern) => pattern.test(text))) {
     return { ok: false, reason: 'denied' };
   }
-  if (charactersSoFar + text.length > limits.answerCharacters) {
+  if (charactersSoFar + text.length > gateThresholds.answerCharacters) {
     return { ok: false, reason: 'too-long' };
   }
   return { ok: true, text };

@@ -1,7 +1,6 @@
 import type { Project } from '@portfolio/content';
-import type { AnswerEngine } from '../src/ask/answer-engine.js';
+import type { AskService } from '../src/ask/ask.service.js';
 import type { Knowledge } from '../src/ask/knowledge.js';
-import { gateSentence } from '../src/ask/sentence-gate.js';
 
 type QuestionResult = {
   project: string;
@@ -25,41 +24,32 @@ export type EvalReport = {
   results: QuestionResult[];
 };
 
-async function answerSources(
-  engine: AnswerEngine,
-  knowledge: Knowledge,
-  question: string,
-): Promise<string[]> {
+async function citedFor(ask: AskService, question: string): Promise<string[]> {
   const cited: string[] = [];
-  let characters = 0;
-  for await (const draft of engine.answer(question, new AbortController().signal)) {
-    const resolved = draft.sourceIds.filter((id) => knowledge.get(id));
-    const sourceCount = resolved.length === draft.sourceIds.length ? resolved.length : 0;
-    const verdict = gateSentence({ text: draft.text, sourceCount }, question, characters);
-    if (verdict.ok) {
-      characters += verdict.text.length;
-      cited.push(...resolved);
+  for await (const event of ask.answer(question, new AbortController().signal).events) {
+    if (event.type === 'sentence') {
+      cited.push(...event.sources.map((source) => source.id));
     }
   }
   return cited;
 }
 
 export async function runEvals(
-  engine: AnswerEngine,
+  ask: AskService,
   knowledge: Knowledge,
   projects: Project[],
   attacks: string[] = [],
 ): Promise<EvalReport> {
   const adversarialResults: AdversarialResult[] = [];
   for (const question of attacks) {
-    const cited = await answerSources(engine, knowledge, question);
+    const cited = await citedFor(ask, question);
     adversarialResults.push({ question, cited, refused: cited.length === 0 });
   }
   const results: QuestionResult[] = [];
   for (const project of projects) {
     for (const question of project.evals) {
       const expected = question.expects.map((id) => `${project.slug}/${id}`);
-      const cited = await answerSources(engine, knowledge, question.question);
+      const cited = await citedFor(ask, question.question);
       results.push({
         project: project.slug,
         question: question.question,
@@ -82,7 +72,7 @@ export async function runEvals(
   }
   const hits = results.filter((result) => result.hit).length;
   return {
-    engine: engine.name,
+    engine: ask.engineName,
     questions: results.length,
     hits,
     refusals: results.filter((result) => result.refused).length,

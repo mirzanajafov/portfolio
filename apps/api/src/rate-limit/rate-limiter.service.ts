@@ -1,18 +1,19 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { Clock } from '../common/clock.js';
+import { Clock } from '../common/clock.service.js';
+import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 const keepMs = 2 * 24 * 60 * 60 * 1000;
 
-type Verdict = { allowed: boolean; retryAfterSeconds: number };
+export type Verdict = { allowed: boolean; retryAfterSeconds: number };
 
 type Limit = { key: string; limit: number; windowSeconds: number };
 
 @Injectable()
 export class RateLimiter implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(RateLimiter.name);
-  private timer?: NodeJS.Timeout;
+  private stop?: () => void;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -20,15 +21,14 @@ export class RateLimiter implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    this.timer = setInterval(() => void this.cleanup(), cleanupEveryMs);
-    this.timer.unref();
+    this.stop = runEvery(cleanupEveryMs, 'rate limit cleanup', () => this.cleanup(), this.log);
   }
 
   onModuleDestroy(): void {
-    clearInterval(this.timer);
+    this.stop?.();
   }
 
-  async hit({ key, limit, windowSeconds }: Limit): Promise<Verdict> {
+  private async hit({ key, limit, windowSeconds }: Limit): Promise<Verdict> {
     const now = this.clock.now().getTime();
     const windowMs = windowSeconds * 1000;
     const windowStart = new Date(Math.floor(now / windowMs) * windowMs);
@@ -36,9 +36,11 @@ export class RateLimiter implements OnModuleInit, OnModuleDestroy {
       INSERT INTO "RateLimit" (key, "windowStart", count) VALUES (${key}, ${windowStart}, 1)
       ON CONFLICT (key, "windowStart") DO UPDATE SET count = "RateLimit".count + 1
       RETURNING count`;
-    const count = row?.count ?? 1;
+    if (!row) {
+      throw new Error(`counting ${key} returned no row`);
+    }
     return {
-      allowed: count <= limit,
+      allowed: row.count <= limit,
       retryAfterSeconds: Math.max(1, Math.ceil((windowStart.getTime() + windowMs - now) / 1000)),
     };
   }
@@ -54,16 +56,8 @@ export class RateLimiter implements OnModuleInit, OnModuleDestroy {
     return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
   }
 
-  async cleanup(): Promise<number> {
+  async cleanup(): Promise<void> {
     const cutoff = new Date(this.clock.now().getTime() - keepMs);
-    try {
-      const { count } = await this.prisma.rateLimit.deleteMany({
-        where: { windowStart: { lt: cutoff } },
-      });
-      return count;
-    } catch (error) {
-      this.log.warn(`rate limit cleanup failed: ${(error as Error).message}`);
-      return 0;
-    }
+    await this.prisma.rateLimit.deleteMany({ where: { windowStart: { lt: cutoff } } });
   }
 }

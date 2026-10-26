@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
-import { AskService, type AskEvent } from './ask.service.js';
+import { AskService, type AskEvent, type AskOutcome } from './ask.service.js';
 import { Knowledge } from './knowledge.js';
 
 const knowledge = new Knowledge(
@@ -31,12 +31,20 @@ const refusal: AskEvent = {
   sources: [],
 };
 
-async function collect(service: AskService, question = 'How fast is it?'): Promise<AskEvent[]> {
-  const events: AskEvent[] = [];
-  for await (const event of service.ask(question, new AbortController().signal)) {
-    events.push(event);
+async function answered(
+  service: AskService,
+  question = 'How fast is it?',
+): Promise<{ streamed: AskEvent[]; outcome: AskOutcome }> {
+  const { events, outcome } = service.answer(question, new AbortController().signal);
+  const streamed: AskEvent[] = [];
+  for await (const event of events) {
+    streamed.push(event);
   }
-  return events;
+  return { streamed, outcome };
+}
+
+async function collect(service: AskService): Promise<AskEvent[]> {
+  return (await answered(service)).streamed;
 }
 
 describe('AskService', () => {
@@ -77,6 +85,34 @@ describe('AskService', () => {
     const events = await collect(service);
     expect(events.at(-2)).toEqual(refusal);
     expect(events.at(-1)).toEqual({ type: 'done' });
+  });
+
+  it('reports what it said, what it withheld and whether it refused', async () => {
+    const service = new AskService(
+      engineSaying(
+        { text: 'It answers in 40 ms.', sourceIds: ['demo/fast'] },
+        { text: 'Unsourced claim.', sourceIds: [] },
+      ),
+      knowledge,
+      'me@example.com',
+    );
+    const { streamed, outcome } = await answered(service);
+    expect(outcome.sentences.map((sentence) => sentence.text)).toEqual(
+      streamed.flatMap((event) => (event.type === 'sentence' ? [event.text] : [])),
+    );
+    expect(outcome).toEqual({
+      engine: 'stub',
+      sentences: [{ text: 'It answers in 40 ms.', sources: ['demo/fast'] }],
+      withheld: ['unsupported'],
+      refused: false,
+    });
+  });
+
+  it('counts a fixed refusal as refused in what it reports', async () => {
+    const service = new AskService(engineSaying(), knowledge, 'me@example.com');
+    const { streamed, outcome } = await answered(service);
+    expect(streamed).toContainEqual(refusal);
+    expect(outcome).toMatchObject({ refused: true, sentences: [{ sources: [] }] });
   });
 
   it('refuses when the engine has nothing to say', async () => {
