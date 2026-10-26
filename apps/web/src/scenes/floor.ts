@@ -95,7 +95,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
   const floor = createFloor(seeded(7));
   const dotGeometry = new SphereGeometry(0.42, 20, 16);
   const haloGeometry = new RingGeometry(0.55, 0.62, 40);
-  const tags = floor.tags.map((tag) => {
+  const views = floor.tags.map((tag) => {
     const dot = new Mesh(dotGeometry, new MeshBasicMaterial());
     const halo = new Mesh(
       haloGeometry,
@@ -129,7 +129,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
       for (const receiver of receivers) {
         receiver.mesh.material.color.copy(next.signal);
       }
-      for (const view of tags) {
+      for (const view of views) {
         view.dot.material.color.copy(next.accent);
         view.halo.material.color.copy(next.fg);
         view.trailMaterial.color.copy(next.accent);
@@ -138,7 +138,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
     step(dt) {
       const fitted = floor.step(dt);
       if (fitted) {
-        for (const view of tags) {
+        for (const view of views) {
           const trail = view.trailPositions.array;
           trail.copyWithin(3, 0, trail.length - 3);
           view.trailPositions.setXYZ(0, view.tag.estimate.x, 0.05, view.tag.estimate.y);
@@ -186,12 +186,12 @@ export const createFloorScene: SceneFactory = (hooks) => {
       camera.position.set(Math.sin(swing) * 46 * far, 34 * far, Math.cos(swing) * 38 * far);
       camera.lookAt(0, -4 * far, 1);
       const narrow = hooks.narrow();
-      for (const view of tags) {
+      for (const view of views) {
         const { estimate, truth } = view.tag;
         view.dot.position.set(estimate.x, 0.42, estimate.y);
         view.halo.position.set(truth.x, 0.03, truth.y);
-        hooks.place(view.label, view.dot.position.x, view.dot.position.y, view.dot.position.z);
         hooks.write(view.label, `tag ${view.tag.id} · ±${estimate.distanceTo(truth).toFixed(1)} m`);
+        hooks.place(view.label, view.dot.position.x, view.dot.position.y, view.dot.position.z);
         if (narrow) {
           view.label.style.display = 'none';
         }

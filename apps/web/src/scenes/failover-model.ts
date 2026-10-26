@@ -1,23 +1,23 @@
 import { MathUtils } from 'three';
-import data from './failover-data.json';
+import failoverData from './failover-data.json';
 import { commonLength, sampleAt } from './series';
 
-export const failoverData = data;
+export { failoverData };
 
-type FailoverLane = (typeof data.lanes)[number];
+type FailoverLane = (typeof failoverData.lanes)[number];
 
 const bins = commonLength(
-  data.lanes.flatMap((lane) => [lane.requests, lane.served, lane.failed, lane.retried]),
+  failoverData.lanes.flatMap((lane) => [lane.requests, lane.served, lane.failed, lane.retried]),
 );
 
-export const failoverEnd = data.fromMs + bins * data.binMs;
+export const failoverEnd = failoverData.fromMs + bins * failoverData.binMs;
 
 function binAt(ms: number): number {
-  return MathUtils.clamp(Math.floor((ms - data.fromMs) / data.binMs), 0, bins - 1);
+  return MathUtils.clamp(Math.floor((ms - failoverData.fromMs) / failoverData.binMs), 0, bins - 1);
 }
 
 export function laneAt(lane: FailoverLane, ms: number) {
-  const position = MathUtils.clamp((ms - data.fromMs) / data.binMs, 0, bins);
+  const position = MathUtils.clamp((ms - failoverData.fromMs) / failoverData.binMs, 0, bins);
   const whole = Math.floor(position);
   let lost = 0;
   let retried = 0;
@@ -45,7 +45,7 @@ export function faultAt(ms: number): 'before' | 'down' | 'cleared' {
   if (ms < 0) {
     return 'before';
   }
-  return ms < data.clearMs ? 'down' : 'cleared';
+  return ms < failoverData.clearMs ? 'down' : 'cleared';
 }
 
 export function stateOfA(lane: FailoverLane, ms: number): 'up' | 'picked' | 'out' | 'back' {
@@ -67,9 +67,9 @@ export type Fate = (typeof fates)[number];
 export function countsBetween(lane: FailoverLane, from: number, to: number): Record<Fate, number> {
   const counts = { served: 0, failed: 0, retried: 0, other: 0 };
   for (let bin = binAt(from); bin <= binAt(to - 1e-6); bin += 1) {
-    const start = data.fromMs + bin * data.binMs;
-    const overlap = Math.max(0, Math.min(to, start + data.binMs) - Math.max(from, start));
-    const share = overlap / data.binMs;
+    const start = failoverData.fromMs + bin * failoverData.binMs;
+    const overlap = Math.max(0, Math.min(to, start + failoverData.binMs) - Math.max(from, start));
+    const share = overlap / failoverData.binMs;
     const served = sampleAt(lane.served, bin);
     const failed = sampleAt(lane.failed, bin);
     const retried = sampleAt(lane.retried, bin);

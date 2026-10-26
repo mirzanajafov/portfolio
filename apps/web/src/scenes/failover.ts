@@ -17,15 +17,15 @@ import {
 import {
   countsBetween,
   failoverData,
-  faultAt,
   failoverEnd,
+  faultAt,
   type Fate,
   fates,
   laneAt,
   stateOfA,
 } from './failover-model';
-import { aim, frame, viewFrom } from './framing';
 import { coloredInstances } from './colored-instances';
+import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatNumber } from './readout';
 import type { SceneFactory } from './types';

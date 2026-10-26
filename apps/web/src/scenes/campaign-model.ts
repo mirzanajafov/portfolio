@@ -1,10 +1,10 @@
-import data from './campaign-data.json';
+import campaignData from './campaign-data.json';
 
-export const campaignData = data;
+export { campaignData };
 
-export type Run = (typeof data.runs)[number];
+export type Run = (typeof campaignData.runs)[number];
 
-const [first] = data.runs;
+const [first] = campaignData.runs;
 if (!first) {
   throw new Error('the campaign data has no runs');
 }
@@ -17,9 +17,9 @@ export const campaignPace = {
   clearSeconds: 0.8,
 };
 
-const runCount = data.runs.length;
+const runCount = campaignData.runs.length;
 const runsEnd = runCount / campaignPace.runsPerSecond;
-export const mutantsEnd = runsEnd + data.mutants.length * campaignPace.mutantSeconds;
+export const mutantsEnd = runsEnd + campaignData.mutants.length * campaignPace.mutantSeconds;
 export const holdEnd = mutantsEnd + campaignPace.holdSeconds;
 export const campaignLoop = holdEnd + campaignPace.clearSeconds;
 
@@ -36,18 +36,19 @@ function countUpTo(seconds: number, appears: (index: number) => number, total: n
 
 export function campaignAt(seconds: number) {
   const shownRuns = countUpTo(seconds, runAppears, runCount);
-  const shownMutants = countUpTo(seconds, mutantAppears, data.mutants.length);
-  const shown = data.runs.slice(0, shownRuns);
+  const shownMutants = countUpTo(seconds, mutantAppears, campaignData.mutants.length);
+  const shown = campaignData.runs.slice(0, shownRuns);
   const total = (pick: (run: Run) => number) => shown.reduce((sum, run) => sum + pick(run), 0);
   return {
     shownRuns,
     shownMutants,
     run: shown.at(-1) ?? firstRun,
-    mutant: data.mutants[shownMutants - 1],
+    mutant: campaignData.mutants[shownMutants - 1],
     journeys: total((run) => run.journeys),
     kills: total((run) => run.kills),
     crashes: total((run) => run.postgres + run.kafka),
     violations: total((run) => run.violations),
-    caught: data.mutants.slice(0, shownMutants).filter((mutant) => mutant.caughtIn !== null).length,
+    caught: campaignData.mutants.slice(0, shownMutants).filter((mutant) => mutant.caughtIn !== null)
+      .length,
   };
 }

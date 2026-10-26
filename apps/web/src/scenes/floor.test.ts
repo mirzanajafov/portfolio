@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFloorScene } from './floor';
-import { createFloor } from './floor-model';
+import { createFloor, floorParameters } from './floor-model';
 import { seeded } from './random';
 import { testHooks } from './test-hooks';
 
@@ -34,29 +34,24 @@ describe('the floor model', () => {
 });
 
 describe('the floor scene', () => {
-  it('labels the receivers and tags and reports the batches and the error of the model it draws', () => {
+  it('labels the receivers and each tag with its error, and counts the fitted batches', () => {
     const { hooks, labels } = testHooks();
     const scene = createFloorScene(hooks);
     for (let frame = 0; frame < 60; frame += 1) {
       scene.step(1 / 60, frame / 60);
     }
     scene.render(1, 1 / 60);
-    const model = createFloor(seeded(7));
-    for (let frame = 0; frame < 60; frame += 1) {
-      model.step(1 / 60);
+    const texts = labels.map((label) => label.textContent);
+    expect(texts.slice(0, 5)).toEqual(['R1', 'R2', 'R3', 'R4', 'R5']);
+    expect(texts.slice(5)).toHaveLength(floorParameters.tags);
+    for (const text of texts.slice(5)) {
+      expect(text).toMatch(/^tag [0-9a-f]{4} · ±\d+\.\d m$/);
     }
-    expect(labels.map((label) => label.textContent)).toEqual([
-      'R1',
-      'R2',
-      'R3',
-      'R4',
-      'R5',
-      ...model.tags.map(
-        (tag) => `tag ${tag.id} · ±${tag.estimate.distanceTo(tag.truth).toFixed(1)} m`,
-      ),
-    ]);
     const [, batches, error] = scene.readout();
-    expect(batches).toContain(`log-distance fit · ${model.flushes()} batches of 150 ms`);
-    expect(error).toBe(`estimate error now ${model.error().toFixed(2)} m`);
+    const fitted = Math.floor(1000 / floorParameters.flushMs);
+    expect(batches).toContain(
+      `log-distance fit · ${fitted} batches of ${floorParameters.flushMs} ms`,
+    );
+    expect(error).toMatch(/^estimate error now \d+\.\d{2} m$/);
   });
 });

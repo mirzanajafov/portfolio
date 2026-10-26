@@ -27,8 +27,8 @@ import {
   runAppears,
   type Run,
 } from './campaign-model';
-import { aim, viewFrom } from './framing';
 import { coloredInstances } from './colored-instances';
+import { aim, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatClock, formatNumber, plural } from './readout';
 import type { SceneFactory } from './types';
@@ -131,9 +131,9 @@ export const createCampaignScene: SceneFactory = (hooks) => {
   const mutantFrame = new LineSegments(new EdgesGeometry(mutantFloorGeometry), frameMaterial);
   mutantFrame.position.copy(mutantFloor.position);
 
-  const shaded = () => new MeshBasicMaterial({ vertexColors: true });
-  const runTiles = coloredInstances(boxGeometry, shaded(), runs.length);
-  const mutantTiles = coloredInstances(boxGeometry, shaded(), mutants.length);
+  const tileMaterial = new MeshBasicMaterial({ vertexColors: true });
+  const runTiles = coloredInstances(boxGeometry, tileMaterial, runs.length);
+  const mutantTiles = coloredInstances(boxGeometry, tileMaterial, mutants.length);
   const sparkMesh = coloredInstances(
     new BoxGeometry(0.14, 0.14, 0.14),
     new MeshBasicMaterial(),
