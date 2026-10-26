@@ -18,6 +18,14 @@ describe('webglAvailable', () => {
     expect(loseContext).toHaveBeenCalledTimes(1);
   });
 
+  it('says no when asking for a context throws, as some blockers make it', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    const { webglAvailable } = await import('./webgl');
+    expect(webglAvailable()).toBe(false);
+  });
+
   it('says no when the browser has no WebGL2', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     const { webglAvailable } = await import('./webgl');

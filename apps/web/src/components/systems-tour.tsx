@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ViewTransition } from 'react';
-import type { DemoName, Fact, UsedProject } from '@portfolio/content';
+import type { Fact, UsedProject } from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
-import { TourScroller } from '@/components/tour-scroller';
+import { TourScroller, type TourDemo } from '@/components/tour-scroller';
 import { factKindLabel } from '@/lib/format';
 import type { GraphApp } from '@/scenes/systems-graph';
 
@@ -17,7 +17,7 @@ export type TourStop = {
   code?: string;
   caseStudy?: string;
   privateSource?: boolean;
-  demo?: { scene: DemoName; caption: string };
+  demo?: TourDemo;
 };
 
 type Intro = { title: string; body: string };

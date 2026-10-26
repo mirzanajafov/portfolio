@@ -2,10 +2,12 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { ScenePlayer } from '@/components/scene-player';
-import type { TourStop } from '@/components/systems-tour';
+import type { DemoName } from '@portfolio/content';
 import type { GraphApp } from '@/scenes/systems-graph';
 
-type ScrollStop = { id: string; headingId: string; demo?: TourStop['demo']; card: ReactNode };
+export type TourDemo = { scene: DemoName; caption: string };
+
+type ScrollStop = { id: string; headingId: string; demo?: TourDemo; card: ReactNode };
 
 const settleMs = 500;
 
@@ -48,9 +50,9 @@ export function TourScroller({
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
-      const measured = entries.flatMap(({ target }): [string, number][] => {
+      const measured = entries.flatMap(({ target, borderBoxSize: [box] }): [string, number][] => {
         const id = demoCards.current.get(target);
-        return id === undefined ? [] : [[id, Math.round(target.getBoundingClientRect().height)]];
+        return id === undefined || !box ? [] : [[id, Math.round(box.blockSize)]];
       });
       setCards((previous) =>
         measured.every(([id, height]) => previous[id] === height)

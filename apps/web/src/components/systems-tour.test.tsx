@@ -173,8 +173,8 @@ describe('SystemsTour', () => {
     expect(observed).toEqual([screen.getByRole('article', { name: 'Matchium' })]);
     arriveAt('matchium');
     const card = observed[0]!;
-    card.getBoundingClientRect = () => ({ height: 401.4 }) as DOMRect;
-    act(() => measure([{ target: card } as unknown as ResizeObserverEntry], {} as ResizeObserver));
+    const entry = { target: card, borderBoxSize: [{ blockSize: 401.4, inlineSize: 320 }] };
+    act(() => measure([entry as unknown as ResizeObserverEntry], {} as ResizeObserver));
     const layer = screen.getByTestId('scene-population').parentElement!;
     expect(layer.style.getPropertyValue('--card-height')).toBe('401px');
   });
