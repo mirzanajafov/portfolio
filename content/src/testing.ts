@@ -30,7 +30,7 @@ type ProjectFolder = {
   caseStudy?: CaseStudyFile;
 };
 
-export const phoneNumber = /\+\d[\d\s().-]{7,}\d/;
+export const phoneNumber = /(?:(?<!\w)\+|\b0)(?:[\s().-]*\d){9,}/;
 
 export function aFact(overrides: Partial<FactFile> = {}): FactFile {
   return {

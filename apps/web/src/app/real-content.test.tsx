@@ -1,4 +1,5 @@
 import { content, projectsWithCaseStudy } from '@portfolio/content';
+import { phoneNumber } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import CvPage from './cv/page';
@@ -12,16 +13,18 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('the real content', () => {
-  it('renders the home page with a tour stop for every project', () => {
-    render(<Home />);
+  it('renders the home page with a tour stop for every project and no phone number', () => {
+    const { container } = render(<Home />);
+    expect(container.textContent).not.toMatch(phoneNumber);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(content.profile.name);
     for (const project of content.projects) {
       expect(screen.getByRole('heading', { level: 3, name: project.name })).toBeInTheDocument();
     }
   });
 
-  it('renders the CV with every role', () => {
-    render(<CvPage />);
+  it('renders the CV with every role and no phone number', () => {
+    const { container } = render(<CvPage />);
+    expect(container.textContent).not.toMatch(phoneNumber);
     expect(
       screen.getByRole('heading', { level: 1, name: content.profile.name }),
     ).toBeInTheDocument();
