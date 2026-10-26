@@ -14,8 +14,8 @@ export function gaussian(random: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
 }
 
-export function pick<T>(random: () => number, items: readonly T[]): T {
-  const item = items[Math.floor(random() * items.length)];
+export function pick<T>(random: () => number, items: readonly T[], among = items.length): T {
+  const item = items[Math.floor(random() * among)];
   if (item === undefined) {
     throw new RangeError('there is nothing to pick from');
   }

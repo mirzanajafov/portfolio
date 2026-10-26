@@ -8,7 +8,7 @@ export type GraphNode = {
   position: [number, number, number];
 };
 
-export type GraphEdge = { from: GraphNode; to: GraphNode; app: string };
+export type GraphEdge = { from: GraphNode; to: GraphNode };
 
 type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; apps: GraphApp[] };
 
@@ -41,7 +41,7 @@ export function buildGraph(apps: GraphApp[]): Graph {
       position: [ax, ay, az],
     };
     nodes.push(appNode);
-    edges.push({ from: server, to: appNode, app: app.id });
+    edges.push({ from: server, to: appNode });
     const parts = [...new Set(app.stack)];
     parts.forEach((part, partIndex) => {
       const spread = parts.length === 1 ? 0 : (partIndex / (parts.length - 1) - 0.5) * 2.4;
@@ -58,7 +58,7 @@ export function buildGraph(apps: GraphApp[]): Graph {
         ],
       };
       nodes.push(partNode);
-      edges.push({ from: appNode, to: partNode, app: app.id });
+      edges.push({ from: appNode, to: partNode });
     });
   });
   return { nodes, edges, apps };

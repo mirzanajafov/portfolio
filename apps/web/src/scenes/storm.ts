@@ -160,11 +160,8 @@ export const createStormScene: SceneFactory = (hooks) => {
         const now = stormSample(cage.series, whole);
         if (whole > lastWhole) {
           const respawned = now.spawns - stormSample(cage.series, lastWhole).spawns;
-          if (respawned > 0 && now.processes > 0) {
-            const alive = cage.slots.slice(0, now.processes);
-            for (let k = 0; k < respawned; k += 1) {
-              pick(random, alive).scale = 0;
-            }
+          for (let k = 0; k < respawned && now.processes > 0; k += 1) {
+            pick(random, cage.slots, now.processes).scale = 0;
           }
         }
         cage.slots.forEach((slot, index) => {

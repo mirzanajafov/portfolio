@@ -12,7 +12,7 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
-import { seeded } from './random';
+import { pick, seeded } from './random';
 import {
   buildGraph,
   focusPose,
@@ -130,11 +130,11 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
     if (!palette) {
       return;
     }
-    const route = routes[Math.floor(random() * routes.length)];
-    if (!route) {
+    if (routes.length === 0) {
       return;
     }
-    const next = route.parts[Math.floor(random() * route.parts.length)];
+    const route = pick(random, routes);
+    const next = route.parts.length > 0 ? pick(random, route.parts) : undefined;
     const mesh = new Mesh(
       geometries.pulse,
       new MeshBasicMaterial({ color: palette.accent, transparent: true }),
@@ -181,7 +181,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
         start.fromArray(pulse.edge.from.position);
         end.fromArray(pulse.edge.to.position);
         pulse.mesh.position.lerpVectors(start, end, Math.min(pulse.t, 1));
-        pulse.mesh.material.opacity = inFocus(pulse.edge.app) ? 1 : 0.06;
+        pulse.mesh.material.opacity = inFocus(pulse.edge.to.app) ? 1 : 0.06;
         if (pulse.t >= 1 && pulse.next) {
           pulse.edge = pulse.next;
           pulse.next = undefined;
