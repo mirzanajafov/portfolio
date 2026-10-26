@@ -17,6 +17,7 @@ const play = vi.fn(async () => {
 
 beforeEach(() => {
   handles.length = 0;
+  play.mockClear();
 });
 
 vi.mock('@/scenes/player', () => ({ play }));
@@ -47,8 +48,7 @@ describe('ScenePlayer', () => {
         { name: 'storm' },
         expect.anything(),
         expect.anything(),
-        expect.anything(),
-        expect.anything(),
+        expect.objectContaining({ shown: false }),
       );
     });
     const [floor, storm] = handles;

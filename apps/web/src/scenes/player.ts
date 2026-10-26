@@ -48,9 +48,14 @@ export async function play(
   spec: SceneSpec,
   canvas: HTMLCanvasElement,
   labels: HTMLElement,
-  onReadout: (lines: string[]) => void,
-  signal: AbortSignal,
+  options: {
+    onReadout: (lines: string[]) => void;
+    signal: AbortSignal;
+    playing: boolean;
+    shown: boolean;
+  },
 ): Promise<PlayerHandle> {
+  const { onReadout, signal } = options;
   const create = await load(spec);
   signal.throwIfAborted();
   const renderer = new WebGLRenderer({
@@ -116,9 +121,8 @@ export async function play(
     instance.step(0.05, i * 0.05);
   }
 
-  let playing = true;
+  let { playing, shown } = options;
   let visible = true;
-  let shown = true;
   let clock = 0;
   let last = performance.now();
   let readoutAt = 0;

@@ -21,7 +21,7 @@ import data from './failover-data.json';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatNumber } from './readout';
-import { sampleAt } from './series';
+import { commonLength, sampleAt } from './series';
 import type { Palette, SceneFactory } from './types';
 
 const failoverParameters = {
@@ -45,21 +45,9 @@ type FailoverLane = (typeof data.lanes)[number];
 
 export const failoverData = data;
 
-const [firstLane] = data.lanes;
-if (!firstLane) {
-  throw new Error('the failover data has no lanes');
-}
-const bins = firstLane.requests.length;
-if (
-  bins === 0 ||
-  data.lanes.some((lane) =>
-    [lane.requests, lane.served, lane.failed, lane.retried].some(
-      (series) => series.length !== bins,
-    ),
-  )
-) {
-  throw new Error('every failover lane needs a value for every bin');
-}
+const bins = commonLength(
+  data.lanes.flatMap((lane) => [lane.requests, lane.served, lane.failed, lane.retried]),
+);
 const endMs = data.fromMs + bins * data.binMs;
 
 export function speedAt(ms: number): number {
@@ -417,13 +405,13 @@ export const createFailoverScene: SceneFactory = (hooks) => {
           }
           const broken = index === 0 && down;
           const out = index === 0 && state === 'out';
-          let ring = palette.signal;
+          let ringColor = palette.signal;
           if (broken) {
-            ring = palette.accent;
+            ringColor = palette.accent;
           } else if (out && !down) {
-            ring = palette.muted;
+            ringColor = palette.muted;
           }
-          portal.ringMaterial.color.copy(ring);
+          portal.ringMaterial.color.copy(ringColor);
           portal.discMaterial.color.copy(broken ? palette.accent : palette.signal);
         });
         const lost = `${formatNumber(now.lost)} lost`;

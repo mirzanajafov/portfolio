@@ -11,7 +11,7 @@ import {
 } from 'three';
 import data from './storm-data.json';
 import { pick, seeded } from './random';
-import { sampleAt } from './series';
+import { commonLength, sampleAt } from './series';
 import type { Palette, SceneFactory } from './types';
 
 export const stormParameters = {
@@ -32,17 +32,19 @@ export const stormData = data;
 
 const boxSeries = data.policies.find((series) => series.id === 'box');
 const poolSeries = data.policies.find((series) => series.id === 'pool');
-if (
-  data.policies.length !== 2 ||
-  !boxSeries ||
-  !poolSeries ||
-  [boxSeries, poolSeries].some((series) =>
-    [series.processes, series.running, series.goodput, series.spawns, series.backlogSeconds].some(
-      (values) => values.length === 0 || values.length !== boxSeries.processes.length,
-    ),
-  )
-) {
-  throw new Error('the storm data needs the box and the pool, with a value for every second');
+if (data.policies.length !== 2 || !boxSeries || !poolSeries) {
+  throw new Error('the storm data needs the box and the pool');
+}
+const columns = (series: StormSeries) => [
+  series.processes,
+  series.running,
+  series.goodput,
+  series.spawns,
+  series.backlogSeconds,
+];
+const stormSeconds = commonLength([...columns(boxSeries), ...columns(poolSeries)]);
+if (Math.max(...boxSeries.processes, ...poolSeries.processes) > data.machine.processLimit) {
+  throw new Error('the storm data runs more processes than the machine has slots');
 }
 
 export function stormSample(series: StormSeries, second: number) {
@@ -69,7 +71,6 @@ export const createStormScene: SceneFactory = (hooks) => {
   const group = new Group();
   scene.add(group);
   const random = seeded(11);
-  const length = boxSeries.processes.length;
 
   const cageGeometry = new EdgesGeometry(new BoxGeometry(p.cageWidth, p.cageHeight, p.cageDepth));
   const slotGeometry = new BoxGeometry(1.1, 1.1, 1.1);
@@ -160,7 +161,7 @@ export const createStormScene: SceneFactory = (hooks) => {
     },
     step(dt) {
       second += dt * p.secondsPerSecond;
-      if (second >= length) {
+      if (second >= stormSeconds) {
         second = 0;
         lastWhole = 0;
       }

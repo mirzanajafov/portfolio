@@ -72,7 +72,9 @@ export function ScenePlayer({
   const playing = choice ?? !reducedMotion;
   const start = useEffectEvent(
     (canvas: HTMLCanvasElement, labels: HTMLElement, signal: AbortSignal) =>
-      import('@/scenes/player').then(({ play }) => play(scene, canvas, labels, setReadout, signal)),
+      import('@/scenes/player').then(({ play }) =>
+        play(scene, canvas, labels, { onReadout: setReadout, signal, playing, shown }),
+      ),
   );
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export function ScenePlayer({
     let started: PlayerHandle | null = null;
     Promise.resolve()
       .then(() => {
+        abort.signal.throwIfAborted();
         if (!webglAvailable()) {
           throw new Error('no WebGL');
         }
