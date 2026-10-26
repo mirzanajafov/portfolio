@@ -5,11 +5,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
-import { Clock } from '../src/common/clock.service.js';
+import { ClockService } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
-class FixedClock extends Clock {
+class FixedClock extends ClockService {
   current = new Date('2026-10-02T12:00:00Z');
   override now(): Date {
     return this.current;
@@ -33,7 +33,7 @@ async function startApp(overrides: Record<string, string> = {}) {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV)
     .useValue(parseEnv({ ...process.env, ...overrides }))
-    .overrideProvider(Clock)
+    .overrideProvider(ClockService)
     .useValue(clock)
     .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>();

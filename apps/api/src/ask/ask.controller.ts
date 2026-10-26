@@ -1,9 +1,18 @@
-import { BadRequestException, Body, Controller, Post, Req, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  HttpException,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
-import { AskLimits } from './ask-limits.service.js';
+import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
 
@@ -17,7 +26,7 @@ type AskRequest = z.infer<typeof askRequestSchema>;
 export class AskController {
   constructor(
     private readonly ask: AskService,
-    private readonly limits: AskLimits,
+    private readonly limits: AskLimitsService,
     private readonly askLog: AskLogService,
   ) {}
 
@@ -28,22 +37,20 @@ export class AskController {
     @Res() res: Response,
   ): Promise<void> {
     if (!req.ip) {
-      throw new BadRequestException('the caller has no address');
+      throw new BadRequestException('the client has no address');
     }
-    const client = this.limits.callerOf(req.ip);
+    const client = this.limits.clientOf(req.ip);
     const verdict = await this.limits.admit(client);
     if (!verdict.allowed) {
-      res
-        .status(429)
-        .set('Retry-After', String(verdict.retryAfterSeconds))
-        .json({ message: 'too many questions', retryAfterSeconds: verdict.retryAfterSeconds });
-      return;
+      res.set('Retry-After', String(verdict.retryAfterSeconds));
+      throw new HttpException(
+        { message: 'too many questions', retryAfterSeconds: verdict.retryAfterSeconds },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     const abort = new AbortController();
-    res.on('close', () => {
-      abort.abort();
-    });
+    res.on('close', () => abort.abort());
     res.status(200).set({
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-store',
@@ -53,17 +60,21 @@ export class AskController {
 
     const started = performance.now();
     const { events, outcome } = this.ask.answer(question, abort.signal);
-    for await (const event of events) {
-      if (!abort.signal.aborted) {
+    try {
+      for await (const event of events) {
+        if (abort.signal.aborted) {
+          break;
+        }
         res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
       }
+    } finally {
+      res.end();
+      await this.askLog.record({
+        client,
+        question,
+        ...outcome,
+        durationMs: Math.round(performance.now() - started),
+      });
     }
-    res.end();
-    await this.askLog.record({
-      client,
-      question,
-      ...outcome,
-      durationMs: Math.round(performance.now() - started),
-    });
   }
 }

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { RateLimiter } from './rate-limiter.service.js';
+import { RateLimiterService } from './rate-limiter.service.js';
 
 @Module({
-  providers: [RateLimiter],
-  exports: [RateLimiter],
+  providers: [RateLimiterService],
+  exports: [RateLimiterService],
 })
 export class RateLimitModule {}

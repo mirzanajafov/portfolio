@@ -14,7 +14,7 @@ const denied = [
   /\bi (accept|agree to)\b/i,
 ];
 
-const tag = /<\/?[a-z][^<>]*>/gi;
+const tag = /<[^\s<>][^<>]*>/g;
 
 function withoutMarkup(text: string, gap: string): string {
   return text.replace(tag, gap).replace(/\s+/g, ' ').trim();
@@ -56,7 +56,7 @@ export function gateSentence(
     return { ok: false, reason: 'unsupported' };
   }
   const text = withoutMarkup(sentence.text, ' ');
-  if (!text) {
+  if (words(text).length === 0) {
     return { ok: false, reason: 'empty' };
   }
   const readings = [text, withoutMarkup(sentence.text, '')];

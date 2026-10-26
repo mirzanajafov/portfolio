@@ -1,5 +1,5 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { Clock } from '../common/clock.service.js';
+import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -11,13 +11,13 @@ export type Verdict = { allowed: boolean; retryAfterSeconds: number };
 type Limit = { key: string; limit: number; windowSeconds: number };
 
 @Injectable()
-export class RateLimiter implements OnModuleInit, OnModuleDestroy {
-  private readonly log = new Logger(RateLimiter.name);
+export class RateLimiterService implements OnModuleInit, OnModuleDestroy {
+  private readonly log = new Logger(RateLimiterService.name);
   private stop?: () => void;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly clock: Clock,
+    private readonly clock: ClockService,
   ) {}
 
   onModuleInit(): void {
@@ -56,7 +56,7 @@ export class RateLimiter implements OnModuleInit, OnModuleDestroy {
     return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
   }
 
-  async cleanup(): Promise<void> {
+  private async cleanup(): Promise<void> {
     const cutoff = new Date(this.clock.now().getTime() - keepMs);
     await this.prisma.rateLimit.deleteMany({ where: { windowStart: { lt: cutoff } } });
   }

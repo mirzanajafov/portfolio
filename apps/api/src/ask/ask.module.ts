@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { content } from '@portfolio/content';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
 import { ANSWER_ENGINE } from './answer-engine.js';
-import { AskLimits } from './ask-limits.service.js';
+import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
 import { AskController } from './ask.controller.js';
 import { AskService, CONTACT_EMAIL } from './ask.service.js';
@@ -21,7 +21,7 @@ import { Knowledge, buildKnowledge } from './knowledge.js';
     },
     { provide: CONTACT_EMAIL, useValue: content.profile.links.email },
     AskService,
-    AskLimits,
+    AskLimitsService,
     AskLogService,
   ],
 })

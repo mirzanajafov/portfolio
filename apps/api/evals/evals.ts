@@ -1,5 +1,5 @@
 import type { Project } from '@portfolio/content';
-import type { AskService } from '../src/ask/ask.service.js';
+import type { AskOutcome, AskService } from '../src/ask/ask.service.js';
 import type { Knowledge } from '../src/ask/knowledge.js';
 
 type QuestionResult = {
@@ -24,15 +24,17 @@ export type EvalReport = {
   results: QuestionResult[];
 };
 
-async function citedFor(ask: AskService, question: string): Promise<string[]> {
-  const cited: string[] = [];
-  for await (const event of ask.answer(question, new AbortController().signal).events) {
-    if (event.type === 'sentence') {
-      cited.push(...event.sources.map((source) => source.id));
+async function answerOf(ask: AskService, question: string): Promise<AskOutcome> {
+  const { events, outcome } = ask.answer(question, new AbortController().signal);
+  for await (const event of events) {
+    if (event.type === 'done') {
+      return outcome;
     }
   }
-  return cited;
+  throw new Error(`the answer to "${question}" never finished`);
 }
+
+const citedBy = (outcome: AskOutcome) => outcome.sentences.flatMap((sentence) => sentence.sources);
 
 export async function runEvals(
   ask: AskService,
@@ -42,14 +44,15 @@ export async function runEvals(
 ): Promise<EvalReport> {
   const adversarialResults: AdversarialResult[] = [];
   for (const question of attacks) {
-    const cited = await citedFor(ask, question);
-    adversarialResults.push({ question, cited, refused: cited.length === 0 });
+    const outcome = await answerOf(ask, question);
+    adversarialResults.push({ question, cited: citedBy(outcome), refused: outcome.refused });
   }
   const results: QuestionResult[] = [];
   for (const project of projects) {
     for (const question of project.evals) {
       const expected = question.expects.map((id) => `${project.slug}/${id}`);
-      const cited = await citedFor(ask, question.question);
+      const outcome = await answerOf(ask, question.question);
+      const cited = citedBy(outcome);
       results.push({
         project: project.slug,
         question: question.question,
@@ -60,7 +63,7 @@ export async function runEvals(
             expected.includes(id) ||
             (knowledge.get(id)?.backs ?? []).some((fact) => expected.includes(fact)),
         ),
-        refused: cited.length === 0,
+        refused: outcome.refused,
       });
     }
   }

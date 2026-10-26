@@ -68,14 +68,21 @@ describe('gateSentence', () => {
     });
   });
 
-  it('withholds a sourced sentence that is nothing but markup', () => {
-    expect(gateSentence(sourced('<break time="1s"/>'), 'q', 0)).toEqual({
-      ok: false,
-      reason: 'empty',
-    });
-  });
+  it.each(['<break time="1s"/>', '<!-- only a comment -->', '.', '<break time="1s"/> ...'])(
+    'withholds a sourced sentence with no words in it: %s',
+    (text) => {
+      expect(gateSentence(sourced(text), 'q', 0)).toEqual({ ok: false, reason: 'empty' });
+    },
+  );
 
-  it('keeps comparison signs, which are prose and not markup', () => {
+  it.each(['I <!-- -->accept the offer.', 'I <?x?>accept the offer.', 'I <_/>accept the offer.'])(
+    'denies a commitment that comments or other markup hide: %s',
+    (text) => {
+      expect(gateSentence(sourced(text), 'q', 0)).toEqual({ ok: false, reason: 'denied' });
+    },
+  );
+
+  it('keeps comparison signs followed by a space, which are prose and not markup', () => {
     const text = 'p99 stays < 200 ms while throughput is > 2,000 requests a second.';
     expect(gateSentence(sourced(text), 'q', 0)).toEqual({ ok: true, text });
   });

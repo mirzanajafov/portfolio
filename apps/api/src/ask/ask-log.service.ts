@@ -5,7 +5,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
-import { Clock } from '../common/clock.service.js';
+import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { ENV, type Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -23,7 +23,7 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly clock: Clock,
+    private readonly clock: ClockService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 

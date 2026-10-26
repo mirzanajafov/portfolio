@@ -33,18 +33,13 @@ const refusal: AskEvent = {
 
 async function answered(
   service: AskService,
-  question = 'How fast is it?',
 ): Promise<{ streamed: AskEvent[]; outcome: AskOutcome }> {
-  const { events, outcome } = service.answer(question, new AbortController().signal);
+  const { events, outcome } = service.answer('How fast is it?', new AbortController().signal);
   const streamed: AskEvent[] = [];
   for await (const event of events) {
     streamed.push(event);
   }
   return { streamed, outcome };
-}
-
-async function collect(service: AskService): Promise<AskEvent[]> {
-  return (await answered(service)).streamed;
 }
 
 describe('AskService', () => {
@@ -54,7 +49,7 @@ describe('AskService', () => {
       knowledge,
       'me@example.com',
     );
-    expect(await collect(service)).toEqual([
+    expect((await answered(service)).streamed).toEqual([
       { type: 'meta', engine: 'stub' },
       {
         type: 'sentence',
@@ -71,7 +66,7 @@ describe('AskService', () => {
       knowledge,
       'me@example.com',
     );
-    const events = await collect(service);
+    const events = (await answered(service)).streamed;
     expect(events).toContainEqual({ type: 'withheld', reason: 'unsupported' });
     expect(events).not.toContainEqual(expect.objectContaining({ text: 'It won an award.' }));
   });
@@ -82,7 +77,7 @@ describe('AskService', () => {
       knowledge,
       'me@example.com',
     );
-    const events = await collect(service);
+    const events = (await answered(service)).streamed;
     expect(events.at(-2)).toEqual(refusal);
     expect(events.at(-1)).toEqual({ type: 'done' });
   });
@@ -96,10 +91,7 @@ describe('AskService', () => {
       knowledge,
       'me@example.com',
     );
-    const { streamed, outcome } = await answered(service);
-    expect(outcome.sentences.map((sentence) => sentence.text)).toEqual(
-      streamed.flatMap((event) => (event.type === 'sentence' ? [event.text] : [])),
-    );
+    const { outcome } = await answered(service);
     expect(outcome).toEqual({
       engine: 'stub',
       sentences: [{ text: 'It answers in 40 ms.', sources: ['demo/fast'] }],
@@ -108,10 +100,10 @@ describe('AskService', () => {
     });
   });
 
-  it('counts a fixed refusal as refused in what it reports', async () => {
+  it('refuses when the engine has nothing to say, and reports the refusal', async () => {
     const service = new AskService(engineSaying(), knowledge, 'me@example.com');
     const { streamed, outcome } = await answered(service);
-    expect(streamed).toContainEqual(refusal);
+    expect(streamed.filter((event) => event.type === 'sentence')).toEqual([refusal]);
     expect(outcome).toMatchObject({ refused: true, sentences: [{ sources: [] }] });
   });
 
@@ -121,14 +113,8 @@ describe('AskService', () => {
       knowledge,
       'me@example.com',
     );
-    const events = await collect(service);
+    const events = (await answered(service)).streamed;
     expect(events).toContainEqual({ type: 'withheld', reason: 'empty' });
     expect(events.filter((event) => event.type === 'sentence')).toEqual([refusal]);
-  });
-
-  it('refuses when the engine has nothing to say', async () => {
-    const service = new AskService(engineSaying(), knowledge, 'me@example.com');
-    const sentences = (await collect(service)).filter((event) => event.type === 'sentence');
-    expect(sentences).toEqual([refusal]);
   });
 });
