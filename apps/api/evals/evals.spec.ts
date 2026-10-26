@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { content } from '@portfolio/content';
+import { content, type Project } from '@portfolio/content';
 import { aProject, contentOf } from '@portfolio/content/testing';
 import { assert, beforeAll, describe, expect, it } from 'vitest';
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
@@ -49,24 +49,30 @@ describe('the keyword baseline on the real eval set', () => {
   });
 });
 
-const [project] = (
-  await contentOf({
-    projects: [
-      aProject({
-        slug: 'demo',
-        evals: [
-          { question: 'right', expects: ['fast'] },
-          { question: 'also right', expects: ['fast'] },
-          { question: 'wrong', expects: ['fast'] },
-          { question: 'also wrong', expects: ['fast'] },
-        ],
-      }),
-    ],
-  })
-).projects;
-assert(project);
-
 describe('runEvals', () => {
+  const answered = new Set(['right', 'also right', 'attack']);
+  let project: Project;
+
+  beforeAll(async () => {
+    const [loaded] = (
+      await contentOf({
+        projects: [
+          aProject({
+            slug: 'demo',
+            evals: [
+              { question: 'right', expects: ['fast'] },
+              { question: 'also right', expects: ['fast'] },
+              { question: 'wrong', expects: ['fast'] },
+              { question: 'also wrong', expects: ['fast'] },
+            ],
+          }),
+        ],
+      })
+    ).projects;
+    assert(loaded);
+    project = loaded;
+  });
+
   const tiny = new Knowledge(
     [
       {
@@ -83,10 +89,7 @@ describe('runEvals', () => {
   const engine: AnswerEngine = {
     name: 'stub',
     async *answer(question) {
-      if (question.endsWith('right')) {
-        yield { text: 'Fast.', sourceIds: ['demo/fast'] };
-      }
-      if (question === 'attack') {
+      if (answered.has(question)) {
         yield { text: 'Fast.', sourceIds: ['demo/fast'] };
       }
     },
