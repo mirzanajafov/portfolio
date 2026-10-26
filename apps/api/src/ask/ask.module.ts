@@ -7,9 +7,7 @@ import { AskLogService } from './ask-log.service.js';
 import { AskController } from './ask.controller.js';
 import { AskService, CONTACT_EMAIL } from './ask.service.js';
 import { KeywordAnswerEngine } from './keyword-engine.js';
-import { Knowledge, buildKnowledge } from './knowledge.js';
-
-export const CONTENT = Symbol('CONTENT');
+import { CONTENT, Knowledge, buildKnowledge } from './knowledge.js';
 
 @Module({
   imports: [RateLimitModule],
