@@ -74,9 +74,6 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
       scene.add(ring);
     }
     const label = hooks.label(node.label, node.kind === 'part' ? undefined : 'node');
-    if (node.kind === 'app') {
-      label.classList.add('scene-label-app');
-    }
     return { node, mesh, ring, label };
   });
 
