@@ -1,12 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { createFailoverScene, layoutIsWide, speedAt } from './failover';
 import { failoverData, laneAt, stateOfA } from './failover-model';
 import { testHooks } from './test-hooks';
 
 const { hooks } = testHooks();
 
-const probes = failoverData.lanes.find((lane) => lane.id === 'probes')!;
-const all = failoverData.lanes.find((lane) => lane.id === 'all')!;
+const probes = failoverData.lanes.find((lane) => lane.id === 'probes');
+const all = failoverData.lanes.find((lane) => lane.id === 'all');
+assert(probes && all, 'the failover data needs both lanes');
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 const binsBetween = (values: number[], fromMs: number, toMs: number) =>
   values.slice(
@@ -37,10 +38,12 @@ describe("the failover data taken from PortalGun's crash run", () => {
       sum(binsBetween(probes.failed, 0, 1500)) / sum(binsBetween(probes.requests, 0, 1500));
     expect(down).toBeGreaterThan(0.45);
     expect(down).toBeLessThan(0.6);
-    expect(probes.events[0]).toMatchObject({ state: 'unhealthy', reason: 'probes' });
-    expect(probes.events[0]!.atMs).toBeGreaterThan(1400);
-    expect(all.events[0]!.state).toBe('ejected');
-    expect(all.events[0]!.atMs).toBeLessThan(10);
+    const [unhealthy] = probes.events;
+    const [ejected] = all.events;
+    expect(unhealthy).toMatchObject({ state: 'unhealthy', reason: 'probes' });
+    expect(unhealthy?.atMs).toBeGreaterThan(1400);
+    expect(ejected?.state).toBe('ejected');
+    expect(ejected?.atMs).toBeLessThan(10);
   });
 
   it('gives each of the three dimensions about a third before the crash', () => {
@@ -87,7 +90,9 @@ describe('the failover replay', () => {
 describe('the failover scene', () => {
   it('opens in the middle of the crash, so a still frame already shows it', () => {
     const scene = createFailoverScene(hooks);
-    for (let i = 0; i < 40; i += 1) scene.step(0.05, i * 0.05);
+    for (let i = 0; i < 40; i += 1) {
+      scene.step(0.05, i * 0.05);
+    }
     scene.render(2, 0.05);
     const [when, first, second] = scene.readout();
     expect(when).toContain('dimension a refuses every connection · slowed 4×');
@@ -100,7 +105,9 @@ describe('the failover scene', () => {
     const seen: string[] = [];
     for (let frame = 0; frame < 60 * 30; frame += 1) {
       scene.step(1 / 60, frame / 60);
-      if (frame % 30 === 0) seen.push(scene.readout()[0]!);
+      if (frame % 30 === 0) {
+        seen.push(...scene.readout().slice(0, 1));
+      }
     }
     const back = seen.findIndex((line) => line.includes('a is back after 30 s'));
     expect(back).toBeGreaterThan(0);

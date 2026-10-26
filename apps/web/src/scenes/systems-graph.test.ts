@@ -1,6 +1,6 @@
 import { content } from '@portfolio/content';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { buildGraph, focusPose, pullBack } from './systems-graph';
 
 const apps = content.projects.map((project) => ({
@@ -43,10 +43,12 @@ describe('the systems graph', () => {
     const overview = focusPose(graph, null);
     const close = focusPose(graph, 'marauder');
     const marauder = graph.nodes.find((node) => node.id === 'marauder');
-    const distance = (a: number[], b: number[]) =>
-      Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
-    expect(distance(close.position, marauder!.position)).toBeLessThan(
-      distance(overview.position, marauder!.position),
+    assert(marauder);
+    type Point = [number, number, number];
+    const distance = ([ax, ay, az]: Point, [bx, by, bz]: Point) =>
+      Math.hypot(ax - bx, ay - by, az - bz);
+    expect(distance(close.position, marauder.position)).toBeLessThan(
+      distance(overview.position, marauder.position),
     );
     expect(focusPose(graph, 'no-such-app')).toEqual(overview);
   });

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScenePlayer } from './scene-player';
 
 function handle() {
@@ -103,7 +103,9 @@ describe('ScenePlayer', () => {
       expect(second?.setShown).toHaveBeenLastCalledWith(false);
     });
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Pause motion' })[0]!);
+    const [pause] = screen.getAllByRole('button', { name: 'Pause motion' });
+    assert(pause);
+    await userEvent.click(pause);
     expect(screen.getAllByRole('button', { name: 'Play motion' })).toHaveLength(2);
     expect(first?.setPlaying).toHaveBeenLastCalledWith(false);
     expect(second?.setPlaying).toHaveBeenLastCalledWith(false);
