@@ -34,7 +34,7 @@ describe('the floor model', () => {
 });
 
 describe('the floor scene', () => {
-  it('labels each tag with its error and reports the mean of those errors', () => {
+  it('labels the receivers and each tag with its error, counts the batches and reports the mean error', () => {
     const { hooks, labels } = testHooks();
     const scene = createFloorScene(hooks);
     for (let frame = 0; frame < 60; frame += 1) {
@@ -49,15 +49,16 @@ describe('the floor scene', () => {
       return Number(match?.[1]);
     });
     expect(errors).toHaveLength(6);
-    const [, batches = '', error = ''] = scene.readout();
+    const [, batches, error = ''] = scene.readout();
     expect(batches).toContain('log-distance fit · 6 batches of 150 ms');
+    expect(error).toMatch(/^estimate error now \d+\.\d{2} m$/);
     const reported = Number(/^estimate error now (\d+\.\d{2}) m$/.exec(error)?.[1]);
     const mean = errors.reduce((sum, value) => sum + value, 0) / errors.length;
     expect(Math.abs(reported - mean)).toBeLessThan(0.055);
   });
 
   it('writes a tag label before placing it, so the label is kept in frame by its new width', () => {
-    const { hooks } = testHooks();
+    const { hooks, labels } = testHooks();
     const placed: string[] = [];
     const scene = createFloorScene({
       ...hooks,
@@ -66,10 +67,8 @@ describe('the floor scene', () => {
       },
     });
     scene.render(0, 1 / 60);
-    const tags = placed.filter((text) => text.startsWith('tag '));
+    const tags = labels.slice(5).map((label) => label.textContent);
     expect(tags).toHaveLength(6);
-    for (const text of tags) {
-      expect(text).toContain('±');
-    }
+    expect(placed.filter((text) => text.startsWith('tag '))).toEqual(tags);
   });
 });

@@ -1,8 +1,8 @@
 import {
-  type BufferGeometry,
   Color,
   DynamicDrawUsage,
   InstancedMesh,
+  type BufferGeometry,
   type MeshBasicMaterial,
 } from 'three';
 

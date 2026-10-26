@@ -24,8 +24,8 @@ import {
   holdEnd,
   mutantAppears,
   mutantsEnd,
-  type Run,
   runAppears,
+  type Run,
 } from './campaign-model';
 import { coloredInstances } from './colored-instances';
 import { aim, viewFrom } from './framing';

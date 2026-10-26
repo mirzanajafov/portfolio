@@ -1,11 +1,11 @@
 import {
-  type BufferGeometry,
   InstancedMesh,
   Line,
-  type Material,
   Mesh,
-  type Object3D,
   Points,
+  type BufferGeometry,
+  type Material,
+  type Object3D,
 } from 'three';
 
 type Drawn = Object3D & { geometry: BufferGeometry; material: Material | Material[] };

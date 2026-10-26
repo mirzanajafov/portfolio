@@ -19,11 +19,11 @@ import {
   countsBetween,
   failoverData,
   failoverEnd,
-  type Fate,
   fates,
   faultAt,
   laneAt,
   stateOfA,
+  type Fate,
 } from './failover-model';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
