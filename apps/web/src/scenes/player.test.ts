@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { play } from './player';
 
-const loaded = vi.hoisted(() => new Set<string>());
+const loadPopulation = vi.hoisted(() => vi.fn());
 
 vi.mock('./population', async (importOriginal) => {
-  loaded.add('population');
+  loadPopulation();
   return importOriginal();
 });
 
@@ -26,7 +26,8 @@ describe('play', () => {
     abort.abort();
     const { starting, getContext } = start('population', abort.signal);
     await expect(starting).rejects.toMatchObject({ name: 'AbortError' });
-    expect(loaded.has('population')).toBe(false);
+    await vi.dynamicImportSettled();
+    expect(loadPopulation).not.toHaveBeenCalled();
     expect(getContext).not.toHaveBeenCalled();
   });
 
