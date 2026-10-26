@@ -3,5 +3,8 @@ import { config } from 'dotenv';
 
 export default function setup(): void {
   const { parsed } = config({ path: '.env.test', quiet: true, processEnv: {} });
-  execSync('npx prisma migrate deploy', { env: { ...process.env, ...parsed }, stdio: 'ignore' });
+  execSync('pnpm exec prisma migrate deploy', {
+    env: { ...process.env, ...parsed },
+    stdio: 'ignore',
+  });
 }
