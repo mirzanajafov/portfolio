@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { readJson } from './read-json.ts';
 
 const [labDir, outPath = 'src/scenes/commission-data.json'] = process.argv.slice(2);
 if (!labDir) {
@@ -88,8 +89,7 @@ function parse(fault: z.infer<typeof faultSchema>) {
   };
 }
 
-const reportOf = (dir: string) =>
-  reportSchema.parse(JSON.parse(readFileSync(join(labDir, dir, 'report.json'), 'utf8')));
+const reportOf = (dir: string) => readJson(join(labDir, dir, 'report.json'), reportSchema);
 const passed = (report: Report) => report.linearizable === 'Ok' && !report.problems?.length;
 const run = reportOf(replayed);
 const hashes = run.hashes ?? [];

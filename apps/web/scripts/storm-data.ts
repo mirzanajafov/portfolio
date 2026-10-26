@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { z } from 'zod';
+import { readJson } from './read-json.ts';
 
 const [seriesPath, outPath = 'src/scenes/storm-data.json'] = process.argv.slice(2);
 if (!seriesPath) {
@@ -35,7 +36,7 @@ const seriesSchema = z.array(
   }),
 );
 
-const series = seriesSchema.parse(JSON.parse(readFileSync(seriesPath, 'utf8')));
+const series = readJson(seriesPath, seriesSchema);
 
 function extract({ id, policy, label }: (typeof picks)[number]) {
   const line = series.find(

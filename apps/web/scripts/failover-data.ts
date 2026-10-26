@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { z } from 'zod';
+import { readJsonLines } from './read-json.ts';
 
 const [runsPath, outPath = 'src/scenes/failover-data.json'] = process.argv.slice(2);
 if (!runsPath) {
@@ -40,10 +41,7 @@ const runSchema = z.object({
   }),
 });
 
-const runs = readFileSync(runsPath, 'utf8')
-  .split('\n')
-  .filter(Boolean)
-  .map((line) => runSchema.parse(JSON.parse(line)));
+const runs = readJsonLines(runsPath, runSchema);
 
 function extract({ id, cell, label }: (typeof picks)[number]) {
   const run = runs.find((r) => r.cell === cell && r.report.result.bins);

@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { readJsonLines } from './read-json.ts';
 
 const [resultsDir, outPath = 'src/scenes/campaign-data.json'] = process.argv.slice(2);
 if (!resultsDir) {
@@ -60,10 +61,7 @@ function runsOf<T>(dir: string, schema: z.ZodType<T>): T[] {
   if (!existsSync(path)) {
     throw new Error(`no runs in ${dir}`);
   }
-  return readFileSync(path, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => schema.parse(JSON.parse(line)));
+  return readJsonLines(path, schema);
 }
 
 const campaignDirs = readdirSync(resultsDir)
