@@ -13,7 +13,7 @@ import type { Palette, SceneHooks } from './types';
 function sceneHooks(width: number) {
   const labels: HTMLElement[] = [];
   const hooks: SceneHooks = {
-    label: (text: string) => {
+    label: (text) => {
       const label = document.createElement('span');
       label.textContent = text;
       labels.push(label);

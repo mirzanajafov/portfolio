@@ -55,6 +55,10 @@ describe('gateSentence', () => {
       ok: true,
       text: 'Hello world',
     });
+    expect(gateSentence(sourced('I <b>accept</b> the offer.'), 'q', 0)).toEqual({
+      ok: false,
+      reason: 'denied',
+    });
   });
 
   it('stops the answer once it gets too long', () => {

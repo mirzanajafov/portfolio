@@ -9,10 +9,6 @@ export type AskEvent =
   | { type: 'withheld'; reason: GateReason }
   | { type: 'done' };
 
-function refusal(email: string): string {
-  return `I don't have a source for that, so I won't guess. Ask me directly at ${email}.`;
-}
-
 @Injectable()
 export class AskService {
   constructor(
@@ -40,7 +36,11 @@ export class AskService {
       yield { type: 'sentence', text: verdict.text, sources };
     }
     if (!answered && !signal.aborted) {
-      yield { type: 'sentence', text: refusal(this.email), sources: [] };
+      yield {
+        type: 'sentence',
+        text: `I don't have a source for that, so I won't guess. Ask me directly at ${this.email}.`,
+        sources: [],
+      };
     }
     yield { type: 'done' };
   }

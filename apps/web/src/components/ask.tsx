@@ -76,8 +76,8 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
         </h2>
         <p className="max-w-2xl text-sm text-[var(--muted)]">
           Answers come only from my CV and my project notes, with the source under every sentence,
-          and it says so when it doesn&apos;t know. For now a keyword matcher picks the sentences; a
-          language model and my own voice come later.
+          and it says so when it doesn&apos;t know. For now a keyword matcher picks the sentences,
+          and a language model and my own voice come later.
         </p>
         <p className="max-w-2xl text-xs text-[var(--muted)]">
           I keep questions for 30 days to see where the answers fail, then they are deleted. Your IP
