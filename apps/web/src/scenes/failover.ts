@@ -53,7 +53,9 @@ const bins = firstLane.requests.length;
 if (
   bins === 0 ||
   data.lanes.some((lane) =>
-    [lane.requests, lane.served, lane.failed, lane.retried].some((bin) => bin.length !== bins),
+    [lane.requests, lane.served, lane.failed, lane.retried].some(
+      (series) => series.length !== bins,
+    ),
   )
 ) {
   throw new Error('every failover lane needs a value for every bin');

@@ -26,11 +26,13 @@ describe('ScenePlayer', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('starts the scene it is given now, not the one it was first given', async () => {
+  it('starts the scene it is given now, and tells it what the old one was told', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
-    const { rerender } = render(<ScenePlayer scene={{ name: 'floor' }} description="A floor" />);
+    const { rerender } = render(
+      <ScenePlayer scene={{ name: 'floor' }} description="A floor" shown={false} />,
+    );
     await screen.findByRole('button', { name: 'Pause motion' });
-    rerender(<ScenePlayer scene={{ name: 'storm' }} description="A storm" />);
+    rerender(<ScenePlayer scene={{ name: 'storm' }} description="A storm" shown={false} />);
     await waitFor(() => {
       expect(play).toHaveBeenLastCalledWith(
         { name: 'storm' },
@@ -38,6 +40,10 @@ describe('ScenePlayer', () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+    const storm = await play.mock.results.at(-1)?.value;
+    await waitFor(() => {
+      expect(storm?.setShown).toHaveBeenLastCalledWith(false);
     });
   });
 

@@ -64,7 +64,7 @@ export function ScenePlayer({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
-  const handleRef = useRef<PlayerHandle | null>(null);
+  const [handle, setHandle] = useState<PlayerHandle | null>(null);
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<'loading' | 'running' | 'unsupported'>('loading');
   const [readout, setReadout] = useState<string[]>([]);
@@ -81,19 +81,24 @@ export function ScenePlayer({
       return;
     }
     let cancelled = false;
+    let started: PlayerHandle | null = null;
     Promise.resolve()
       .then(() => {
         if (!webglAvailable()) {
           throw new Error('no WebGL');
         }
-        return start(canvas, labels);
+        return cancelled ? null : start(canvas, labels);
       })
-      .then((handle) => {
-        if (cancelled) {
-          handle.dispose();
+      .then((next) => {
+        if (!next) {
           return;
         }
-        handleRef.current = handle;
+        if (cancelled) {
+          next.dispose();
+          return;
+        }
+        started = next;
+        setHandle(next);
         setState('running');
       })
       .catch(() => {
@@ -103,23 +108,25 @@ export function ScenePlayer({
       });
     return () => {
       cancelled = true;
-      handleRef.current?.dispose();
-      handleRef.current = null;
+      started?.dispose();
+      setHandle(null);
+      setState('loading');
+      setReadout([]);
       labels.replaceChildren();
     };
   }, [scene.name]);
 
   useEffect(() => {
-    handleRef.current?.setPlaying(playing);
-  }, [playing, state]);
+    handle?.setPlaying(playing);
+  }, [handle, playing]);
 
   useEffect(() => {
-    handleRef.current?.focus(focus);
-  }, [focus, state]);
+    handle?.focus(focus);
+  }, [handle, focus]);
 
   useEffect(() => {
-    handleRef.current?.setShown(shown);
-  }, [shown, state]);
+    handle?.setShown(shown);
+  }, [handle, shown]);
 
   return (
     <div className="scene" data-state={state}>

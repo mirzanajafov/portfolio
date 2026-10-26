@@ -68,14 +68,14 @@ export function greedyMatch(points: BufferAttribute, capacity: number): [number,
     }
   }
   candidates.sort((a, b) => a.distance - b.distance);
-  const load = new Map<number, number>();
+  const load = new Uint8Array(points.count);
   const pairs: [number, number][] = [];
   for (const { i, j } of candidates) {
-    const loadI = load.get(i) ?? 0;
-    const loadJ = load.get(j) ?? 0;
+    const loadI = load[i] ?? 0;
+    const loadJ = load[j] ?? 0;
     if (loadI < capacity && loadJ < capacity) {
-      load.set(i, loadI + 1);
-      load.set(j, loadJ + 1);
+      load[i] = loadI + 1;
+      load[j] = loadJ + 1;
       pairs.push([i, j]);
     }
   }

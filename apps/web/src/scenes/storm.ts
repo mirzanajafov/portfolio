@@ -32,8 +32,16 @@ export const stormData = data;
 
 const boxSeries = data.policies.find((series) => series.id === 'box');
 const poolSeries = data.policies.find((series) => series.id === 'pool');
-if (!boxSeries || !poolSeries) {
-  throw new Error('the storm data needs the box and the pool');
+if (
+  !boxSeries ||
+  !poolSeries ||
+  [boxSeries, poolSeries].some((series) =>
+    [series.processes, series.running, series.goodput, series.spawns, series.backlogSeconds].some(
+      (values) => values.length === 0 || values.length !== boxSeries.processes.length,
+    ),
+  )
+) {
+  throw new Error('the storm data needs the box and the pool, with a value for every second');
 }
 
 export function stormSample(series: StormSeries, second: number) {

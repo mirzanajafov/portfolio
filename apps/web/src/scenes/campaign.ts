@@ -279,9 +279,9 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       const now = campaignAt(seconds);
 
       runTiles.count = now.runs;
-      data.runs.forEach((run, index) => {
+      for (const [index, run] of data.runs.entries()) {
         if (index >= now.runs) {
-          return;
+          break;
         }
         const { x, z } = runPosition(index);
         const age = seconds - runAppears(index);
@@ -296,14 +296,17 @@ export const createCampaignScene: SceneFactory = (hooks) => {
           }
           runTiles.setColorAt(index, color);
         }
-      });
+      }
       runTiles.instanceMatrix.needsUpdate = true;
       if (runTiles.instanceColor) {
         runTiles.instanceColor.needsUpdate = true;
       }
 
       mutantTiles.count = now.mutants;
-      data.mutants.slice(0, now.mutants).forEach((mutant, index) => {
+      for (const [index, mutant] of data.mutants.entries()) {
+        if (index >= now.mutants) {
+          break;
+        }
         const age = seconds - mutantAppears(index);
         const height = Math.max(0.001, mutantHeight * ease(age / 0.3) * clearing);
         matrix.makeScale(p.tile, height, p.tile).setPosition(mutantX(index), 0, mutantZ);
@@ -313,7 +316,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
           color.copy(palette.fg).lerp(settled, ease(age / 0.5));
           mutantTiles.setColorAt(index, color);
         }
-      });
+      }
       mutantTiles.instanceMatrix.needsUpdate = true;
       if (mutantTiles.instanceColor) {
         mutantTiles.instanceColor.needsUpdate = true;

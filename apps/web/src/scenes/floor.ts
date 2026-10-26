@@ -1,6 +1,5 @@
 import {
   BoxGeometry,
-  BufferAttribute,
   BufferGeometry,
   DoubleSide,
   Float32BufferAttribute,
@@ -100,7 +99,7 @@ type Tag = {
   target: Vector2 | null;
   dot: Mesh<SphereGeometry, MeshBasicMaterial>;
   halo: Mesh<RingGeometry, MeshBasicMaterial>;
-  trailPositions: BufferAttribute;
+  trailPositions: Float32BufferAttribute;
   trailGeometry: BufferGeometry;
   trailMaterial: LineBasicMaterial;
   count: number;
@@ -165,7 +164,7 @@ export const createFloorScene: SceneFactory = (hooks) => {
       new MeshBasicMaterial({ transparent: true, opacity: 0.6, side: DoubleSide }),
     );
     halo.rotation.x = -Math.PI / 2;
-    const trailPositions = new BufferAttribute(new Float32Array(trailLength * 3), 3);
+    const trailPositions = new Float32BufferAttribute(trailLength * 3, 3);
     const trailGeometry = new BufferGeometry();
     trailGeometry.setAttribute('position', trailPositions);
     const trailMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.55 });

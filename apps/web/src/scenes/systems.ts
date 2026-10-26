@@ -127,10 +127,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
   }
 
   function spawn() {
-    if (!palette) {
-      return;
-    }
-    if (routes.length === 0) {
+    if (!palette || routes.length === 0) {
       return;
     }
     const route = pick(random, routes);

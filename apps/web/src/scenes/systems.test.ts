@@ -1,5 +1,5 @@
 import { Color } from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSystemsScene } from './systems';
 import type { SceneHooks } from './types';
 
@@ -8,6 +8,10 @@ const hooks: SceneHooks = {
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
 };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('the systems map', () => {
   it('runs without apps and sends no requests', () => {
@@ -23,10 +27,11 @@ describe('the systems map', () => {
       accent: color,
       signal: color,
     });
+    const drawn = scene.scene.children.length;
     for (let i = 0; i < 40; i += 1) {
       scene.step(0.05, i * 0.05);
     }
+    expect(scene.scene.children).toHaveLength(drawn);
     expect(scene.readout()).toEqual(['0 apps on one server']);
-    vi.unstubAllGlobals();
   });
 });
