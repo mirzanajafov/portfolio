@@ -25,7 +25,7 @@ export const stormParameters = {
   queueFullMinutes: 25,
 };
 
-type StormSeries = (typeof data.policies)[number];
+export type StormSeries = (typeof data.policies)[number];
 
 export const stormData = data;
 

@@ -53,10 +53,10 @@ export function gateSentence(
   question: string,
   charactersSoFar: number,
 ): GateVerdict {
-  const text = stripMarkup(sentence.text);
   if (sentence.sourceCount === 0) {
     return { ok: false, reason: 'unsupported' };
   }
+  const text = stripMarkup(sentence.text);
   if (longestSharedRun(text, question) >= limits.echoRun) {
     return { ok: false, reason: 'echo' };
   }
