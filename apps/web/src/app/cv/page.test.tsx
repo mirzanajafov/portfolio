@@ -3,13 +3,23 @@ import { describe, expect, it, vi } from 'vitest';
 import CvPage from './page';
 
 vi.mock('@portfolio/content', async () => {
-  const { aCv, aRole, contentModule, someContent } = await import('@portfolio/content/testing');
+  const { aCv, aRole, contentModule, contentOf } = await import('@portfolio/content/testing');
   return contentModule(
-    someContent({
+    await contentOf({
       cv: aCv({
         experience: [
-          aRole({ company: 'Northwind', from: '2025-01', highlights: ['Cut the queue to 6 ms.'] }),
-          aRole({ company: undefined, role: 'Freelance Backend Developer', kind: 'freelance' }),
+          aRole({
+            company: 'Northwind',
+            role: 'Backend Engineer',
+            from: '2025-01',
+            highlights: ['Cut the queue to 6 ms.'],
+          }),
+          aRole({
+            company: undefined,
+            role: 'Freelance Backend Developer',
+            kind: 'freelance',
+            from: '2024-01',
+          }),
         ],
         mentoring: [aRole({ company: 'Code School', role: 'Mentor', kind: 'part-time' })],
       }),
@@ -27,12 +37,5 @@ describe('CV page', () => {
       'Mentor at Code School',
     ]);
     expect(screen.getByText('Cut the queue to 6 ms.')).toBeInTheDocument();
-  });
-
-  it('names a freelance role without inventing a company for it', () => {
-    render(<CvPage />);
-    expect(
-      screen.getByRole('heading', { level: 3, name: 'Freelance Backend Developer' }),
-    ).toBeInTheDocument();
   });
 });

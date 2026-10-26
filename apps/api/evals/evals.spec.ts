@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { content } from '@portfolio/content';
-import { aProject } from '@portfolio/content/testing';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { aProject, contentOf } from '@portfolio/content/testing';
+import { assert, beforeAll, describe, expect, it } from 'vitest';
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskService } from '../src/ask/ask.service.js';
 import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
@@ -49,6 +49,23 @@ describe('the keyword baseline on the real eval set', () => {
   });
 });
 
+const [project] = (
+  await contentOf({
+    projects: [
+      aProject({
+        slug: 'demo',
+        evals: [
+          { question: 'right', expects: ['fast'] },
+          { question: 'also right', expects: ['fast'] },
+          { question: 'wrong', expects: ['fast'] },
+          { question: 'also wrong', expects: ['fast'] },
+        ],
+      }),
+    ],
+  })
+).projects;
+assert(project);
+
 describe('runEvals', () => {
   const tiny = new Knowledge(
     [
@@ -63,17 +80,10 @@ describe('runEvals', () => {
     ],
     new Map([['demo', 'Demo']]),
   );
-  const project = aProject({
-    slug: 'demo',
-    evals: [
-      { question: 'right', expects: ['fast'] },
-      { question: 'wrong', expects: ['fast'] },
-    ],
-  });
   const engine: AnswerEngine = {
     name: 'stub',
     async *answer(question) {
-      if (question === 'right') {
+      if (question.endsWith('right')) {
         yield { text: 'Fast.', sourceIds: ['demo/fast'] };
       }
       if (question === 'attack') {
@@ -109,7 +119,7 @@ describe('runEvals', () => {
       withPassage,
       [project],
     );
-    expect(report.hits).toBe(2);
+    expect(report.hits).toBe(4);
   });
 
   it('counts a hit only when an expected fact is cited, and a refusal when nothing is', async () => {
@@ -119,8 +129,8 @@ describe('runEvals', () => {
       [project],
       ['attack', 'quiet'],
     );
-    expect(report.hits).toBe(1);
-    expect(report.refusals).toBe(1);
+    expect(report.hits).toBe(2);
+    expect(report.refusals).toBe(2);
     expect(report.hitRate).toBe(0.5);
     expect(report.adversarial).toEqual(expect.objectContaining({ questions: 2, refused: 1 }));
   });

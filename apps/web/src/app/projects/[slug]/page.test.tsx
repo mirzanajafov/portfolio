@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import CaseStudyPage, { generateStaticParams } from './page';
 
 vi.mock('next/navigation', () => ({
@@ -9,32 +9,35 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@portfolio/content', async () => {
-  const { aCaseStudy, aFact, aProject, contentModule, someContent } =
+  const { aCaseStudy, aFact, aProject, contentModule, contentOf } =
     await import('@portfolio/content/testing');
-  const measured = aFact({
-    id: 'fast',
-    text: 'It answers in 40 ms.',
-    source: { file: 'README.md', href: 'https://github.com/someone/demo/blob/main/README.md' },
-  });
-  const designed = aFact({ id: 'small', text: 'It keeps one table.', kind: 'design' });
-  const parameter = aFact({ id: 'flush', text: 'It flushes every 150 ms.', kind: 'parameter' });
-  const hidden = aFact({ id: 'queue', text: 'It queues offline.', source: { file: 'queue.ts' } });
   return contentModule(
-    someContent({
+    await contentOf({
       projects: [
         aProject({
           slug: 'open',
           name: 'Open',
-          headline: measured,
-          facts: [measured, designed, parameter],
-          uses: [{ slug: 'closed', name: 'Closed', for: 'its queue' }],
+          links: { live: 'https://open.example.com', repo: 'https://github.com/someone/open' },
+          headline: 'fast',
+          facts: [
+            aFact({ id: 'fast', text: 'It answers in 40 ms.', source: { file: 'README.md' } }),
+            aFact({
+              id: 'small',
+              text: 'It keeps one table.',
+              kind: 'design',
+              source: { file: 'schema.sql' },
+            }),
+            aFact({
+              id: 'flush',
+              text: 'It flushes every 150 ms.',
+              kind: 'parameter',
+              source: { file: 'flush.ts' },
+            }),
+          ],
+          uses: [{ project: 'closed', for: 'its queue' }],
           caseStudy: aCaseStudy({
             decisions: [
-              {
-                title: 'Measure first',
-                body: 'I measured.',
-                facts: [measured, designed, parameter],
-              },
+              { title: 'Measure first', body: 'I measured.', facts: ['fast', 'small', 'flush'] },
               { title: 'Keep it small', body: 'I kept it small.', facts: [] },
             ],
           }),
@@ -44,12 +47,11 @@ vi.mock('@portfolio/content', async () => {
           name: 'Closed',
           order: 2,
           visibility: 'private',
-          links: { live: 'https://closed.example.com' },
-          knowledge: [],
-          headline: hidden,
+          headline: 'queue',
+          facts: [aFact({ id: 'queue', text: 'It queues offline.', source: { file: 'queue.ts' } })],
           caseStudy: aCaseStudy({
             decisions: [
-              { title: 'Queue offline', body: 'I queue offline.', facts: [hidden] },
+              { title: 'Queue offline', body: 'I queue offline.', facts: ['queue'] },
               { title: 'Keep it small', body: 'I kept it small.', facts: [] },
             ],
           }),
@@ -66,9 +68,7 @@ async function renderCaseStudy(slug: string) {
 
 function decision(title: string): HTMLElement {
   const article = screen.getByRole('heading', { name: title }).closest('article');
-  if (!article) {
-    throw new Error(`${title} is not in an article`);
-  }
+  assert(article, `${title} is not in an article`);
   return article;
 }
 
@@ -83,7 +83,7 @@ describe('case study pages', () => {
     expect(measured.getByText('It answers in 40 ms.')).toBeInTheDocument();
     expect(measured.getByRole('link', { name: 'README.md' })).toHaveAttribute(
       'href',
-      'https://github.com/someone/demo/blob/main/README.md',
+      'https://github.com/someone/open/blob/main/README.md',
     );
   });
 
