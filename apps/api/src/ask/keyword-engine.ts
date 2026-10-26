@@ -51,7 +51,8 @@ type Indexed = {
   length: number;
 };
 
-const bm25 = { k1: 1.2, b: 0.75 };
+const bm25K1 = 1.2;
+const bm25B = 0.75;
 const keywordWeight = 0.5;
 const summaryWeight = 0.5;
 const minScore = 2.5;
@@ -111,7 +112,6 @@ export class KeywordAnswerEngine implements AnswerEngine {
 
   private rank(query: Set<string>): Ranked[] {
     const projects = this.mentionedProjects(query);
-    const { k1, b } = bm25;
     return this.indexed
       .filter(
         ({ document }) =>
@@ -126,8 +126,8 @@ export class KeywordAnswerEngine implements AnswerEngine {
             continue;
           }
           matched += 1;
-          const norm = tf + k1 * (1 - b + (b * length) / this.averageLength);
-          score += ((this.idf.get(token) ?? 0) * (tf * (k1 + 1))) / norm;
+          const norm = tf + bm25K1 * (1 - bm25B + (bm25B * length) / this.averageLength);
+          score += ((this.idf.get(token) ?? 0) * (tf * (bm25K1 + 1))) / norm;
         }
         if (document.id.endsWith('/summary')) {
           score *= summaryWeight;

@@ -9,11 +9,11 @@ import {
 } from './failover';
 import type { SceneHooks } from './types';
 
-const hooks = {
+const hooks: SceneHooks = {
   label: () => document.createElement('span'),
   place: () => undefined,
   size: () => ({ width: 1200, height: 800 }),
-} as unknown as SceneHooks;
+};
 
 const probes = failoverData.lanes.find((lane) => lane.id === 'probes')!;
 const all = failoverData.lanes.find((lane) => lane.id === 'all')!;
