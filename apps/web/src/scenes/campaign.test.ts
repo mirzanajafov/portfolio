@@ -1,20 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  campaignAt,
-  campaignData,
-  campaignLoop,
-  campaignParameters,
-  createCampaignScene,
-} from './campaign';
-import type { SceneHooks } from './types';
+import { createCampaignScene } from './campaign';
+import { campaignAt, campaignData, campaignLoop, campaignPace, type Run } from './campaign-model';
+import { testHooks } from './test-hooks';
 
-const hooks: SceneHooks = {
-  label: () => document.createElement('span'),
-  place: () => undefined,
-  size: () => ({ width: 1200, height: 800 }),
-};
+const { hooks } = testHooks();
 
-const total = (pick: (run: (typeof campaignData.runs)[number]) => number) =>
+const total = (pick: (run: Run) => number) =>
   campaignData.runs.reduce((sum, run) => sum + pick(run), 0);
 
 describe("the campaign data taken from Car Wash Ledger's chaos results", () => {
@@ -47,16 +38,16 @@ describe("the campaign data taken from Car Wash Ledger's chaos results", () => {
 
 describe('the campaign replay', () => {
   it('adds one run at a time, then the mutants', () => {
-    expect(campaignAt(0)).toMatchObject({ runs: 1, mutants: 0 });
-    const lastRun = (campaignData.runs.length - 1) / campaignParameters.runsPerSecond;
+    expect(campaignAt(0)).toMatchObject({ shownRuns: 1, shownMutants: 0 });
+    const lastRun = (campaignData.runs.length - 1) / campaignPace.runsPerSecond;
     expect(campaignAt(lastRun)).toMatchObject({
-      runs: 200,
-      mutants: 0,
+      shownRuns: 200,
+      shownMutants: 0,
       journeys: 135048,
       kills: 8792,
       violations: 0,
     });
-    expect(campaignAt(campaignLoop - 0.01)).toMatchObject({ mutants: 14, caught: 12 });
+    expect(campaignAt(campaignLoop - 0.01)).toMatchObject({ shownMutants: 14, caught: 12 });
   });
 });
 
@@ -73,7 +64,6 @@ describe('the campaign scene', () => {
       'the deployed code: 200 runs · 135,048 journeys · 8,792 kills · 0 violations',
     );
     expect(third).toMatch(/^one guard removed: \d+ of \d+ mutants caught$/);
-    scene.dispose();
   });
 
   it('starts the night again after the mutants', () => {
@@ -84,6 +74,5 @@ describe('the campaign scene', () => {
       if (frame % 20 === 0) seen.push(scene.readout()[0]!);
     }
     expect(seen.some((line) => line.startsWith('run 1 of 200'))).toBe(true);
-    scene.dispose();
   });
 });

@@ -9,10 +9,17 @@ import {
   PerspectiveCamera,
   Scene,
 } from 'three';
-import data from './storm-data.json';
 import { pick, seeded } from './random';
-import { commonLength, sampleAt } from './series';
-import type { Palette, SceneFactory } from './types';
+import {
+  burstAt,
+  stormAt,
+  stormData,
+  stormSample,
+  stormSeconds,
+  stormSeries,
+  type StormSeries,
+} from './storm-model';
+import type { SceneFactory } from './types';
 
 export const stormParameters = {
   secondsPerSecond: 30,
@@ -25,38 +32,6 @@ export const stormParameters = {
   gap: 6,
   queueFullMinutes: 25,
 };
-
-type StormSeries = (typeof data.policies)[number];
-
-export const stormData = data;
-
-const boxSeries = data.policies.find((series) => series.id === 'box');
-const poolSeries = data.policies.find((series) => series.id === 'pool');
-if (data.policies.length !== 2 || !boxSeries || !poolSeries) {
-  throw new Error('the storm data needs the box and the pool');
-}
-const samplesOf = (series: StormSeries) => [
-  series.processes,
-  series.running,
-  series.goodput,
-  series.spawns,
-  series.backlogSeconds,
-];
-const stormSeconds = commonLength([...samplesOf(boxSeries), ...samplesOf(poolSeries)]);
-const processCounts = [...boxSeries.processes, ...poolSeries.processes];
-if (processCounts.some((count) => !Number.isInteger(count) || count > data.machine.processLimit)) {
-  throw new Error('the storm data needs whole process counts that fit in the machine');
-}
-
-export function stormSample(series: StormSeries, second: number) {
-  return {
-    processes: sampleAt(series.processes, second),
-    running: sampleAt(series.running, second),
-    goodput: sampleAt(series.goodput, second),
-    spawns: sampleAt(series.spawns, second),
-    queuedMinutes: sampleAt(series.backlogSeconds, second) / 60,
-  };
-}
 
 function slotScale(index: number, processes: number, running: number): number {
   if (index >= processes) {
@@ -72,6 +47,7 @@ export const createStormScene: SceneFactory = (hooks) => {
   const group = new Group();
   scene.add(group);
   const random = seeded(11);
+  let palette = hooks.palette;
 
   const cageGeometry = new EdgesGeometry(new BoxGeometry(p.cageWidth, p.cageHeight, p.cageDepth));
   const slotGeometry = new BoxGeometry(1.1, 1.1, 1.1);
@@ -88,7 +64,7 @@ export const createStormScene: SceneFactory = (hooks) => {
     const floorMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.12 });
     root.add(frame, new Mesh(floorGeometry, floorMaterial));
 
-    const slots = Array.from({ length: data.machine.processLimit }, (_, slot) => {
+    const slots = Array.from({ length: stormData.machine.processLimit }, (_, slot) => {
       const material = new MeshBasicMaterial();
       const mesh = new Mesh(slotGeometry, material);
       const column = slot % p.columns;
@@ -134,19 +110,11 @@ export const createStormScene: SceneFactory = (hooks) => {
       queueLabel: hooks.label('queued'),
     };
   };
-  const box = cageFor(boxSeries, 0);
-  const pool = cageFor(poolSeries, 1);
-  const cages = [box, pool];
+  const cages = [cageFor(stormSeries.box, 0), cageFor(stormSeries.pool, 1)];
   const burstLabel = hooks.label('burst: arrivals at 1.5× capacity', 'signal');
 
-  let palette: Palette | null = null;
   let second = 0;
   let lastWhole = 0;
-
-  const inBurst = () => {
-    const minute = data.startMinute + second / 60;
-    return minute >= data.burst.from && minute < data.burst.to;
-  };
 
   return {
     scene,
@@ -167,6 +135,7 @@ export const createStormScene: SceneFactory = (hooks) => {
         lastWhole = 0;
       }
       const whole = Math.floor(second);
+      const burst = burstAt(second);
       for (const cage of cages) {
         const now = stormSample(cage.series, whole);
         if (whole > lastWhole) {
@@ -179,9 +148,7 @@ export const createStormScene: SceneFactory = (hooks) => {
           const target = slotScale(index, now.processes, now.running);
           slot.scale += (target - slot.scale) * Math.min(1, dt * 6);
           slot.mesh.scale.setScalar(Math.max(0.001, slot.scale));
-          if (palette) {
-            slot.material.color.copy(index < now.running ? palette.accent : palette.muted);
-          }
+          slot.material.color.copy(index < now.running ? palette.accent : palette.muted);
         });
         const share = Math.min(1, now.goodput);
         cage.useful.scale.x = Math.max(0.001, p.cageWidth * share);
@@ -189,15 +156,13 @@ export const createStormScene: SceneFactory = (hooks) => {
         const height = Math.max(0.001, (now.queuedMinutes / p.queueFullMinutes) * p.cageHeight);
         cage.queue.scale.y = height;
         cage.queue.position.y = height / 2;
-        if (palette) {
-          cage.frameMaterial.color.copy(inBurst() ? palette.accent : palette.line);
-        }
+        cage.frameMaterial.color.copy(burst ? palette.accent : palette.line);
       }
       lastWhole = whole;
     },
     render(time) {
       const swing = Math.sin(time * 0.05) * 0.16;
-      const narrow = hooks.size().width < 600;
+      const narrow = hooks.narrow();
       const stacked = narrow || camera.aspect < 1.05;
       for (const cage of cages) {
         const side = cage.index === 0 ? -1 : 1;
@@ -227,43 +192,16 @@ export const createStormScene: SceneFactory = (hooks) => {
       } else {
         hooks.place(burstLabel, 0, p.cageHeight + 3.4, -p.cageDepth / 2);
       }
-      burstLabel.style.display = inBurst() ? '' : 'none';
+      burstLabel.style.display = burstAt(second) ? '' : 'none';
     },
     readout() {
-      const minute = Math.floor(data.startMinute + second / 60);
-      const load = inBurst() ? data.burst.load : data.baseLoad;
-      const boxNow = stormSample(box.series, second);
-      const poolNow = stormSample(pool.series, second);
+      const { minute, load, box, pool } = stormAt(second);
+      const { cores, processLimit } = stormData.machine;
       return [
-        `simulated minute ${minute} · arrivals at ${load}× capacity · ${data.machine.cores} CPUs, ${data.machine.processLimit} processes`,
-        `the box: ${boxNow.processes} processes · ${boxNow.spawns} spawns so far · ${Math.round(Math.min(1, boxNow.goodput) * 100)}% useful · ${boxNow.queuedMinutes.toFixed(1)} min queued`,
-        `the pool: ${poolNow.processes} processes · ${Math.round(Math.min(1, poolNow.goodput) * 100)}% useful · ${poolNow.queuedMinutes.toFixed(1)} min queued`,
+        `simulated minute ${minute} · arrivals at ${load}× capacity · ${cores} CPUs, ${processLimit} processes`,
+        `the box: ${box.processes} processes · ${box.spawns} spawns so far · ${Math.round(Math.min(1, box.goodput) * 100)}% useful · ${box.queuedMinutes.toFixed(1)} min queued`,
+        `the pool: ${pool.processes} processes · ${Math.round(Math.min(1, pool.goodput) * 100)}% useful · ${pool.queuedMinutes.toFixed(1)} min queued`,
       ];
-    },
-    dispose() {
-      for (const cage of cages) {
-        cage.title.remove();
-        cage.usefulLabel.remove();
-        cage.queueLabel.remove();
-        for (const slot of cage.slots) {
-          slot.material.dispose();
-        }
-        cage.frameMaterial.dispose();
-        cage.floorMaterial.dispose();
-        cage.trackMaterial.dispose();
-        cage.usefulMaterial.dispose();
-        cage.queueMaterial.dispose();
-      }
-      burstLabel.remove();
-      for (const geometry of [
-        cageGeometry,
-        slotGeometry,
-        barGeometry,
-        columnGeometry,
-        floorGeometry,
-      ]) {
-        geometry.dispose();
-      }
     },
   };
 };

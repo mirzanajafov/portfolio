@@ -150,7 +150,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   );
   const reign = hooks.label('', 'node');
 
-  let palette: Palette | null = null;
+  let palette = hooks.palette;
   let seconds = commissionRunEnd - 1;
   let state = commissionAt(runSeconds(seconds));
   let donRingSize = 0;
@@ -159,12 +159,6 @@ export const createCommissionScene: SceneFactory = (hooks) => {
   const color = new Color();
   const matrix = new Matrix4();
   const spot = new Vector3();
-
-  const write = (label: HTMLElement, text: string) => {
-    if (label.textContent !== text) {
-      label.textContent = text;
-    }
-  };
 
   const pulse = (from: Vector3, to: Vector3, along: number, size: number) => {
     matrix.makeScale(size, size, size).setPosition(spot.lerpVectors(from, to, along));
@@ -190,10 +184,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       state = commissionAt(runSeconds(seconds));
     },
     render(time, dt = 1 / 60) {
-      if (!palette) {
-        return;
-      }
-      const narrow = hooks.size().width < 600;
+      const narrow = hooks.narrow();
       const follow = settled ? 1 - Math.exp(-dt * 9) : 1;
       settled = true;
 
@@ -211,7 +202,7 @@ export const createCommissionScene: SceneFactory = (hooks) => {
         seat.material.color.lerp(color, follow);
         seat.mesh.position.copy(seat.direction).multiplyScalar(seat.radius).setY(seat.lift);
         seat.mesh.scale.setScalar(seat.size);
-        write(seat.label, seatText(state, seat.node, narrow));
+        hooks.write(seat.label, seatText(state, seat.node, narrow));
         hooks.place(seat.label, seat.mesh.position.x, seat.lift - 0.2, seat.mesh.position.z);
       }
 
@@ -276,9 +267,9 @@ export const createCommissionScene: SceneFactory = (hooks) => {
       pulses.instanceMatrix.needsUpdate = true;
 
       if (state.finished) {
-        write(reign, 'linearizable');
+        hooks.write(reign, 'linearizable');
       } else {
-        write(reign, state.don ? `reign ${state.term}` : 'no Don');
+        hooks.write(reign, state.don ? `reign ${state.term}` : 'no Don');
       }
       hooks.place(reign, 0, 0, narrow ? outRadius + 0.4 : tableRadius);
 
@@ -292,33 +283,6 @@ export const createCommissionScene: SceneFactory = (hooks) => {
     },
     readout() {
       return readoutOf(state);
-    },
-    dispose() {
-      reign.remove();
-      for (const seat of seats) {
-        seat.label.remove();
-        seat.material.dispose();
-      }
-      pulses.dispose();
-      for (const material of [
-        tableMaterial,
-        rimMaterial,
-        linkMaterial,
-        donRingMaterial,
-        pulseMaterial,
-      ]) {
-        material.dispose();
-      }
-      for (const geometry of [
-        tableGeometry,
-        rimGeometry,
-        seatGeometry,
-        donRingGeometry,
-        pulseGeometry,
-        linkGeometry,
-      ]) {
-        geometry.dispose();
-      }
     },
   };
 };

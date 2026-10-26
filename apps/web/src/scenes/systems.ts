@@ -21,7 +21,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from './systems-graph';
-import type { Palette, SceneHooks, SceneInstance } from './types';
+import type { SceneHooks, SceneInstance } from './types';
 
 type NodeView = {
   node: GraphNode;
@@ -93,7 +93,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
   scene.add(new LineSegments(edgeGeometry, edgeMaterial));
 
   const pulses: Pulse[] = [];
-  let palette: Palette | null = null;
+  let palette = hooks.palette;
   let focus: string | null = null;
   let spawnIn = 0;
   const pose = focusPose(graph, null);
@@ -127,7 +127,7 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
   }
 
   function spawn() {
-    if (!palette || routes.length === 0) {
+    if (routes.length === 0) {
       return;
     }
     const route = pick(random, routes);
@@ -223,19 +223,6 @@ export const createSystemsScene = (hooks: SceneHooks, apps: GraphApp[]): SceneIn
     readout() {
       const focused = focus ? graph.apps.find((app) => app.id === focus)?.name : null;
       return [focused ? `following ${focused}` : `${graph.apps.length} apps on one server`];
-    },
-    dispose() {
-      for (const { label } of views) {
-        label.remove();
-      }
-      for (const pulse of pulses) {
-        pulse.mesh.material.dispose();
-      }
-      for (const geometry of Object.values(geometries)) {
-        geometry.dispose();
-      }
-      edgeGeometry.dispose();
-      edgeMaterial.dispose();
     },
   };
 };

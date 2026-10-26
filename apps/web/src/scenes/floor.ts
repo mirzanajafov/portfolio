@@ -13,28 +13,10 @@ import {
   RingGeometry,
   Scene,
   SphereGeometry,
-  Vector2,
 } from 'three';
-import { fitPosition, rssiToDistance } from './position-fit';
-import { gaussian, pick, seeded } from './random';
-import type { Palette, SceneFactory } from './types';
-
-const floorParameters = {
-  width: 40,
-  depth: 25,
-  tags: 6,
-  walkingSpeed: 1.4,
-  readingHz: 10,
-  flushMs: 150,
-  txPower: -59,
-  pathLossExponent: 2.5,
-  noiseDb: 3,
-  dropRate: 0.08,
-  rssiAlpha: 0.2,
-  positionAlpha: 0.3,
-};
-
-const bounds = { minX: -20, minY: -12.5, maxX: 20, maxY: 12.5 };
+import { createFloor, floorParameters, receiverSpots } from './floor-model';
+import { seeded } from './random';
+import type { SceneFactory } from './types';
 
 const walls: [number, number, number, number][] = [
   [-20, -12.5, 20, -12.5],
@@ -56,55 +38,10 @@ const walls: [number, number, number, number][] = [
   [-8, -3, -8, -12.5],
 ];
 
-const receiverSpots: [number, number][] = [
-  [-17, -10],
-  [17, -10],
-  [-17, 10],
-  [17, 10],
-  [0, 0],
-];
-
-const rooms: [number, number][] = [
-  [-15, 8.5],
-  [-5, 8.5],
-  [5, 8.5],
-  [15, 8.5],
-  [-14, -8],
-  [0, -6],
-  [15, -7],
-  [-2, 1],
-  [12, 2],
-  [-16, 0],
-];
-
 const trailLength = 40;
+const ringLife = 1.6;
 
 type Ring = { mesh: Mesh<RingGeometry, MeshBasicMaterial>; age: number };
-
-type Receiver = {
-  x: number;
-  y: number;
-  mesh: Mesh<BoxGeometry, MeshBasicMaterial>;
-  label: HTMLElement;
-  rings: Ring[];
-  next: number;
-};
-
-type Tag = {
-  id: string;
-  truth: Vector2;
-  estimate: Vector2;
-  fitted: boolean;
-  readings: { receiver: Receiver; rssi: number }[];
-  target: Vector2 | null;
-  dot: Mesh<SphereGeometry, MeshBasicMaterial>;
-  halo: Mesh<RingGeometry, MeshBasicMaterial>;
-  trailPositions: Float32BufferAttribute;
-  trailGeometry: BufferGeometry;
-  trailMaterial: LineBasicMaterial;
-  count: number;
-  label: HTMLElement;
-};
 
 export const createFloorScene: SceneFactory = (hooks) => {
   const p = floorParameters;
@@ -112,7 +49,8 @@ export const createFloorScene: SceneFactory = (hooks) => {
   const camera = new PerspectiveCamera(34, 1, 0.1, 400);
   const group = new Group();
   scene.add(group);
-  const random = seeded(7);
+  const random = seeded(11);
+  let palette = hooks.palette;
 
   const wallPoints: number[] = [];
   for (const [x1, y1, x2, y2] of walls) {
@@ -139,25 +77,25 @@ export const createFloorScene: SceneFactory = (hooks) => {
   const receiverGeometry = new BoxGeometry(0.7, 2.2, 0.7);
   const ringGeometry = new RingGeometry(0.96, 1, 64);
   ringGeometry.rotateX(-Math.PI / 2);
-  const receivers = receiverSpots.map(([x, y], index): Receiver => {
+  const receivers = receiverSpots.map(([x, y], index) => {
     const mesh = new Mesh(receiverGeometry, new MeshBasicMaterial());
     mesh.position.set(x, 1.1, y);
     group.add(mesh);
+    const rings: Ring[] = [];
     return {
       x,
       y,
       mesh,
       label: hooks.label(`R${index + 1}`, 'signal'),
-      rings: [],
+      rings,
       next: random() * 0.8,
     };
   });
 
+  const floor = createFloor(seeded(7));
   const dotGeometry = new SphereGeometry(0.42, 20, 16);
   const haloGeometry = new RingGeometry(0.55, 0.62, 40);
-  const tags = Array.from({ length: p.tags }, (_, index): Tag => {
-    const [x, y] = pick(random, rooms);
-    const truth = new Vector2(x, y);
+  const views = floor.tags.map((tag) => {
     const dot = new Mesh(dotGeometry, new MeshBasicMaterial());
     const halo = new Mesh(
       haloGeometry,
@@ -169,28 +107,17 @@ export const createFloorScene: SceneFactory = (hooks) => {
     trailGeometry.setAttribute('position', trailPositions);
     const trailMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.55 });
     group.add(dot, halo, new Line(trailGeometry, trailMaterial));
-    const id = (0x3a00 + index * 0x1f7).toString(16);
     return {
-      id,
-      truth,
-      estimate: truth.clone(),
-      fitted: false,
-      readings: receivers.map((receiver) => ({ receiver, rssi: Number.NaN })),
-      target: null,
+      tag,
       dot,
       halo,
       trailPositions,
       trailGeometry,
       trailMaterial,
       count: 0,
-      label: hooks.label(`tag ${id}`),
+      label: hooks.label(`tag ${tag.id}`),
     };
   });
-
-  let palette: Palette | null = null;
-  let readingClock = 0;
-  let flushClock = 0;
-  let flushes = 0;
 
   return {
     scene,
@@ -202,86 +129,27 @@ export const createFloorScene: SceneFactory = (hooks) => {
       for (const receiver of receivers) {
         receiver.mesh.material.color.copy(next.signal);
       }
-      for (const tag of tags) {
-        tag.dot.material.color.copy(next.accent);
-        tag.halo.material.color.copy(next.fg);
-        tag.trailMaterial.color.copy(next.accent);
+      for (const view of views) {
+        view.dot.material.color.copy(next.accent);
+        view.halo.material.color.copy(next.fg);
+        view.trailMaterial.color.copy(next.accent);
       }
     },
     step(dt) {
-      for (const tag of tags) {
-        if (!tag.target || tag.truth.distanceTo(tag.target) < 0.3) {
-          const [x, y] = pick(random, rooms);
-          tag.target = new Vector2(x + (random() - 0.5) * 4, y + (random() - 0.5) * 3);
-        }
-        const direction = tag.target.clone().sub(tag.truth);
-        const distance = direction.length();
-        if (distance > 0) {
-          tag.truth.add(
-            direction.multiplyScalar(Math.min(p.walkingSpeed * dt, distance) / distance),
-          );
-        }
-      }
-      readingClock += dt;
-      const readingEvery = 1 / p.readingHz;
-      while (readingClock >= readingEvery) {
-        readingClock -= readingEvery;
-        for (const tag of tags) {
-          for (const reading of tag.readings) {
-            if (random() < p.dropRate) {
-              continue;
-            }
-            const { receiver } = reading;
-            const range = Math.max(
-              0.1,
-              Math.hypot(tag.truth.x - receiver.x, tag.truth.y - receiver.y),
-            );
-            const rssi =
-              p.txPower -
-              10 * p.pathLossExponent * Math.log10(range) +
-              gaussian(random) * p.noiseDb;
-            reading.rssi = Number.isNaN(reading.rssi)
-              ? rssi
-              : p.rssiAlpha * rssi + (1 - p.rssiAlpha) * reading.rssi;
-          }
-        }
-      }
-      flushClock += dt;
-      if (flushClock >= p.flushMs / 1000) {
-        flushClock %= p.flushMs / 1000;
-        flushes += 1;
-        for (const tag of tags) {
-          const anchors = tag.readings.flatMap(({ receiver, rssi }) =>
-            Number.isNaN(rssi)
-              ? []
-              : [
-                  {
-                    x: receiver.x,
-                    y: receiver.y,
-                    distance: rssiToDistance(rssi, p.txPower, p.pathLossExponent),
-                  },
-                ],
-          );
-          if (anchors.length > 0) {
-            const fit = fitPosition(anchors, bounds);
-            if (tag.fitted) {
-              tag.estimate.lerp(new Vector2(fit.x, fit.y), p.positionAlpha);
-            } else {
-              tag.estimate.set(fit.x, fit.y);
-              tag.fitted = true;
-            }
-          }
-          const trail = tag.trailPositions.array;
+      const fitted = floor.step(dt);
+      if (fitted) {
+        for (const view of views) {
+          const trail = view.trailPositions.array;
           trail.copyWithin(3, 0, trail.length - 3);
-          tag.trailPositions.setXYZ(0, tag.estimate.x, 0.05, tag.estimate.y);
-          tag.count = Math.min(tag.count + 1, trailLength);
-          tag.trailGeometry.setDrawRange(0, tag.count);
-          tag.trailPositions.needsUpdate = true;
+          view.trailPositions.setXYZ(0, view.tag.estimate.x, 0.05, view.tag.estimate.y);
+          view.count = Math.min(view.count + 1, trailLength);
+          view.trailGeometry.setDrawRange(0, view.count);
+          view.trailPositions.needsUpdate = true;
         }
       }
       for (const receiver of receivers) {
         receiver.next -= dt;
-        if (receiver.next <= 0 && palette) {
+        if (receiver.next <= 0) {
           receiver.next = 0.6 + random() * 0.9;
           const ring = new Mesh(
             ringGeometry,
@@ -300,10 +168,10 @@ export const createFloorScene: SceneFactory = (hooks) => {
           ring.age += dt;
           const scale = 0.5 + ring.age * 9;
           ring.mesh.scale.set(scale, scale, scale);
-          ring.mesh.material.opacity = Math.max(0, 0.45 * (1 - ring.age / 1.6));
+          ring.mesh.material.opacity = Math.max(0, 0.45 * (1 - ring.age / ringLife));
         }
         receiver.rings = receiver.rings.filter((ring) => {
-          if (ring.age <= 1.6) {
+          if (ring.age <= ringLife) {
             return true;
           }
           group.remove(ring.mesh);
@@ -317,14 +185,15 @@ export const createFloorScene: SceneFactory = (hooks) => {
       const far = Math.max(1, 1.5 / camera.aspect);
       camera.position.set(Math.sin(swing) * 46 * far, 34 * far, Math.cos(swing) * 38 * far);
       camera.lookAt(0, -4 * far, 1);
-      const narrow = hooks.size().width < 600;
-      for (const tag of tags) {
-        tag.dot.position.set(tag.estimate.x, 0.42, tag.estimate.y);
-        tag.halo.position.set(tag.truth.x, 0.03, tag.truth.y);
-        hooks.place(tag.label, tag.dot.position.x, tag.dot.position.y, tag.dot.position.z);
-        tag.label.textContent = `tag ${tag.id} · ±${tag.estimate.distanceTo(tag.truth).toFixed(1)} m`;
+      const narrow = hooks.narrow();
+      for (const view of views) {
+        const { estimate, truth } = view.tag;
+        view.dot.position.set(estimate.x, 0.42, estimate.y);
+        view.halo.position.set(truth.x, 0.03, truth.y);
+        hooks.write(view.label, `tag ${view.tag.id} · ±${estimate.distanceTo(truth).toFixed(1)} m`);
+        hooks.place(view.label, view.dot.position.x, view.dot.position.y, view.dot.position.z);
         if (narrow) {
-          tag.label.style.display = 'none';
+          view.label.style.display = 'none';
         }
       }
       for (const receiver of receivers) {
@@ -332,31 +201,11 @@ export const createFloorScene: SceneFactory = (hooks) => {
       }
     },
     readout() {
-      const error =
-        tags.reduce((sum, tag) => sum + tag.estimate.distanceTo(tag.truth), 0) / tags.length;
       return [
         `${p.width} × ${p.depth} m floor · ${receivers.length} receivers · ${p.tags} tags at ${p.walkingSpeed} m/s`,
-        `RSSI at ${p.readingHz} Hz with ${p.noiseDb} dB noise · log-distance fit · ${flushes} batches of ${p.flushMs} ms`,
-        `estimate error now ${error.toFixed(2)} m`,
+        `RSSI at ${p.readingHz} Hz with ${p.noiseDb} dB noise · log-distance fit · ${floor.flushes()} batches of ${p.flushMs} ms`,
+        `estimate error now ${floor.error().toFixed(2)} m`,
       ];
-    },
-    dispose() {
-      for (const tag of tags) {
-        tag.label.remove();
-      }
-      for (const receiver of receivers) {
-        receiver.label.remove();
-      }
-      for (const geometry of [
-        wallGeometry,
-        gridGeometry,
-        receiverGeometry,
-        ringGeometry,
-        dotGeometry,
-        haloGeometry,
-      ]) {
-        geometry.dispose();
-      }
     },
   };
 };

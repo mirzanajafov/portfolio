@@ -1,10 +1,8 @@
 import {
   BoxGeometry,
   Color,
-  DynamicDrawUsage,
   EdgesGeometry,
   Float32BufferAttribute,
-  InstancedMesh,
   LineBasicMaterial,
   LineSegments,
   MathUtils,
@@ -17,17 +15,25 @@ import {
   Scene,
   Vector3,
 } from 'three';
-import data from './campaign-data.json';
+import {
+  campaignAt,
+  campaignData,
+  campaignLoop,
+  campaignPace,
+  firstRun,
+  holdEnd,
+  mutantAppears,
+  mutantsEnd,
+  runAppears,
+  type Run,
+} from './campaign-model';
+import { coloredInstances } from './colored-instances';
 import { aim, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatClock, formatNumber, plural } from './readout';
-import type { Palette, SceneFactory } from './types';
+import type { SceneFactory } from './types';
 
-export const campaignParameters = {
-  runsPerSecond: 10,
-  mutantSeconds: 0.6,
-  holdSeconds: 3.5,
-  clearSeconds: 0.8,
+const look = {
   columns: 20,
   spacing: 1.15,
   tile: 0.82,
@@ -37,69 +43,27 @@ export const campaignParameters = {
   swing: 0.06,
 };
 
-export const campaignData = data;
-
-type Run = (typeof data.runs)[number];
-
-const [firstRun] = data.runs;
-if (!firstRun) {
-  throw new Error('the campaign data has no runs');
-}
-
-const p = campaignParameters;
-const runCount = data.runs.length;
-const rows = Math.ceil(runCount / p.columns);
-const runsEnd = runCount / p.runsPerSecond;
-const mutantsEnd = runsEnd + data.mutants.length * p.mutantSeconds;
-const holdEnd = mutantsEnd + p.holdSeconds;
-export const campaignLoop = holdEnd + p.clearSeconds;
-
-const runAppears = (index: number) => index / p.runsPerSecond;
-const mutantAppears = (index: number) => runsEnd + index * p.mutantSeconds;
-
-function countUpTo(seconds: number, appears: (index: number) => number, total: number): number {
-  let count = 0;
-  while (count < total && appears(count) <= seconds + 1e-9) {
-    count += 1;
-  }
-  return count;
-}
-
-export function campaignAt(seconds: number) {
-  const runs = countUpTo(seconds, runAppears, runCount);
-  const mutants = countUpTo(seconds, mutantAppears, data.mutants.length);
-  const shown = data.runs.slice(0, runs);
-  const total = (pick: (run: Run) => number) => shown.reduce((sum, run) => sum + pick(run), 0);
-  return {
-    runs,
-    mutants,
-    journeys: total((run) => run.journeys),
-    kills: total((run) => run.kills),
-    crashes: total((run) => run.postgres + run.kafka),
-    violations: total((run) => run.violations),
-    caught: data.mutants.slice(0, mutants).filter((mutant) => mutant.caughtIn !== null).length,
-  };
-}
-
+const { runs, mutants } = campaignData;
+const rows = Math.ceil(runs.length / look.columns);
 const gridCenterZ = -2;
-const gridWidth = p.columns * p.spacing;
-const gridDepth = rows * p.spacing;
+const gridWidth = look.columns * look.spacing;
+const gridDepth = rows * look.spacing;
 const gridBack = gridCenterZ - gridDepth / 2;
 const gridFront = gridCenterZ + gridDepth / 2;
 const mutantZ = gridFront + 2;
 const mutantHeight = 0.9;
 
 function runPosition(index: number) {
-  const column = index % p.columns;
-  const row = Math.floor(index / p.columns);
+  const column = index % look.columns;
+  const row = Math.floor(index / look.columns);
   return {
-    x: (column - (p.columns - 1) / 2) * p.spacing,
-    z: gridBack + (row + 0.5) * p.spacing,
+    x: (column - (look.columns - 1) / 2) * look.spacing,
+    z: gridBack + (row + 0.5) * look.spacing,
   };
 }
 
 function mutantX(index: number) {
-  return (index - (data.mutants.length - 1) / 2) * p.mutantSpacing;
+  return (index - (mutants.length - 1) / 2) * look.mutantSpacing;
 }
 
 function runHeight(kills: number) {
@@ -138,6 +102,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 400);
   const random = seeded(17);
+  let palette = hooks.palette;
 
   const boxGeometry = new BoxGeometry(1, 1, 1);
   boxGeometry.translate(0, 0.5, 0);
@@ -148,15 +113,12 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       3,
     ),
   );
-  const sparkGeometry = new BoxGeometry(0.14, 0.14, 0.14);
   const ringGeometry = new RingGeometry(0.92, 1, 40);
   ringGeometry.rotateX(-Math.PI / 2);
   const gridFloorGeometry = new PlaneGeometry(gridWidth + 0.6, gridDepth + 0.6);
   gridFloorGeometry.rotateX(-Math.PI / 2);
   const mutantFloorGeometry = new PlaneGeometry(gridWidth + 0.6, 1.9);
   mutantFloorGeometry.rotateX(-Math.PI / 2);
-  const gridFrameGeometry = new EdgesGeometry(gridFloorGeometry);
-  const mutantFrameGeometry = new EdgesGeometry(mutantFloorGeometry);
 
   const floorMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.12 });
   const frameMaterial = new LineBasicMaterial({ transparent: true, opacity: 0.9 });
@@ -164,38 +126,35 @@ export const createCampaignScene: SceneFactory = (hooks) => {
   gridFloor.position.set(0, 0, gridCenterZ);
   const mutantFloor = new Mesh(mutantFloorGeometry, floorMaterial);
   mutantFloor.position.set(0, 0, mutantZ);
-  const gridFrame = new LineSegments(gridFrameGeometry, frameMaterial);
+  const gridFrame = new LineSegments(new EdgesGeometry(gridFloorGeometry), frameMaterial);
   gridFrame.position.copy(gridFloor.position);
-  const mutantFrame = new LineSegments(mutantFrameGeometry, frameMaterial);
+  const mutantFrame = new LineSegments(new EdgesGeometry(mutantFloorGeometry), frameMaterial);
   mutantFrame.position.copy(mutantFloor.position);
-  scene.add(gridFloor, mutantFloor, gridFrame, mutantFrame);
 
-  const instanced = (geometry: BoxGeometry | RingGeometry, count: number) => {
-    const mesh = new InstancedMesh(
-      geometry,
-      new MeshBasicMaterial({ vertexColors: geometry === boxGeometry }),
-      count,
-    );
-    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    mesh.frustumCulled = false;
-    const white = new Color(1, 1, 1);
-    for (let i = 0; i < count; i += 1) {
-      mesh.setColorAt(i, white);
-    }
-    mesh.count = 0;
-    scene.add(mesh);
-    return mesh;
-  };
-  const runTiles = instanced(boxGeometry, runCount);
-  const mutantTiles = instanced(boxGeometry, data.mutants.length);
-  const sparkMesh = instanced(sparkGeometry, maxSparks);
-  const ringMesh = instanced(ringGeometry, maxRings);
+  const tileMaterial = new MeshBasicMaterial({ vertexColors: true });
+  const runTiles = coloredInstances(boxGeometry, tileMaterial, runs.length);
+  const mutantTiles = coloredInstances(boxGeometry, tileMaterial, mutants.length);
+  const sparkMesh = coloredInstances(
+    new BoxGeometry(0.14, 0.14, 0.14),
+    new MeshBasicMaterial(),
+    maxSparks,
+  );
+  const ringMesh = coloredInstances(ringGeometry, new MeshBasicMaterial(), maxRings);
+  scene.add(
+    gridFloor,
+    mutantFloor,
+    gridFrame,
+    mutantFrame,
+    runTiles,
+    mutantTiles,
+    sparkMesh,
+    ringMesh,
+  );
 
   const gridTitle = hooks.label('');
   const mutantTitle = hooks.label('', 'node');
   const mutantLabel = hooks.label('');
 
-  let palette: Palette | null = null;
   let seconds = mutantsEnd - 2;
   let sparks: Particle[] = [];
   let rings: Ring[] = [];
@@ -206,7 +165,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
   const burst = (run: Run, index: number) => {
     const { x, z } = runPosition(index);
     const top = runHeight(run.kills);
-    const count = Math.round(run.kills / p.killsPerSpark);
+    const count = Math.round(run.kills / look.killsPerSpark);
     for (let i = 0; i < count && sparks.length < maxSparks; i += 1) {
       const angle = random() * Math.PI * 2;
       const speed = 0.6 + random() * 1.4;
@@ -244,7 +203,7 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         burst(firstRun, 0);
         return;
       }
-      data.runs.forEach((run, index) => {
+      runs.forEach((run, index) => {
         const at = runAppears(index);
         if (at > before && at <= seconds) {
           burst(run, index);
@@ -274,52 +233,41 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       });
     },
     render(time) {
-      const narrow = hooks.size().width < 600;
-      const clearing = seconds > holdEnd ? 1 - ease((seconds - holdEnd) / p.clearSeconds) : 1;
+      const narrow = hooks.narrow();
+      const clearing =
+        seconds > holdEnd ? 1 - ease((seconds - holdEnd) / campaignPace.clearSeconds) : 1;
       const now = campaignAt(seconds);
 
-      runTiles.count = now.runs;
-      for (const [index, run] of data.runs.entries()) {
-        if (index >= now.runs) {
+      runTiles.count = now.shownRuns;
+      for (const [index, run] of runs.entries()) {
+        if (index >= now.shownRuns) {
           break;
         }
         const { x, z } = runPosition(index);
         const age = seconds - runAppears(index);
         const grow = ease(age / 0.35) * clearing;
         const height = Math.max(0.001, runHeight(run.kills) * grow);
-        matrix.makeScale(p.tile, height, p.tile).setPosition(x, 0, z);
+        matrix.makeScale(look.tile, height, look.tile).setPosition(x, 0, z);
         runTiles.setMatrixAt(index, matrix);
-        if (palette) {
-          color.copy(palette.fg).lerp(palette.signal, ease(age / 0.6));
-          if (run.violations > 0) {
-            color.copy(palette.accent);
-          }
-          runTiles.setColorAt(index, color);
+        color.copy(palette.fg).lerp(palette.signal, ease(age / 0.6));
+        if (run.violations > 0) {
+          color.copy(palette.accent);
         }
-      }
-      runTiles.instanceMatrix.needsUpdate = true;
-      if (runTiles.instanceColor) {
-        runTiles.instanceColor.needsUpdate = true;
+        runTiles.setColorAt(index, color);
       }
 
-      mutantTiles.count = now.mutants;
-      for (const [index, mutant] of data.mutants.entries()) {
-        if (index >= now.mutants) {
+      mutantTiles.count = now.shownMutants;
+      for (const [index, mutant] of mutants.entries()) {
+        if (index >= now.shownMutants) {
           break;
         }
         const age = seconds - mutantAppears(index);
         const height = Math.max(0.001, mutantHeight * ease(age / 0.3) * clearing);
-        matrix.makeScale(p.tile, height, p.tile).setPosition(mutantX(index), 0, mutantZ);
+        matrix.makeScale(look.tile, height, look.tile).setPosition(mutantX(index), 0, mutantZ);
         mutantTiles.setMatrixAt(index, matrix);
-        if (palette) {
-          const settled = mutant.caughtIn === null ? palette.muted : palette.accent;
-          color.copy(palette.fg).lerp(settled, ease(age / 0.5));
-          mutantTiles.setColorAt(index, color);
-        }
-      }
-      mutantTiles.instanceMatrix.needsUpdate = true;
-      if (mutantTiles.instanceColor) {
-        mutantTiles.instanceColor.needsUpdate = true;
+        const settled = mutant.caughtIn === null ? palette.muted : palette.accent;
+        color.copy(palette.fg).lerp(settled, ease(age / 0.5));
+        mutantTiles.setColorAt(index, color);
       }
 
       sparkMesh.count = sparks.length;
@@ -327,14 +275,8 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         const fade = 1 - spark.age / sparkLife;
         matrix.makeScale(fade, fade, fade).setPosition(spark.x, spark.y, spark.z);
         sparkMesh.setMatrixAt(index, matrix);
-        if (palette) {
-          sparkMesh.setColorAt(index, color.copy(palette.accent).lerp(palette.bg, 1 - fade));
-        }
+        sparkMesh.setColorAt(index, color.copy(palette.accent).lerp(palette.bg, 1 - fade));
       });
-      sparkMesh.instanceMatrix.needsUpdate = true;
-      if (sparkMesh.instanceColor) {
-        sparkMesh.instanceColor.needsUpdate = true;
-      }
 
       ringMesh.count = rings.length;
       rings.forEach((ring, index) => {
@@ -342,31 +284,38 @@ export const createCampaignScene: SceneFactory = (hooks) => {
         const radius = 0.5 + progress * 1.4;
         matrix.makeScale(radius, 1, radius).setPosition(ring.x, 0.03, ring.z);
         ringMesh.setMatrixAt(index, matrix);
-        if (palette) {
-          ringMesh.setColorAt(index, color.copy(palette.accent).lerp(palette.bg, progress));
-        }
+        ringMesh.setColorAt(index, color.copy(palette.accent).lerp(palette.bg, progress));
       });
-      ringMesh.instanceMatrix.needsUpdate = true;
-      if (ringMesh.instanceColor) {
-        ringMesh.instanceColor.needsUpdate = true;
+
+      for (const mesh of [runTiles, mutantTiles, sparkMesh, ringMesh]) {
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) {
+          mesh.instanceColor.needsUpdate = true;
+        }
       }
 
-      gridTitle.textContent = narrow
-        ? `deployed code · ${now.runs} runs · ${now.violations} violations`
-        : `the deployed code · ${now.runs} of ${runCount} runs · ${now.violations} violations`;
+      hooks.write(
+        gridTitle,
+        narrow
+          ? `deployed code · ${now.shownRuns} runs · ${now.violations} violations`
+          : `the deployed code · ${now.shownRuns} of ${runs.length} runs · ${now.violations} violations`,
+      );
       hooks.place(gridTitle, 0, 1.5, gridBack);
-      mutantTitle.textContent =
-        now.mutants === 0
+      hooks.write(
+        mutantTitle,
+        now.shownMutants === 0
           ? 'one guard removed'
-          : `one guard removed · ${now.caught} of ${now.mutants} caught`;
+          : `one guard removed · ${now.caught} of ${now.shownMutants} caught`,
+      );
       hooks.place(mutantTitle, 0, 0, mutantZ + 0.95);
-      const latest = data.mutants[now.mutants - 1];
-      if (latest && seconds <= holdEnd) {
-        mutantLabel.textContent =
-          latest.caughtIn === null
-            ? `${latest.id} · survived`
-            : `${latest.id} · ${latest.caughtBy.join(' ')}`;
-        hooks.place(mutantLabel, mutantX(now.mutants - 1), mutantHeight + 0.2, mutantZ);
+      if (now.mutant && seconds <= holdEnd) {
+        hooks.write(
+          mutantLabel,
+          now.mutant.caughtIn === null
+            ? `${now.mutant.id} · survived`
+            : `${now.mutant.id} · ${now.mutant.caughtBy.join(' ')}`,
+        );
+        hooks.place(mutantLabel, mutantX(now.shownMutants - 1), mutantHeight + 0.2, mutantZ);
       } else {
         mutantLabel.style.display = 'none';
       }
@@ -374,51 +323,28 @@ export const createCampaignScene: SceneFactory = (hooks) => {
       aim(
         camera,
         framePoints,
-        viewFrom(p.tilt, Math.sin(time * 0.05) * p.swing),
+        viewFrom(look.tilt, Math.sin(time * 0.05) * look.swing),
         { top: narrow ? 0.84 : 0.7, side: 0.92, bottom: 0.92 },
         center,
       );
     },
     readout() {
       const now = campaignAt(seconds);
-      const latest = data.mutants[now.mutants - 1];
-      if (latest) {
+      const { mutant, run } = now;
+      if (mutant) {
         return [
-          latest.caughtIn === null
-            ? `${latest.id}, ${latest.guard}: survived ${latest.runs} runs, as it should`
-            : `${latest.id}, ${latest.guard}: caught by ${latest.caughtBy.join(', ')} in run ${latest.caughtIn}`,
-          `the deployed code: ${runCount} runs · ${formatNumber(now.journeys)} journeys · ${formatNumber(now.kills)} kills · ${now.violations} violations`,
-          `one guard removed: ${now.caught} of ${now.mutants} mutants caught`,
+          mutant.caughtIn === null
+            ? `${mutant.id}, ${mutant.guard}: survived ${mutant.runs} runs, as it should`
+            : `${mutant.id}, ${mutant.guard}: caught by ${mutant.caughtBy.join(', ')} in run ${mutant.caughtIn}`,
+          `the deployed code: ${runs.length} runs · ${formatNumber(now.journeys)} journeys · ${formatNumber(now.kills)} kills · ${now.violations} violations`,
+          `one guard removed: ${now.caught} of ${now.shownMutants} mutants caught`,
         ];
       }
-      const run = data.runs[now.runs - 1] ?? firstRun;
       return [
-        `run ${now.runs} of ${runCount} · ${formatNumber(now.kills)} process kills so far · ${now.violations} violations`,
+        `run ${now.shownRuns} of ${runs.length} · ${formatNumber(now.kills)} process kills so far · ${now.violations} violations`,
         `${formatClock(run.minute)} into the night · seed ${run.seed} · ${run.journeys} journeys · ${run.kills} kills · ${plural(run.postgres + run.kafka, 'crash', 'crashes')}`,
         `so far: ${formatNumber(now.journeys)} journeys · ${formatNumber(now.crashes)} Postgres and Kafka crashes`,
       ];
-    },
-    dispose() {
-      gridTitle.remove();
-      mutantTitle.remove();
-      mutantLabel.remove();
-      for (const mesh of [runTiles, mutantTiles, sparkMesh, ringMesh]) {
-        mesh.material.dispose();
-        mesh.dispose();
-      }
-      floorMaterial.dispose();
-      frameMaterial.dispose();
-      for (const geometry of [
-        boxGeometry,
-        sparkGeometry,
-        ringGeometry,
-        gridFloorGeometry,
-        mutantFloorGeometry,
-        gridFrameGeometry,
-        mutantFrameGeometry,
-      ]) {
-        geometry.dispose();
-      }
     },
   };
 };

@@ -1,14 +1,10 @@
 import {
   BoxGeometry,
   CircleGeometry,
-  Color,
-  DynamicDrawUsage,
   EdgesGeometry,
   Group,
-  InstancedMesh,
   LineBasicMaterial,
   LineSegments,
-  MathUtils,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -18,12 +14,21 @@ import {
   TorusGeometry,
   Vector3,
 } from 'three';
-import data from './failover-data.json';
+import { coloredInstances } from './colored-instances';
+import {
+  countsBetween,
+  failoverData,
+  failoverEnd,
+  fates,
+  faultAt,
+  laneAt,
+  stateOfA,
+  type Fate,
+} from './failover-model';
 import { aim, frame, viewFrom } from './framing';
 import { seeded } from './random';
 import { formatNumber } from './readout';
-import { commonLength, sampleAt } from './series';
-import type { Palette, SceneFactory } from './types';
+import type { SceneFactory } from './types';
 
 const failoverParameters = {
   pace: [
@@ -42,64 +47,10 @@ const failoverParameters = {
   startMs: 300,
 };
 
-type FailoverLane = (typeof data.lanes)[number];
-
-export const failoverData = data;
-
-const bins = commonLength(
-  data.lanes.flatMap((lane) => [lane.requests, lane.served, lane.failed, lane.retried]),
-);
-const endMs = data.fromMs + bins * data.binMs;
-
 export function speedAt(ms: number): number {
   const { pace, finalSpeed } = failoverParameters;
   return pace.find((step) => ms < step.until)?.speed ?? finalSpeed;
 }
-
-function binAt(ms: number): number {
-  return MathUtils.clamp(Math.floor((ms - data.fromMs) / data.binMs), 0, bins - 1);
-}
-
-export function laneAt(lane: FailoverLane, ms: number) {
-  const position = MathUtils.clamp((ms - data.fromMs) / data.binMs, 0, bins);
-  const whole = Math.floor(position);
-  let lost = 0;
-  let retried = 0;
-  for (let i = 0; i < whole; i += 1) {
-    lost += sampleAt(lane.failed, i);
-    retried += sampleAt(lane.retried, i);
-  }
-  const bin = binAt(ms);
-  const part = position - whole;
-  if (part > 0) {
-    lost += sampleAt(lane.failed, bin) * part;
-    retried += sampleAt(lane.retried, bin) * part;
-  }
-  const requests = Math.max(1, sampleAt(lane.requests, bin));
-  const sentToA =
-    sampleAt(lane.served, bin) + sampleAt(lane.failed, bin) + sampleAt(lane.retried, bin);
-  return {
-    lost: Math.floor(lost),
-    retried: Math.floor(retried),
-    toA: sentToA / requests,
-  };
-}
-
-export function stateOfA(lane: FailoverLane, ms: number): 'up' | 'picked' | 'out' | 'back' {
-  if (ms < 0) {
-    return 'up';
-  }
-  const last = lane.events.filter((e) => e.atMs <= ms).at(-1);
-  const out = last !== undefined && (last.state === 'ejected' || last.state === 'unhealthy');
-  if (ms < data.clearMs) {
-    return out ? 'out' : 'picked';
-  }
-  return out ? 'out' : 'back';
-}
-
-const fates = ['served', 'failed', 'retried', 'other'] as const;
-
-type Fate = (typeof fates)[number];
 
 const nothingOwed = (): Record<Fate, number> => ({
   served: 0.5,
@@ -107,23 +58,6 @@ const nothingOwed = (): Record<Fate, number> => ({
   retried: 0.5,
   other: 0.5,
 });
-
-function countsBetween(lane: FailoverLane, from: number, to: number): Record<Fate, number> {
-  const counts = { served: 0, failed: 0, retried: 0, other: 0 };
-  for (let bin = binAt(from); bin <= binAt(to - 1e-6); bin += 1) {
-    const start = data.fromMs + bin * data.binMs;
-    const overlap = Math.max(0, Math.min(to, start + data.binMs) - Math.max(from, start));
-    const share = overlap / data.binMs;
-    const served = sampleAt(lane.served, bin);
-    const failed = sampleAt(lane.failed, bin);
-    const retried = sampleAt(lane.retried, bin);
-    counts.served += served * share;
-    counts.failed += failed * share;
-    counts.retried += retried * share;
-    counts.other += Math.max(0, sampleAt(lane.requests, bin) - served - failed - retried) * share;
-  }
-  return counts;
-}
 
 type Dot = {
   fate: Fate;
@@ -164,7 +98,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   const baseGeometry = new EdgesGeometry(new BoxGeometry(1.3, 0.001, 1.3));
   const dotGeometry = new BoxGeometry(0.24, 0.24, 0.24);
 
-  const lanes = data.lanes.map((lane, index) => {
+  const lanes = failoverData.lanes.map((lane, index) => {
     const root = new Group();
     scene.add(root);
     const centerX = (laneBox.minX + laneBox.maxX) / 2;
@@ -206,15 +140,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     base.position.set(lostSpot.x, 0.01, lostSpot.z);
     root.add(column, base);
 
-    const dotMaterial = new MeshBasicMaterial();
-    const dotMesh = new InstancedMesh(dotGeometry, dotMaterial, p.maxDots);
-    dotMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    dotMesh.frustumCulled = false;
-    const white = new Color(1, 1, 1);
-    for (let i = 0; i < p.maxDots; i += 1) {
-      dotMesh.setColorAt(i, white);
-    }
-    dotMesh.count = 0;
+    const dotMesh = coloredInstances(dotGeometry, new MeshBasicMaterial(), p.maxDots);
     root.add(dotMesh);
     const dots: Dot[] = [];
 
@@ -231,7 +157,6 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       columnMaterial,
       baseMaterial,
       dotMesh,
-      dotMaterial,
       dots,
       owed: nothingOwed(),
       title: hooks.label(lane.label, 'node'),
@@ -240,7 +165,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
     };
   });
 
-  let palette: Palette | null = null;
+  let palette = hooks.palette;
   let clock = p.startMs;
   let layout = { aspect: 0, top: 0, wide: false };
   const matrix = new Matrix4();
@@ -314,7 +239,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
   };
 
   const restart = () => {
-    clock = data.fromMs;
+    clock = failoverData.fromMs;
     for (const lane of lanes) {
       lane.dots = [];
       lane.owed = nothingOwed();
@@ -339,11 +264,11 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       const speed = speedAt(clock);
       const from = clock;
       clock += dt * 1000 * speed;
-      if (clock >= endMs) {
+      if (clock >= failoverEnd) {
         restart();
         return;
       }
-      const perRequest = p.dotsPerSecond / (data.rate * speed);
+      const perRequest = p.dotsPerSecond / (failoverData.rate * speed);
       for (const lane of lanes) {
         const counts = countsBetween(lane.lane, from, clock);
         for (const fate of fates) {
@@ -367,9 +292,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
           }
           matrix.makeScale(scaleVector.x, scaleVector.y, scaleVector.z).setPosition(spot);
           lane.dotMesh.setMatrixAt(i, matrix);
-          if (palette) {
-            lane.dotMesh.setColorAt(i, dot.alarm ? palette.accent : palette.signal);
-          }
+          lane.dotMesh.setColorAt(i, dot.alarm ? palette.accent : palette.signal);
         });
         lane.dotMesh.count = lane.dots.length;
         lane.dotMesh.instanceMatrix.needsUpdate = true;
@@ -382,7 +305,7 @@ export const createFailoverScene: SceneFactory = (hooks) => {
       }
     },
     render(time, dt = 0.016) {
-      const narrow = hooks.size().width < 600;
+      const narrow = hooks.narrow();
       const tiny = hooks.size().height < 180;
       const top = narrow ? 0.84 : 0.7;
       if (layout.aspect !== camera.aspect || layout.top !== top) {
@@ -396,14 +319,11 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         const { x, z } = lane.root.position;
         const now = laneAt(lane.lane, clock);
         const state = stateOfA(lane.lane, clock);
-        const down = clock >= 0 && clock < data.clearMs;
+        const down = faultAt(clock) === 'down';
         lane.portals.forEach((portal, index) => {
           const share = index === 0 ? now.toA : (1 - now.toA) / 2;
           portal.glow += (0.06 + share * 0.6 - portal.glow) * ease;
           portal.discMaterial.opacity = portal.glow;
-          if (!palette) {
-            return;
-          }
           const broken = index === 0 && down;
           const out = index === 0 && state === 'out';
           let ringColor = palette.signal;
@@ -417,10 +337,12 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         });
         const lost = `${formatNumber(now.lost)} lost`;
         const text = stateText(state, down);
-        lane.title.textContent =
+        hooks.write(
+          lane.title,
           text && !narrow
             ? `${lane.lane.label} · a ${text} · ${lost}`
-            : `${lane.lane.label} · ${lost}`;
+            : `${lane.lane.label} · ${lost}`,
+        );
         const above = !wide && lane.index === 0;
         lane.title.classList.toggle('scene-label-node', !above);
         hooks.place(
@@ -460,51 +382,18 @@ export const createFailoverScene: SceneFactory = (hooks) => {
         }),
       ];
     },
-    dispose() {
-      for (const lane of lanes) {
-        lane.title.remove();
-        for (const name of lane.names) {
-          name.label.remove();
-        }
-        lane.gatewayLabel.remove();
-        lane.floorMaterial.dispose();
-        lane.frameMaterial.dispose();
-        lane.gatewayMaterial.dispose();
-        lane.gatewayLineMaterial.dispose();
-        lane.columnMaterial.dispose();
-        lane.baseMaterial.dispose();
-        lane.dotMaterial.dispose();
-        lane.dotMesh.dispose();
-        for (const portal of lane.portals) {
-          portal.ringMaterial.dispose();
-          portal.discMaterial.dispose();
-        }
-      }
-      for (const geometry of [
-        floorGeometry,
-        frameGeometry,
-        gatewayGeometry,
-        gatewayEdges,
-        ringGeometry,
-        discGeometry,
-        columnGeometry,
-        baseGeometry,
-        dotGeometry,
-      ]) {
-        geometry.dispose();
-      }
-    },
   };
 };
 
 function phaseOf(clock: number): string {
-  if (clock < 0) {
-    return `three dimensions, ${formatNumber(data.rate)} requests a second`;
+  const fault = faultAt(clock);
+  if (fault === 'before') {
+    return `three dimensions, ${formatNumber(failoverData.rate)} requests a second`;
   }
-  if (clock < data.clearMs) {
+  if (fault === 'down') {
     return 'dimension a refuses every connection';
   }
-  return `a is back after ${Math.round(data.clearMs / 1000)} s`;
+  return `a is back after ${Math.round(failoverData.clearMs / 1000)} s`;
 }
 
 function stateText(state: ReturnType<typeof stateOfA>, down: boolean): string | null {
