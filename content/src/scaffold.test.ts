@@ -1,6 +1,6 @@
 import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, assert, beforeEach, describe, expect, it } from 'vitest';
 import { ContentError, loadContent } from './load.ts';
@@ -30,9 +30,7 @@ describe('scaffoldProject', () => {
     const error = await loadContent(root).catch((e: unknown) => e);
     assert(error instanceof ContentError);
     const problems = error.issues.filter((i) => i.file.includes('new-thing'));
-    const paths = new Set(
-      problems.map((i) => `${i.file.slice(i.file.lastIndexOf('/') + 1)} ${i.path}`),
-    );
+    const paths = new Set(problems.map((i) => `${basename(i.file)} ${i.path}`));
     for (const expected of [
       'project.yaml name',
       'project.yaml order',

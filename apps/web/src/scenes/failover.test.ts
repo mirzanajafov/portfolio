@@ -106,7 +106,9 @@ describe('the failover scene', () => {
     for (let frame = 0; frame < 60 * 30; frame += 1) {
       scene.step(1 / 60, frame / 60);
       if (frame % 30 === 0) {
-        seen.push(...scene.readout().slice(0, 1));
+        const [line] = scene.readout();
+        assert(line);
+        seen.push(line);
       }
     }
     const back = seen.findIndex((line) => line.includes('a is back after 30 s'));

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { createCampaignScene } from './campaign';
 import { campaignAt, campaignData, campaignLoop, campaignPace, type Run } from './campaign-model';
 import { testHooks } from './test-hooks';
@@ -74,7 +74,9 @@ describe('the campaign scene', () => {
     for (let frame = 0; frame < 60 * 12; frame += 1) {
       scene.step(1 / 60, frame / 60);
       if (frame % 20 === 0) {
-        seen.push(...scene.readout().slice(0, 1));
+        const [line] = scene.readout();
+        assert(line);
+        seen.push(line);
       }
     }
     expect(seen.some((line) => line.startsWith('run 1 of 200'))).toBe(true);
