@@ -1,8 +1,19 @@
+import { createServer, type Socket } from 'node:net';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { askEventSchema, questionMaxLength, type AskEvent } from '@portfolio/content/ask';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
@@ -68,6 +79,37 @@ async function loggedRows(prisma: PrismaService, question: string) {
   return [];
 }
 
+async function silentDatabase() {
+  const sockets = new Set<Socket>();
+  const server = createServer((socket) => sockets.add(socket));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert(address !== null && typeof address === 'object');
+  onTestFinished(() => {
+    for (const socket of sockets) {
+      socket.destroy();
+    }
+    server.close();
+  });
+  return `postgresql://portfolio:portfolio@127.0.0.1:${address.port}/portfolio`;
+}
+
+describe('GET /health', () => {
+  it('reports healthy while the database answers', async () => {
+    const { app } = await startApp();
+    onTestFinished(() => app.close());
+    await request(app.getHttpServer()).get('/health').expect(200, { status: 'ok' });
+  });
+
+  it('answers 503 within seconds when the database stops answering', async () => {
+    const { app } = await startApp({ DATABASE_URL: await silentDatabase() });
+    onTestFinished(() => app.close());
+    const started = performance.now();
+    await request(app.getHttpServer()).get('/health').expect(503);
+    expect(performance.now() - started).toBeLessThan(10_000);
+  }, 20_000);
+});
+
 const ask = (app: NestExpressApplication, question: string, ip = '203.0.113.7') =>
   request(app.getHttpServer()).post('/ask').set('X-Forwarded-For', ip).send({ question });
 
@@ -86,10 +128,6 @@ describe('POST /ask against a real database', () => {
 
   beforeEach(async () => {
     await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
-  });
-
-  it('reports healthy while the database answers', async () => {
-    await request(app.getHttpServer()).get('/health').expect(200, { status: 'ok' });
   });
 
   it('streams an answer as server-sent events, with the source of every sentence', async () => {
