@@ -1,15 +1,19 @@
 import type { Content, Role } from '@portfolio/content';
 import type { AskSource } from '@portfolio/content/ask';
 
-export type KnowledgeDocument = {
+type DocumentBase = {
   id: string;
-  kind: 'profile' | 'cv' | 'summary' | 'fact' | 'case-study';
-  project?: string;
   text: string;
   keywords: string;
   source: AskSource;
   backs?: string[];
 };
+
+export type KnowledgeDocument = DocumentBase &
+  (
+    | { kind: 'profile' | 'cv'; project?: undefined }
+    | { kind: 'summary' | 'fact' | 'case-study'; project: string }
+  );
 
 export class Knowledge {
   readonly documents: readonly KnowledgeDocument[];

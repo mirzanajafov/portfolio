@@ -207,6 +207,19 @@ describe('loadContent', () => {
     ]);
   });
 
+  it('reports a headline that is not a fact together with the other problems of the project', async () => {
+    await putProject(
+      'alpha',
+      project(2, { headline: 'nowhere', links: { live: 'https://a.example' } }),
+      [],
+    );
+    expect((await issues()).map((issue) => `${issue.file} ${issue.path}`).sort()).toEqual([
+      'projects/alpha/evals.yaml (root)',
+      'projects/alpha/project.yaml headline',
+      'projects/alpha/project.yaml links.repo',
+    ]);
+  });
+
   it('requires the headline to be one of the facts', async () => {
     await putProject('alpha', project(2, { headline: 'nowhere' }));
     expect(await issues()).toEqual([

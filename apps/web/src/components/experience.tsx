@@ -1,8 +1,8 @@
 import type { Role } from '@portfolio/content';
-import { formatPeriod, kindLabel, roleKey, rolePlace } from '@/lib/format';
+import { formatPeriod, roleKindLabel, roleKey, rolePlace } from '@/lib/format';
 
 export function RoleHeading({ role }: { role: Role }) {
-  const label = kindLabel(role.kind);
+  const label = roleKindLabel(role.kind);
   return (
     <div className="flex flex-col gap-1">
       <h3 className="text-lg font-semibold">

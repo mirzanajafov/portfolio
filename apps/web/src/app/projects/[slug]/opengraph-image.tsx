@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { caseStudies, content } from '@portfolio/content';
+import { content, findProjectWithCaseStudy, projectsWithCaseStudy } from '@portfolio/content';
 import { ogSize, renderCard, truncate } from '@/lib/og';
 
 export const alt = 'Case study';
@@ -8,12 +8,12 @@ export const contentType = 'image/png';
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return caseStudies.map((project) => ({ slug: project.slug }));
+  return projectsWithCaseStudy.map((project) => ({ slug: project.slug }));
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = caseStudies.find((candidate) => candidate.slug === slug);
+  const project = findProjectWithCaseStudy(slug);
   if (!project) {
     notFound();
   }

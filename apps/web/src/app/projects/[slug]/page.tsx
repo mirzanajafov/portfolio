@@ -2,21 +2,27 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ViewTransition } from 'react';
-import { caseStudies, content, type Fact } from '@portfolio/content';
+import {
+  content,
+  findProjectWithCaseStudy,
+  projectsWithCaseStudy,
+  type Fact,
+} from '@portfolio/content';
 import { ProjectUses } from '@/components/project-uses';
 import { ScenePlayer } from '@/components/scene-player';
+import { factKindLabel } from '@/lib/format';
 
 type Params = { slug: string };
 
 export function generateStaticParams(): Params[] {
-  return caseStudies.map((project) => ({ slug: project.slug }));
+  return projectsWithCaseStudy.map((project) => ({ slug: project.slug }));
 }
 
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { slug } = await params;
-  const project = caseStudies.find((candidate) => candidate.slug === slug);
+  const project = findProjectWithCaseStudy(slug);
   if (!project) {
     return {};
   }
@@ -26,19 +32,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   };
 }
 
-const kindLabels: Record<Fact['kind'], string> = {
-  measured: 'measured',
-  parameter: 'design parameter',
-  design: 'design',
-};
-
 function FactLine({ fact }: { fact: Fact }) {
   const { href } = fact.source;
   return (
     <li className="flex flex-col gap-1 border-l-2 border-[var(--accent)] pl-4">
       <span>{fact.text}</span>
       <span className="font-mono text-xs text-[var(--muted)]">
-        {kindLabels[fact.kind]}
+        {factKindLabel(fact.kind)}
         {' · '}
         {href ? (
           <a className="underline underline-offset-4" href={href}>
@@ -54,7 +54,7 @@ function FactLine({ fact }: { fact: Fact }) {
 
 export default async function CaseStudyPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const project = caseStudies.find((candidate) => candidate.slug === slug);
+  const project = findProjectWithCaseStudy(slug);
   if (!project) {
     notFound();
   }

@@ -140,12 +140,7 @@ async function loadProject(
   });
   const headline = facts.get(project.headline);
   if (!headline) {
-    issues.push({
-      file: projectFile,
-      path: 'headline',
-      message: 'headline must be the id of a fact',
-    });
-    return undefined;
+    throw new Error(`${projectFile} passed its checks with a headline that is not a fact`);
   }
   const loaded = { ...project, slug, headline, facts: [...facts.values()], evals };
   const caseStudyFile = `${dir}/case-study.yaml`;

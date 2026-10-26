@@ -1,11 +1,12 @@
 import PDFDocument from 'pdfkit';
 import type { Content, Role } from '@portfolio/content';
 import { fontPath } from './fonts';
-import { formatPeriod, kindLabel, languagesLine, linkText, rolePlace } from './format';
+import { formatPeriod, roleKindLabel, languagesLine, linkText, rolePlace } from './format';
 import { palette } from './palette';
 import { siteUrl } from './site';
 
-const { fg: ink, muted, accent, line } = palette.light;
+const { fg: ink, accent, line } = palette.light;
+const muted = '#57524a';
 const margin = 50;
 function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
   return { ...extra, features: { liga: false } };
@@ -16,7 +17,9 @@ function roleLine(role: Role): string {
 }
 
 function roleMeta(role: Role): string {
-  return [formatPeriod(role), rolePlace(role), kindLabel(role.kind)].filter(Boolean).join('  ·  ');
+  return [formatPeriod(role), rolePlace(role), roleKindLabel(role.kind)]
+    .filter(Boolean)
+    .join('  ·  ');
 }
 
 export function buildCvPdf(content: Content): Promise<Buffer> {

@@ -110,5 +110,5 @@ There is no backup. Apart from Prisma's migration history, the database holds tw
 ```
 apps/web     Next.js site
 apps/api     NestJS API
-content/     what the site says about me, plus the schema, loader and generator
+content/     what the site says about me, plus the schema, loader and generator, and the Ask contract the site and the API share (`@portfolio/content/ask`)
 ```

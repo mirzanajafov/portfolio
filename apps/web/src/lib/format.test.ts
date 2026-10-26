@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatMonth, formatPeriod, kindLabel, languagesLine, linkText, rolePlace } from './format';
+import {
+  factKindLabel,
+  formatMonth,
+  formatPeriod,
+  roleKindLabel,
+  languagesLine,
+  linkText,
+  rolePlace,
+} from './format';
 
 describe('formatMonth', () => {
   it('turns YYYY-MM into a short month and year', () => {
@@ -19,11 +27,19 @@ describe('formatPeriod', () => {
   });
 });
 
-describe('kindLabel', () => {
+describe('roleKindLabel', () => {
   it('labels everything except a regular job, so overlapping dates explain themselves', () => {
-    expect(kindLabel('employee')).toBeNull();
-    expect(kindLabel('contract')).toBe('Contract');
-    expect(kindLabel('freelance')).toBe('Freelance');
+    expect(roleKindLabel('employee')).toBeNull();
+    expect(roleKindLabel('contract')).toBe('Contract');
+    expect(roleKindLabel('freelance')).toBe('Freelance');
+  });
+});
+
+describe('factKindLabel', () => {
+  it('never calls a design parameter a measurement', () => {
+    expect(factKindLabel('measured')).toBe('measured');
+    expect(factKindLabel('parameter')).toBe('design parameter');
+    expect(factKindLabel('design')).toBe('design');
   });
 });
 

@@ -100,6 +100,13 @@ export const projectSchema = z
       }
       used.add(use.project);
     });
+    if (!ids.has(project.headline)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'headline must be the id of a fact',
+        path: ['headline'],
+      });
+    }
     if (project.visibility === 'public' && !project.links.repo) {
       ctx.addIssue({
         code: 'custom',

@@ -11,7 +11,8 @@ RUN pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @portfolio/content build \
   && pnpm --filter @portfolio/api build \
   && pnpm --filter @portfolio/web build
-RUN pnpm deploy --filter @portfolio/api --prod --legacy --ignore-scripts /out/api   && pnpm deploy --filter @portfolio/content --prod --legacy --ignore-scripts /out/content
+RUN pnpm deploy --filter @portfolio/api --prod --legacy --ignore-scripts /out/api \
+  && pnpm deploy --filter @portfolio/content --prod --legacy --ignore-scripts /out/content
 
 FROM build AS migrate
 WORKDIR /repo/apps/api

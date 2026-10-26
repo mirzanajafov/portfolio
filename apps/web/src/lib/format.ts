@@ -1,4 +1,4 @@
-import type { Cv, Role } from '@portfolio/content';
+import type { Cv, Fact, Role } from '@portfolio/content';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,15 +16,25 @@ export function formatPeriod(role: Pick<Role, 'from' | 'to'>): string {
   return `${formatMonth(role.from)} – ${end}`;
 }
 
-const kindLabels: Record<Role['kind'], string | null> = {
+const roleKindLabels: Record<Role['kind'], string | null> = {
   employee: null,
   contract: 'Contract',
   freelance: 'Freelance',
   'part-time': 'Part-time',
 };
 
-export function kindLabel(kind: Role['kind']): string | null {
-  return kindLabels[kind];
+export function roleKindLabel(kind: Role['kind']): string | null {
+  return roleKindLabels[kind];
+}
+
+const factKindLabels: Record<Fact['kind'], string> = {
+  measured: 'measured',
+  parameter: 'design parameter',
+  design: 'design',
+};
+
+export function factKindLabel(kind: Fact['kind']): string {
+  return factKindLabels[kind];
 }
 
 export function rolePlace(role: Pick<Role, 'location' | 'remote'>): string {

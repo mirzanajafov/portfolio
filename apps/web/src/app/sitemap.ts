@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { caseStudies } from '@portfolio/content';
+import { projectsWithCaseStudy } from '@portfolio/content';
 import { siteUrl } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -7,7 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: siteUrl, changeFrequency: 'weekly', priority: 1 },
     { url: `${siteUrl}/cv`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${siteUrl}/cv.pdf`, changeFrequency: 'monthly', priority: 0.6 },
-    ...caseStudies.map((project) => ({
+    ...projectsWithCaseStudy.map((project) => ({
       url: `${siteUrl}/projects/${project.slug}`,
       changeFrequency: 'monthly' as const,
       priority: 0.7,
