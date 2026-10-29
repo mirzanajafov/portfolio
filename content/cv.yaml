@@ -9,7 +9,7 @@ experience:
     about: AI company behind Obsera, a SaaS platform for media monitoring, social media management and AI content generation.
     highlights:
       - Design and build the payment system with Stripe, including checkout, subscriptions and webhook handling.
-      - Own NestJS services and REST APIs from design to production, and review the team's pull requests.
+      - Own Node.js services and REST APIs in NestJS and TypeScript from design to production, and review the team's pull requests.
       - Build React and TypeScript front-end features from the team's designs.
       - Develop the web scraping pipelines that collect news and social media data for Obsera's media monitoring.
       - Prepare datasets and training workflows in Python for NLP models, including sentiment analysis.
@@ -54,7 +54,7 @@ experience:
     remote: true
     about: E-commerce platform providing real-time upsells for high-volume Shopify and Wix stores.
     highlights:
-      - Built REST APIs in NestJS and TypeScript and cut response times on critical services.
+      - Built REST APIs in Node.js, NestJS and TypeScript and cut response times on critical services.
       - Led a large refactoring for performance, which also cleared a lot of old tech debt.
       - Improved caching and the AWS deployment workflow, which cut production incidents.
       - Built backend integrations and payment processing pipelines for Minta.ai, an AI video automation platform.
