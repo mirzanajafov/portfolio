@@ -1,6 +1,7 @@
 declare namespace PDFKit.Mixins {
   type FeatureSwitches = Partial<Record<OpenTypeFeatures, boolean>>;
-  type SwitchedTextOptions = Omit<TextOptions, 'features'> & { features?: FeatureSwitches };
+  type TextLayout = Omit<TextOptions, 'features'>;
+  type SwitchedTextOptions = TextLayout & { features?: FeatureSwitches };
 
   interface PDFText {
     text(text: string, options?: SwitchedTextOptions): this;

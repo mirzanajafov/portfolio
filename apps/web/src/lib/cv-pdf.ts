@@ -8,7 +8,7 @@ import { siteUrl } from './site';
 const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';
 const margin = 40;
-function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
+function options(extra: PDFKit.Mixins.TextLayout = {}) {
   return { link: null, ...extra, features: { liga: false } };
 }
 
@@ -65,11 +65,11 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     text: string,
     font: string,
     size: number,
-    layout: Omit<PDFKit.Mixins.TextOptions, 'features'> = {},
+    layout: PDFKit.Mixins.TextLayout = {},
   ) => doc.font(font).fontSize(size).heightOfString(text, options(layout));
 
   const keepTogether = (height: number) => {
-    if (doc.y + height > doc.page.height - margin) {
+    if (doc.y + height > doc.page.maxY()) {
       doc.addPage();
     }
   };
@@ -80,7 +80,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   const bullets = (items: string[]) => {
     for (const item of items) {
       keepTogether(heightOf(bullet(item), 'regular', 10, bulletLayout));
-      doc.fillColor(ink).text(bullet(item), options(bulletLayout));
+      doc.font('regular').fontSize(10).fillColor(ink).text(bullet(item), options(bulletLayout));
     }
   };
 
@@ -94,7 +94,11 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     doc.font('semibold').fontSize(11.5).fillColor(ink).text(roleLine(role), options());
     doc.font('regular').fontSize(9.5).fillColor(muted).text(roleMeta(role), options());
     if (role.about) {
-      doc.text(role.about, options({ paragraphGap: 3 }));
+      doc
+        .font('regular')
+        .fontSize(9.5)
+        .fillColor(muted)
+        .text(role.about, options({ paragraphGap: 3 }));
     }
     bullets(role.highlights);
   };

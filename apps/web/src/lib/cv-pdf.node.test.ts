@@ -101,11 +101,19 @@ describe('the CV as a PDF', () => {
           .filter((url) => url !== undefined)
           .map(linkText);
         expect(unwrapped).toContain(project.headline.text);
-        expect(links.filter((link) => !text.includes(link))).toEqual([]);
+        expect(links.filter((link) => !unwrapped.includes(link))).toEqual([]);
       } else {
         expect(unwrapped).not.toContain(project.headline.text);
       }
     }
+  });
+
+  it('makes each link clickable once, and not the separators or text around it', () => {
+    const uris = [...pdf.toString('latin1').matchAll(/\/URI \(([^)]*)\)/g)].map(
+      (match) => match[1],
+    );
+    expect(uris.length).toBeGreaterThan(0);
+    expect(uris).toEqual([...new Set(uris)]);
   });
 
   it('labels contract and freelance work the same way the site does', () => {
