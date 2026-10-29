@@ -4,6 +4,7 @@ import { phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
+import { linkText } from './format';
 
 let pdf: Buffer;
 let text = '';
@@ -90,6 +91,20 @@ describe('the CV as a PDF', () => {
     );
     expect(targets.length).toBeGreaterThan(50);
     expect(targets.filter((hex) => hex.length > 4)).toEqual([]);
+  });
+
+  it('shows each project with a case study by its measured result and links, and no other project', () => {
+    for (const project of content.projects) {
+      if (project.caseStudy) {
+        const links = [project.links.live, project.links.repo]
+          .filter((url) => url !== undefined)
+          .map(linkText);
+        expect(text).toContain(project.headline.text);
+        expect(links.filter((link) => !text.includes(link))).toEqual([]);
+      } else {
+        expect(text).not.toContain(project.headline.text);
+      }
+    }
   });
 
   it('labels contract and freelance work the same way the site does', () => {

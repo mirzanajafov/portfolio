@@ -7,7 +7,7 @@ import { siteUrl } from './site';
 
 const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';
-const margin = 50;
+const margin = 40;
 function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
   return { ...extra, features: { liga: false } };
 }
@@ -129,21 +129,35 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   }
 
   heading('Projects');
-  projects.forEach((project, index) => {
-    if (index > 0) {
-      doc.moveDown(0.15);
-    }
-    const href = project.caseStudy ? `${siteUrl}/projects/${project.slug}` : project.links.live;
-    doc
-      .font('semibold')
-      .fontSize(11)
-      .fillColor(ink)
-      .text(project.name, options({ link: href, continued: true }))
-      .font('regular')
-      .fillColor(muted)
-      .text(`  ${project.hook}`, options());
-    doc.font('regular').fontSize(9.5).fillColor(muted).text(project.stack.join(', '), options());
-  });
+  projects
+    .filter((project) => project.caseStudy)
+    .forEach((project, index) => {
+      if (index > 0) {
+        doc.moveDown(0.4);
+      }
+      doc
+        .font('semibold')
+        .fontSize(11)
+        .fillColor(ink)
+        .text(
+          project.name,
+          options({ link: `${siteUrl}/projects/${project.slug}`, continued: true }),
+        )
+        .font('regular')
+        .fillColor(muted)
+        .text(`  ${project.hook}`, options());
+      doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
+      const { live, repo } = project.links;
+      doc
+        .fontSize(9.5)
+        .fillColor(muted)
+        .text(linkText(live), options({ link: live, continued: repo !== undefined }));
+      if (repo) {
+        doc
+          .text('  ·  ', options({ link: null, continued: true }))
+          .text(linkText(repo), options({ link: repo }));
+      }
+    });
 
   heading('Skills');
   for (const skill of cv.skills) {
