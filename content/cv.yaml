@@ -55,10 +55,11 @@ experience:
     about: E-commerce platform providing real-time upsells for high-volume Shopify and Wix stores.
     highlights:
       - Developed and maintained REST APIs using Node.js, TypeScript and NestJS, reducing response times for critical services by ~20%.
+      - Built merchant admin features in React, Redux and TypeScript.
       - Led a large codebase refactoring that improved performance by ~25% and cleared a lot of accumulated tech debt.
       - Improved caching and AWS deployment workflows, reducing production incidents.
       - Built backend integrations and payment processing pipelines for Minta.ai, an AI-powered video automation platform.
-      - Maintained and scaled the core backend infrastructure for ReConvert.io to support high-traffic e-commerce operations.
+      - Maintained and scaled ReConvert.io's backend and Shopify GraphQL integration for high-traffic stores.
 
   - role: Freelance Backend Developer
     kind: freelance
@@ -99,9 +100,9 @@ skills:
   - group: DevOps
     items: [Docker, AWS, CI/CD, Git, GitLab, GitHub]
   - group: Testing
-    items: [Jest, Playwright]
+    items: [Jest, Vitest, Playwright]
   - group: Frontend
-    items: [React, Next.js]
+    items: [React, Redux, Next.js]
 
 languages:
   - name: English
