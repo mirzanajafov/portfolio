@@ -1,9 +1,11 @@
 import { inflateSync } from 'node:zlib';
-import { content } from '@portfolio/content';
+import { content, projectsWithCaseStudy } from '@portfolio/content';
 import { phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
+import { linkText } from './format';
+import { siteUrl } from './site';
 
 let pdf: Buffer;
 let text = '';
@@ -90,6 +92,43 @@ describe('the CV as a PDF', () => {
     );
     expect(targets.length).toBeGreaterThan(50);
     expect(targets.filter((hex) => hex.length > 4)).toEqual([]);
+  });
+
+  it("shows each case-study project's measured result and links, and no other project's result", () => {
+    const unwrapped = text.replace(/-\s+/g, '-');
+    for (const project of content.projects) {
+      if (project.caseStudy) {
+        const links = [project.links.live, project.links.repo]
+          .filter((url) => url !== undefined)
+          .map(linkText);
+        expect(project.headline.kind).toBe('measured');
+        expect(unwrapped).toContain(project.headline.text);
+        expect(links.filter((link) => !unwrapped.includes(link))).toEqual([]);
+      } else {
+        expect(unwrapped).not.toContain(project.headline.text);
+      }
+    }
+  });
+
+  it('links the contacts and every case-study project once each, and nothing around them', () => {
+    const uris = [...pdf.toString('latin1').matchAll(/\/URI \(([^)]*)\)/g)].map(
+      (match) => match[1],
+    );
+    const { links } = content.profile;
+    const projectLinks = projectsWithCaseStudy
+      .flatMap((project) => [
+        `${siteUrl}/projects/${project.slug}`,
+        project.links.live,
+        project.links.repo,
+      ])
+      .filter((url) => url !== undefined);
+    expect(uris).toEqual([
+      `mailto:${links.email}`,
+      siteUrl,
+      links.github,
+      links.linkedin,
+      ...projectLinks,
+    ]);
   });
 
   it('labels contract and freelance work the same way the site does', () => {

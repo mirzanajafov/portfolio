@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import type { Content, Role } from '@portfolio/content';
+import { caseStudiesIn, type Content, type Role } from '@portfolio/content';
 import { fontPath } from './fonts';
 import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
 import { palette } from './palette';
@@ -7,9 +7,9 @@ import { siteUrl } from './site';
 
 const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';
-const margin = 50;
-function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
-  return { ...extra, features: { liga: false } };
+const margin = 40;
+function options(extra: PDFKit.Mixins.TextLayout = {}) {
+  return { link: null, ...extra, features: { liga: false } };
 }
 
 function roleLine(role: Role): string {
@@ -20,6 +20,43 @@ function roleMeta(role: Role): string {
   return [formatPeriod(role), rolePlace(role), roleKindLabel(role.kind)]
     .filter(Boolean)
     .join('  ·  ');
+}
+
+type Font = 'regular' | 'semibold';
+
+type TextBlock = {
+  text: string;
+  font: Font;
+  size: number;
+  color: string;
+  layout?: PDFKit.Mixins.TextLayout;
+};
+
+function roleHead(role: Role): TextBlock[] {
+  const head: TextBlock[] = [
+    { text: roleLine(role), font: 'semibold', size: 11.5, color: ink },
+    { text: roleMeta(role), font: 'regular', size: 9.5, color: muted },
+  ];
+  if (role.about) {
+    head.push({
+      text: role.about,
+      font: 'regular',
+      size: 9.5,
+      color: muted,
+      layout: { paragraphGap: 3 },
+    });
+  }
+  return head;
+}
+
+function bulletBlock(item: string): TextBlock {
+  return {
+    text: `•  ${item}`,
+    font: 'regular',
+    size: 10,
+    color: ink,
+    layout: { indent: 0, paragraphGap: 2 },
+  };
 }
 
 export function buildCvPdf(content: Content): Promise<Buffer> {
@@ -61,14 +98,48 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     doc.moveDown(0.6);
   };
 
-  const bullets = (items: string[]) => {
-    for (const item of items) {
-      doc
-        .font('regular')
-        .fontSize(10)
-        .fillColor(ink)
-        .text(`•  ${item}`, options({ indent: 0, paragraphGap: 2 }));
+  const draw = ({ text, font, size, color, layout }: TextBlock) => {
+    doc.font(font).fontSize(size).fillColor(color).text(text, options(layout));
+  };
+
+  const keepTogether = (blocks: TextBlock[]) => {
+    const height = blocks.reduce(
+      (total, { text, font, size, layout }) =>
+        total + doc.font(font).fontSize(size).heightOfString(text, options(layout)),
+      0,
+    );
+    if (doc.y > doc.page.margins.top && doc.y + height > doc.page.maxY()) {
+      doc.addPage();
     }
+  };
+
+  const roles = (list: Role[]) => {
+    list.forEach((role, index) => {
+      if (index > 0) {
+        doc.moveDown(0.7);
+      }
+      const head = roleHead(role);
+      const bullets = role.highlights.map(bulletBlock);
+      keepTogether([...head, ...bullets.slice(0, 1)]);
+      head.forEach(draw);
+      bullets.forEach((bullet, position) => {
+        if (position > 0) {
+          keepTogether([bullet]);
+        }
+        draw(bullet);
+      });
+    });
+  };
+
+  const linkRow = (links: { text: string; href: string }[], size: number, color: string) => {
+    doc.font('regular').fontSize(size);
+    links.forEach(({ text, href }, index) => {
+      const last = index === links.length - 1;
+      doc.fillColor(color).text(text, options({ link: href, continued: !last }));
+      if (!last) {
+        doc.fillColor(muted).text('  ·  ', options({ continued: true }));
+      }
+    });
   };
 
   doc.font('heavy').fontSize(26).fillColor(ink).text(profile.name, options());
@@ -79,21 +150,17 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     .fontSize(10)
     .fillColor(muted)
     .text(`${profile.location} (${profile.timezone})  ·  ${profile.availability}`, options());
-  doc
-    .fillColor(ink)
-    .text(profile.links.email, options({ link: `mailto:${profile.links.email}`, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(siteUrl), options({ link: siteUrl, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(profile.links.github), options({ link: profile.links.github, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(profile.links.linkedin), options({ link: profile.links.linkedin }));
+  linkRow(
+    [
+      { text: profile.links.email, href: `mailto:${profile.links.email}` },
+      ...[siteUrl, profile.links.github, profile.links.linkedin].map((url) => ({
+        text: linkText(url),
+        href: url,
+      })),
+    ],
+    10,
+    ink,
+  );
 
   heading('Summary');
   doc
@@ -103,46 +170,34 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     .text(profile.summary, options({ lineGap: 2 }));
 
   heading('Experience');
-  cv.experience.forEach((role, index) => {
-    if (index > 0) {
-      doc.moveDown(0.7);
-    }
-    doc.font('semibold').fontSize(11.5).fillColor(ink).text(roleLine(role), options());
-    doc.font('regular').fontSize(9.5).fillColor(muted).text(roleMeta(role), options());
-    if (role.about) {
-      doc
-        .font('regular')
-        .fontSize(9.5)
-        .fillColor(muted)
-        .text(role.about, options({ paragraphGap: 3 }));
-    }
-    bullets(role.highlights);
-  });
+  roles(cv.experience);
 
   if (cv.mentoring.length > 0) {
     heading('Mentoring');
-    cv.mentoring.forEach((role) => {
-      doc.font('semibold').fontSize(11.5).fillColor(ink).text(roleLine(role), options());
-      doc.font('regular').fontSize(9.5).fillColor(muted).text(roleMeta(role), options());
-      bullets(role.highlights);
-    });
+    roles(cv.mentoring);
   }
 
   heading('Projects');
-  projects.forEach((project, index) => {
+  caseStudiesIn(projects).projectsWithCaseStudy.forEach((project, index) => {
     if (index > 0) {
-      doc.moveDown(0.15);
+      doc.moveDown(0.4);
     }
-    const href = project.caseStudy ? `${siteUrl}/projects/${project.slug}` : project.links.live;
     doc
       .font('semibold')
       .fontSize(11)
       .fillColor(ink)
-      .text(project.name, options({ link: href, continued: true }))
+      .text(project.name, options({ link: `${siteUrl}/projects/${project.slug}`, continued: true }))
       .font('regular')
       .fillColor(muted)
       .text(`  ${project.hook}`, options());
-    doc.font('regular').fontSize(9.5).fillColor(muted).text(project.stack.join(', '), options());
+    doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
+    linkRow(
+      [project.links.live, project.links.repo]
+        .filter((url) => url !== undefined)
+        .map((url) => ({ text: linkText(url), href: url })),
+      9.5,
+      muted,
+    );
   });
 
   heading('Skills');
