@@ -9,7 +9,7 @@ const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';
 const margin = 40;
 function options(extra: Omit<PDFKit.Mixins.TextOptions, 'features'> = {}) {
-  return { ...extra, features: { liga: false } };
+  return { link: null, ...extra, features: { liga: false } };
 }
 
 function roleLine(role: Role): string {
@@ -62,13 +62,25 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   };
 
   const bullets = (items: string[]) => {
+    const layout = { indent: 0, paragraphGap: 2 };
     for (const item of items) {
-      doc
-        .font('regular')
-        .fontSize(10)
-        .fillColor(ink)
-        .text(`•  ${item}`, options({ indent: 0, paragraphGap: 2 }));
+      const text = `•  ${item}`;
+      doc.font('regular').fontSize(10);
+      if (doc.y + doc.heightOfString(text, layout) > doc.page.height - margin) {
+        doc.addPage();
+      }
+      doc.fillColor(ink).text(text, options(layout));
     }
+  };
+
+  const linkRow = (links: { text: string; href: string }[], color: string) => {
+    links.forEach(({ text, href }, index) => {
+      const last = index === links.length - 1;
+      doc.fillColor(color).text(text, options({ link: href, continued: !last }));
+      if (!last) {
+        doc.fillColor(muted).text('  ·  ', options({ continued: true }));
+      }
+    });
   };
 
   doc.font('heavy').fontSize(26).fillColor(ink).text(profile.name, options());
@@ -79,21 +91,16 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     .fontSize(10)
     .fillColor(muted)
     .text(`${profile.location} (${profile.timezone})  ·  ${profile.availability}`, options());
-  doc
-    .fillColor(ink)
-    .text(profile.links.email, options({ link: `mailto:${profile.links.email}`, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(siteUrl), options({ link: siteUrl, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(profile.links.github), options({ link: profile.links.github, continued: true }))
-    .fillColor(muted)
-    .text('  ·  ', options({ continued: true }))
-    .fillColor(ink)
-    .text(linkText(profile.links.linkedin), options({ link: profile.links.linkedin }));
+  linkRow(
+    [
+      { text: profile.links.email, href: `mailto:${profile.links.email}` },
+      ...[siteUrl, profile.links.github, profile.links.linkedin].map((url) => ({
+        text: linkText(url),
+        href: url,
+      })),
+    ],
+    ink,
+  );
 
   heading('Summary');
   doc
@@ -147,16 +154,13 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
         .fillColor(muted)
         .text(`  ${project.hook}`, options());
       doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
-      const { live, repo } = project.links;
-      doc
-        .fontSize(9.5)
-        .fillColor(muted)
-        .text(linkText(live), options({ link: live, continued: repo !== undefined }));
-      if (repo) {
-        doc
-          .text('  ·  ', options({ link: null, continued: true }))
-          .text(linkText(repo), options({ link: repo }));
-      }
+      doc.fontSize(9.5);
+      linkRow(
+        [project.links.live, project.links.repo]
+          .filter((url) => url !== undefined)
+          .map((url) => ({ text: linkText(url), href: url })),
+        muted,
+      );
     });
 
   heading('Skills');

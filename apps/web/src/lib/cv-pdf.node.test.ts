@@ -93,16 +93,17 @@ describe('the CV as a PDF', () => {
     expect(targets.filter((hex) => hex.length > 4)).toEqual([]);
   });
 
-  it('shows each project with a case study by its measured result and links, and no other project', () => {
+  it("shows each case-study project's measured result and links, and no other project's result", () => {
+    const unwrapped = text.replace(/-\s+/g, '-');
     for (const project of content.projects) {
       if (project.caseStudy) {
         const links = [project.links.live, project.links.repo]
           .filter((url) => url !== undefined)
           .map(linkText);
-        expect(text).toContain(project.headline.text);
+        expect(unwrapped).toContain(project.headline.text);
         expect(links.filter((link) => !text.includes(link))).toEqual([]);
       } else {
-        expect(text).not.toContain(project.headline.text);
+        expect(unwrapped).not.toContain(project.headline.text);
       }
     }
   });
