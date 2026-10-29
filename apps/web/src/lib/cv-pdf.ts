@@ -61,46 +61,58 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     doc.moveDown(0.6);
   };
 
-  const heightOf = (
-    text: string,
-    font: string,
-    size: number,
-    layout: PDFKit.Mixins.TextLayout = {},
-  ) => doc.font(font).fontSize(size).heightOfString(text, options(layout));
+  type Line = {
+    text: string;
+    font: string;
+    size: number;
+    color: string;
+    layout?: PDFKit.Mixins.TextLayout;
+  };
 
-  const keepTogether = (height: number) => {
+  const draw = ({ text, font, size, color, layout }: Line) => {
+    doc.font(font).fontSize(size).fillColor(color).text(text, options(layout));
+  };
+
+  const keepTogether = (lines: Line[]) => {
+    const height = lines.reduce(
+      (total, { text, font, size, layout }) =>
+        total + doc.font(font).fontSize(size).heightOfString(text, options(layout)),
+      0,
+    );
     if (doc.y + height > doc.page.maxY()) {
       doc.addPage();
     }
   };
 
-  const bulletLayout = { indent: 0, paragraphGap: 2 };
-  const bullet = (item: string) => `•  ${item}`;
-
-  const bullets = (items: string[]) => {
-    for (const item of items) {
-      keepTogether(heightOf(bullet(item), 'regular', 10, bulletLayout));
-      doc.font('regular').fontSize(10).fillColor(ink).text(bullet(item), options(bulletLayout));
-    }
-  };
+  const bulletLine = (item: string): Line => ({
+    text: `•  ${item}`,
+    font: 'regular',
+    size: 10,
+    color: ink,
+    layout: { indent: 0, paragraphGap: 2 },
+  });
 
   const roleBlock = (role: Role) => {
-    keepTogether(
-      heightOf(roleLine(role), 'semibold', 11.5) +
-        heightOf(roleMeta(role), 'regular', 9.5) +
-        (role.about ? heightOf(role.about, 'regular', 9.5, { paragraphGap: 3 }) : 0) +
-        heightOf(bullet(role.highlights[0] ?? ''), 'regular', 10, bulletLayout),
-    );
-    doc.font('semibold').fontSize(11.5).fillColor(ink).text(roleLine(role), options());
-    doc.font('regular').fontSize(9.5).fillColor(muted).text(roleMeta(role), options());
+    const head: Line[] = [
+      { text: roleLine(role), font: 'semibold', size: 11.5, color: ink },
+      { text: roleMeta(role), font: 'regular', size: 9.5, color: muted },
+    ];
     if (role.about) {
-      doc
-        .font('regular')
-        .fontSize(9.5)
-        .fillColor(muted)
-        .text(role.about, options({ paragraphGap: 3 }));
+      head.push({
+        text: role.about,
+        font: 'regular',
+        size: 9.5,
+        color: muted,
+        layout: { paragraphGap: 3 },
+      });
     }
-    bullets(role.highlights);
+    const bullets = role.highlights.map(bulletLine);
+    keepTogether([...head, ...bullets.slice(0, 1)]);
+    head.forEach(draw);
+    for (const bullet of bullets) {
+      keepTogether([bullet]);
+      draw(bullet);
+    }
   };
 
   const linkRow = (links: { text: string; href: string }[], size: number, color: string) => {

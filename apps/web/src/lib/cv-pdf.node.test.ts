@@ -5,6 +5,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
 import { linkText } from './format';
+import { siteUrl } from './site';
 
 let pdf: Buffer;
 let text = '';
@@ -100,6 +101,7 @@ describe('the CV as a PDF', () => {
         const links = [project.links.live, project.links.repo]
           .filter((url) => url !== undefined)
           .map(linkText);
+        expect(project.headline.kind).toBe('measured');
         expect(unwrapped).toContain(project.headline.text);
         expect(links.filter((link) => !unwrapped.includes(link))).toEqual([]);
       } else {
@@ -108,12 +110,26 @@ describe('the CV as a PDF', () => {
     }
   });
 
-  it('makes each link clickable once, and not the separators or text around it', () => {
+  it('links the contacts and every case-study project once each, and nothing around them', () => {
     const uris = [...pdf.toString('latin1').matchAll(/\/URI \(([^)]*)\)/g)].map(
       (match) => match[1],
     );
-    expect(uris.length).toBeGreaterThan(0);
-    expect(uris).toEqual([...new Set(uris)]);
+    const { links } = content.profile;
+    const projectLinks = content.projects
+      .filter((project) => project.caseStudy)
+      .flatMap((project) => [
+        `${siteUrl}/projects/${project.slug}`,
+        project.links.live,
+        project.links.repo,
+      ])
+      .filter((url) => url !== undefined);
+    expect(uris).toEqual([
+      `mailto:${links.email}`,
+      siteUrl,
+      links.github,
+      links.linkedin,
+      ...projectLinks,
+    ]);
   });
 
   it('labels contract and freelance work the same way the site does', () => {
