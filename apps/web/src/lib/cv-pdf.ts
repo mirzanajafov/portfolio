@@ -22,6 +22,41 @@ function roleMeta(role: Role): string {
     .join('  ·  ');
 }
 
+type Line = {
+  text: string;
+  font: string;
+  size: number;
+  color: string;
+  layout?: PDFKit.Mixins.TextLayout;
+};
+
+function roleHead(role: Role): Line[] {
+  const head: Line[] = [
+    { text: roleLine(role), font: 'semibold', size: 11.5, color: ink },
+    { text: roleMeta(role), font: 'regular', size: 9.5, color: muted },
+  ];
+  if (role.about) {
+    head.push({
+      text: role.about,
+      font: 'regular',
+      size: 9.5,
+      color: muted,
+      layout: { paragraphGap: 3 },
+    });
+  }
+  return head;
+}
+
+function bulletLine(item: string): Line {
+  return {
+    text: `•  ${item}`,
+    font: 'regular',
+    size: 10,
+    color: ink,
+    layout: { indent: 0, paragraphGap: 2 },
+  };
+}
+
 export function buildCvPdf(content: Content): Promise<Buffer> {
   const { profile, cv, projects } = content;
   const doc = new PDFDocument({
@@ -61,14 +96,6 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     doc.moveDown(0.6);
   };
 
-  type Line = {
-    text: string;
-    font: string;
-    size: number;
-    color: string;
-    layout?: PDFKit.Mixins.TextLayout;
-  };
-
   const draw = ({ text, font, size, color, layout }: Line) => {
     doc.font(font).fontSize(size).fillColor(color).text(text, options(layout));
   };
@@ -79,40 +106,27 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
         total + doc.font(font).fontSize(size).heightOfString(text, options(layout)),
       0,
     );
-    if (doc.y + height > doc.page.maxY()) {
+    if (doc.y > doc.page.margins.top && doc.y + height > doc.page.maxY()) {
       doc.addPage();
     }
   };
 
-  const bulletLine = (item: string): Line => ({
-    text: `•  ${item}`,
-    font: 'regular',
-    size: 10,
-    color: ink,
-    layout: { indent: 0, paragraphGap: 2 },
-  });
-
-  const roleBlock = (role: Role) => {
-    const head: Line[] = [
-      { text: roleLine(role), font: 'semibold', size: 11.5, color: ink },
-      { text: roleMeta(role), font: 'regular', size: 9.5, color: muted },
-    ];
-    if (role.about) {
-      head.push({
-        text: role.about,
-        font: 'regular',
-        size: 9.5,
-        color: muted,
-        layout: { paragraphGap: 3 },
+  const roles = (list: Role[]) => {
+    list.forEach((role, index) => {
+      if (index > 0) {
+        doc.moveDown(0.7);
+      }
+      const head = roleHead(role);
+      const bullets = role.highlights.map(bulletLine);
+      keepTogether([...head, ...bullets.slice(0, 1)]);
+      head.forEach(draw);
+      bullets.forEach((bullet, position) => {
+        if (position > 0) {
+          keepTogether([bullet]);
+        }
+        draw(bullet);
       });
-    }
-    const bullets = role.highlights.map(bulletLine);
-    keepTogether([...head, ...bullets.slice(0, 1)]);
-    head.forEach(draw);
-    for (const bullet of bullets) {
-      keepTogether([bullet]);
-      draw(bullet);
-    }
+    });
   };
 
   const linkRow = (links: { text: string; href: string }[], size: number, color: string) => {
@@ -154,18 +168,11 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     .text(profile.summary, options({ lineGap: 2 }));
 
   heading('Experience');
-  cv.experience.forEach((role, index) => {
-    if (index > 0) {
-      doc.moveDown(0.7);
-    }
-    roleBlock(role);
-  });
+  roles(cv.experience);
 
   if (cv.mentoring.length > 0) {
     heading('Mentoring');
-    cv.mentoring.forEach((role) => {
-      roleBlock(role);
-    });
+    roles(cv.mentoring);
   }
 
   heading('Projects');
