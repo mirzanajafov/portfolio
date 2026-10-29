@@ -8,8 +8,8 @@ experience:
     remote: false
     about: AI company behind Obsera, a SaaS platform for media monitoring, social media management and AI content generation.
     highlights:
-      - Own NestJS services and REST APIs from design to production, and review the team's pull requests.
       - Design and build the payment system with Stripe, including checkout, subscriptions and webhook handling.
+      - Own NestJS services and REST APIs from design to production, and review the team's pull requests.
       - Build React and TypeScript front-end features from the team's designs.
       - Develop the web scraping pipelines that collect news and social media data for Obsera's media monitoring.
       - Prepare datasets and training workflows in Python for NLP models, including sentiment analysis.
@@ -40,7 +40,7 @@ experience:
     remote: true
     about: Technology consultancy building backend systems for enterprise clients.
     highlights:
-      - Built REST APIs in Node.js and NestJS for client projects and tuned slow SQL queries.
+      - Tuned slow SQL queries and built REST APIs in Node.js and NestJS for client projects.
       - Set up asynchronous processing pipelines to reduce data latency.
       - Led refactoring work that made client codebases faster to change.
       - Agreed API contracts with frontend teams and supported client-side integration.
@@ -55,7 +55,7 @@ experience:
     about: E-commerce platform providing real-time upsells for high-volume Shopify and Wix stores.
     highlights:
       - Built REST APIs in NestJS and TypeScript and made critical services respond faster.
-      - Led a large refactoring of the codebase that improved performance and cleared accumulated tech debt.
+      - Led a large refactoring for performance, which also cleared a lot of old tech debt.
       - Improved caching and the AWS deployment workflow, which cut production incidents.
       - Built backend integrations and payment processing pipelines for Minta.ai, an AI video automation platform.
       - Maintained and scaled ReConvert.io's backend and Shopify GraphQL integration for high-traffic stores.
