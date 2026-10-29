@@ -42,7 +42,7 @@ experience:
     highlights:
       - Tuned slow SQL queries and built REST APIs in Node.js and NestJS for client projects.
       - Set up asynchronous processing pipelines to reduce data latency.
-      - Led refactoring work that made client codebases faster to change.
+      - Led refactoring work so that client codebases took less time to change.
       - Agreed API contracts with frontend teams and supported client-side integration.
 
   - company: UpSell (ex-ReConvert)
@@ -54,7 +54,7 @@ experience:
     remote: true
     about: E-commerce platform providing real-time upsells for high-volume Shopify and Wix stores.
     highlights:
-      - Built REST APIs in NestJS and TypeScript and made critical services respond faster.
+      - Built REST APIs in NestJS and TypeScript and cut response times on critical services.
       - Led a large refactoring for performance, which also cleared a lot of old tech debt.
       - Improved caching and the AWS deployment workflow, which cut production incidents.
       - Built backend integrations and payment processing pipelines for Minta.ai, an AI video automation platform.
