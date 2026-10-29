@@ -3,7 +3,7 @@ import { caseStudiesIn } from './case-studies.ts';
 
 export const { projectsWithCaseStudy, findProjectWithCaseStudy } = caseStudiesIn(content.projects);
 
-export { content };
+export { caseStudiesIn, content };
 export type {
   CaseStudy,
   Content,

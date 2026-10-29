@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import type { Content, Role } from '@portfolio/content';
+import { caseStudiesIn, type Content, type Role } from '@portfolio/content';
 import { fontPath } from './fonts';
 import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
 import { palette } from './palette';
@@ -22,16 +22,18 @@ function roleMeta(role: Role): string {
     .join('  ·  ');
 }
 
-type Line = {
+type Font = 'regular' | 'semibold';
+
+type TextBlock = {
   text: string;
-  font: string;
+  font: Font;
   size: number;
   color: string;
   layout?: PDFKit.Mixins.TextLayout;
 };
 
-function roleHead(role: Role): Line[] {
-  const head: Line[] = [
+function roleHead(role: Role): TextBlock[] {
+  const head: TextBlock[] = [
     { text: roleLine(role), font: 'semibold', size: 11.5, color: ink },
     { text: roleMeta(role), font: 'regular', size: 9.5, color: muted },
   ];
@@ -47,7 +49,7 @@ function roleHead(role: Role): Line[] {
   return head;
 }
 
-function bulletLine(item: string): Line {
+function bulletBlock(item: string): TextBlock {
   return {
     text: `•  ${item}`,
     font: 'regular',
@@ -96,12 +98,12 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
     doc.moveDown(0.6);
   };
 
-  const draw = ({ text, font, size, color, layout }: Line) => {
+  const draw = ({ text, font, size, color, layout }: TextBlock) => {
     doc.font(font).fontSize(size).fillColor(color).text(text, options(layout));
   };
 
-  const keepTogether = (lines: Line[]) => {
-    const height = lines.reduce(
+  const keepTogether = (blocks: TextBlock[]) => {
+    const height = blocks.reduce(
       (total, { text, font, size, layout }) =>
         total + doc.font(font).fontSize(size).heightOfString(text, options(layout)),
       0,
@@ -117,7 +119,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
         doc.moveDown(0.7);
       }
       const head = roleHead(role);
-      const bullets = role.highlights.map(bulletLine);
+      const bullets = role.highlights.map(bulletBlock);
       keepTogether([...head, ...bullets.slice(0, 1)]);
       head.forEach(draw);
       bullets.forEach((bullet, position) => {
@@ -176,32 +178,27 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   }
 
   heading('Projects');
-  projects
-    .filter((project) => project.caseStudy)
-    .forEach((project, index) => {
-      if (index > 0) {
-        doc.moveDown(0.4);
-      }
-      doc
-        .font('semibold')
-        .fontSize(11)
-        .fillColor(ink)
-        .text(
-          project.name,
-          options({ link: `${siteUrl}/projects/${project.slug}`, continued: true }),
-        )
-        .font('regular')
-        .fillColor(muted)
-        .text(`  ${project.hook}`, options());
-      doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
-      linkRow(
-        [project.links.live, project.links.repo]
-          .filter((url) => url !== undefined)
-          .map((url) => ({ text: linkText(url), href: url })),
-        9.5,
-        muted,
-      );
-    });
+  caseStudiesIn(projects).projectsWithCaseStudy.forEach((project, index) => {
+    if (index > 0) {
+      doc.moveDown(0.4);
+    }
+    doc
+      .font('semibold')
+      .fontSize(11)
+      .fillColor(ink)
+      .text(project.name, options({ link: `${siteUrl}/projects/${project.slug}`, continued: true }))
+      .font('regular')
+      .fillColor(muted)
+      .text(`  ${project.hook}`, options());
+    doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
+    linkRow(
+      [project.links.live, project.links.repo]
+        .filter((url) => url !== undefined)
+        .map((url) => ({ text: linkText(url), href: url })),
+      9.5,
+      muted,
+    );
+  });
 
   heading('Skills');
   for (const skill of cv.skills) {

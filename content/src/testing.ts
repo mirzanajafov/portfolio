@@ -167,5 +167,5 @@ export async function contentOf({
 }
 
 export function contentModule(content: Content): typeof ContentModule {
-  return { content, ...caseStudiesIn(content.projects) };
+  return { content, caseStudiesIn, ...caseStudiesIn(content.projects) };
 }

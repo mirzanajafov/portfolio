@@ -1,5 +1,5 @@
 import { inflateSync } from 'node:zlib';
-import { content } from '@portfolio/content';
+import { content, projectsWithCaseStudy } from '@portfolio/content';
 import { phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -115,8 +115,7 @@ describe('the CV as a PDF', () => {
       (match) => match[1],
     );
     const { links } = content.profile;
-    const projectLinks = content.projects
-      .filter((project) => project.caseStudy)
+    const projectLinks = projectsWithCaseStudy
       .flatMap((project) => [
         `${siteUrl}/projects/${project.slug}`,
         project.links.live,
