@@ -1,13 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
+import {
+  errorMessageMaxLength,
+  geolocationCredit,
+  maxPathLength,
+  maxSeconds,
+  webVitals,
+} from '@portfolio/content/analytics';
 import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
-const path = z.string().regex(/^\/(?!\/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/);
+const path = z
+  .string()
+  .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength - 1)}}$`));
 const pageView = z.uuid();
-const seconds = z.int().min(0).max(86_400);
+const seconds = z.int().min(0).max(maxSeconds);
 
 export function linksIn({ profile, projects }: Content): Set<string> {
   return new Set([
@@ -15,6 +24,7 @@ export function linksIn({ profile, projects }: Content): Set<string> {
     profile.links.github,
     profile.links.linkedin,
     '/cv.pdf',
+    geolocationCredit,
     ...projects.flatMap(({ links, facts }) => [
       links.live,
       ...(links.repo ? [links.repo] : []),
@@ -56,15 +66,15 @@ export function eventSchema(links: ReadonlySet<string>) {
       .strictObject({
         type: z.literal('vital'),
         view: pageView,
-        name: z.enum(['LCP', 'INP', 'CLS']),
+        name: z.enum(webVitals),
         value: z.number().min(0).max(60_000),
       })
       .refine(({ name, value }) => name !== 'CLS' || value <= 10, 'CLS is at most 10'),
     z.strictObject({
       type: z.literal('error'),
       view: pageView,
-      message: z.string().max(200),
-      source: z.union([z.literal('external'), path]),
+      message: z.string().max(errorMessageMaxLength),
+      source: path,
       line: z.int32().min(0).optional(),
       column: z.int32().min(0).optional(),
     }),

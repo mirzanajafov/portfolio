@@ -183,6 +183,7 @@ export function TourScroller({
             id={id}
             className="tour-step"
             data-active={active === id}
+            data-read={id}
           >
             {demo && (
               <div

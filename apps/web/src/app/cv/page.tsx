@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
 import { RoleHeading } from '@/components/experience';
@@ -84,6 +85,11 @@ export default function CvPage() {
         <SectionTitle>Languages</SectionTitle>
         <p>{languagesLine(cv.languages)}</p>
       </section>
+      <footer className="border-t border-line pt-8 text-muted print:hidden">
+        <Link className="underline underline-offset-4" href="/privacy">
+          Privacy
+        </Link>
+      </footer>
     </main>
   );
 }

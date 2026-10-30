@@ -37,15 +37,17 @@ function Section({
   id,
   title,
   className,
+  read = true,
   children,
 }: {
   id: string;
   title: string;
   className: string;
+  read?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className={className}>
+    <section aria-labelledby={id} className={className} data-read={read ? id : undefined}>
       <h2 id={id} className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
         {title}
       </h2>
@@ -123,7 +125,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
       </Section>
 
       {caseStudy.demo && caseStudy.demoCaption && (
-        <figure className="flex flex-col gap-3">
+        <figure className="flex flex-col gap-3" data-read="demo">
           <div className="relative h-[clamp(420px,62vh,620px)] overflow-hidden rounded-2xl border border-line">
             <ScenePlayer scene={{ name: caseStudy.demo }} description={caseStudy.demoCaption} />
           </div>
@@ -133,9 +135,13 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </figure>
       )}
 
-      <Section id="decisions" title="Decisions" className="flex flex-col gap-10">
-        {caseStudy.decisions.map((decision) => (
-          <article key={decision.title} className="flex flex-col gap-4">
+      <Section id="decisions" title="Decisions" className="flex flex-col gap-10" read={false}>
+        {caseStudy.decisions.map((decision, index) => (
+          <article
+            key={decision.title}
+            className="flex flex-col gap-4"
+            data-read={`decision-${index + 1}`}
+          >
             <h3 className="text-2xl font-bold tracking-tight">{decision.title}</h3>
             <p className="max-w-[65ch] leading-relaxed">{decision.body}</p>
             {decision.facts.length > 0 && (
@@ -157,9 +163,12 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
       </Section>
 
-      <footer className="border-t border-line pt-8 text-muted">
+      <footer className="flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-8 text-muted">
         <Link className="underline underline-offset-4" href="/">
           Back to everything I built
+        </Link>
+        <Link className="underline underline-offset-4" href="/privacy">
+          Privacy
         </Link>
       </footer>
     </main>

@@ -15,6 +15,10 @@
       "types": "./dist/ask.d.ts",
       "default": "./dist/ask.js"
     },
+    "./analytics": {
+      "types": "./dist/analytics.d.ts",
+      "default": "./dist/analytics.js"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"

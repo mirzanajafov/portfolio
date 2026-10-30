@@ -1,4 +1,5 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { analyticsDays } from '@portfolio/content/analytics';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -8,7 +9,7 @@ import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
-const keepMs = 30 * 24 * 60 * 60 * 1000;
+const dayMs = 24 * 60 * 60 * 1000;
 
 type DropReason = 'bot' | 'limited';
 
@@ -104,7 +105,7 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cleanup(): Promise<void> {
-    const cutoff = new Date(this.clock.now().getTime() - keepMs);
+    const cutoff = new Date(this.clock.now().getTime() - analyticsDays * dayMs);
     await this.prisma.visit.deleteMany({ where: { startedAt: { lt: cutoff } } });
   }
 

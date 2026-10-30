@@ -1,5 +1,7 @@
+import type { VisitEvent } from '@portfolio/content/analytics';
 import { aProject, contentOf } from '@portfolio/content/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { z } from 'zod';
 import { eventSchema, linksIn } from './event.schema.js';
 
 const schema = eventSchema(new Set(['/cv.pdf']));
@@ -96,16 +98,16 @@ describe('eventSchema', () => {
   it('takes an error with its place, but not a long message or a line past 32 bits', () => {
     const error = { type: 'error', view, message: 'x is undefined', source: '/_next/static/a.js' };
     expect(schema.safeParse({ ...error, line: 3, column: 14 }).success).toBe(true);
-    expect(schema.safeParse({ ...error, source: 'external' }).success).toBe(true);
     expect(schema.safeParse({ ...error, message: 'x'.repeat(201) }).success).toBe(false);
     expect(schema.safeParse({ ...error, line: 3_000_000_000 }).success).toBe(false);
   });
 
-  it('takes the source of an error as a path on this site, or only the word external', () => {
+  it('takes the source of an error only as a path on this site', () => {
     const error = { type: 'error', view, message: 'x is undefined' };
     for (const source of [
       'https://najafov.dev/_next/static/a.js?r=memh',
       'chrome-extension://abcdefghijklmnop/content.js',
+      'external',
       '//cdn.elsewhere.example/a.js',
     ]) {
       expect(schema.safeParse({ ...error, source }).success).toBe(false);
@@ -113,8 +115,14 @@ describe('eventSchema', () => {
   });
 });
 
+describe('the contract with the site', () => {
+  it('accepts every event the tracker on the site can send', () => {
+    expectTypeOf<VisitEvent>().toEqualTypeOf<z.input<typeof schema>>();
+  });
+});
+
 describe('linksIn', () => {
-  it('lists every outbound link the site renders, and the CV', async () => {
+  it('lists every outbound link the site renders, the CV and the IP database credit', async () => {
     const content = await contentOf({
       projects: [
         aProject({ slug: 'tuner' }),
@@ -127,6 +135,7 @@ describe('linksIn', () => {
         'https://github.com/ada',
         'https://www.linkedin.com/in/ada',
         '/cv.pdf',
+        'https://db-ip.com',
         'https://tuner.example.com',
         'https://github.com/someone/tuner',
         'https://github.com/someone/tuner/blob/main/README.md',
