@@ -1,3 +1,6 @@
+import type { Browser, Device } from '../user-agent.js';
+import type { DropReason } from '../visit-log.service.js';
+
 export type ViewRow = {
   createdAt: Date;
   path: string;
@@ -15,16 +18,17 @@ export type ViewRow = {
 
 export type VisitRow = {
   startedAt: Date;
-  device: string;
-  browser: string;
+  device: Device;
+  browser: Browser;
   country: string | null;
   views: ViewRow[];
 };
 
 export type ReportRows = {
+  kept: Date;
   visits: VisitRow[];
   questions: { createdAt: Date; refused: boolean }[];
-  dropped: { day: Date; reason: string; count: number }[];
+  dropped: { day: Date; reason: DropReason; count: number }[];
 };
 
 export type Visit = VisitRow & { landing: ViewRow; exit: ViewRow };

@@ -1,9 +1,21 @@
-export type Device = 'phone' | 'tablet' | 'desktop';
+export const devices = ['phone', 'tablet', 'desktop'] as const;
 
-export type Browser =
-  'linkedin' | 'edge' | 'samsung' | 'opera' | 'firefox' | 'chrome' | 'safari' | 'other';
+export type Device = (typeof devices)[number];
 
-const browsers: [Browser, RegExp][] = [
+export const browsers = [
+  'linkedin',
+  'edge',
+  'samsung',
+  'opera',
+  'firefox',
+  'chrome',
+  'safari',
+  'other',
+] as const;
+
+export type Browser = (typeof browsers)[number];
+
+const browserPatterns: [Browser, RegExp][] = [
   ['linkedin', /LinkedInApp/],
   ['edge', /Edg(?:A|iOS)?\//],
   ['samsung', /SamsungBrowser\//],
@@ -14,7 +26,7 @@ const browsers: [Browser, RegExp][] = [
 ];
 
 export function browserOf(userAgent: string): Browser {
-  return browsers.find(([, pattern]) => pattern.test(userAgent))?.[0] ?? 'other';
+  return browserPatterns.find(([, pattern]) => pattern.test(userAgent))?.[0] ?? 'other';
 }
 
 export function deviceOf(userAgent: string): Device {

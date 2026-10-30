@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { Browser } from '../user-agent.js';
 import type { Source } from './report.js';
 import { sourceOf } from './sources.js';
 
 describe('sourceOf', () => {
-  it.each<[string | null, string, Source]>([
+  it.each<[string | null, Browser, Source]>([
     ['www.google.com', 'chrome', 'google'],
     ['www.google.az', 'chrome', 'google'],
     ['www.google.co.uk', 'safari', 'google'],

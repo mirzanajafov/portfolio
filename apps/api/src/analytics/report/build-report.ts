@@ -1,6 +1,7 @@
 import type { Content } from '@portfolio/content';
-import { analyticsDays, readingBlocks } from '@portfolio/content/analytics';
+import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
+import type { DropReason } from '../visit-log.service.js';
 import { qualityOf } from './quality.js';
 import type { Report, Totals, Week } from './report.js';
 import { inOrder, type ReportRows, type Visit } from './rows.js';
@@ -145,13 +146,17 @@ function askOf(questions: ReportRows['questions'], from: number, now: number): R
 
 function filterOf(dropped: ReportRows['dropped'], from: number): Report['filter'] {
   const firstDay = dayOf(new Date(from));
-  const counted = (rows: typeof dropped, reason: string) =>
+  const droppedFor = (rows: typeof dropped, reason: DropReason) =>
     rows.filter((row) => row.reason === reason).reduce((total, { count }) => total + count, 0);
   return groupBy(
     dropped.filter(({ day }) => dayOf(day) >= firstDay),
     ({ day }) => dayOf(day),
   )
-    .map(([day, rows]) => ({ day, bot: counted(rows, 'bot'), limited: counted(rows, 'limited') }))
+    .map(([day, rows]) => ({
+      day,
+      bot: droppedFor(rows, 'bot'),
+      limited: droppedFor(rows, 'limited'),
+    }))
     .toSorted((a, b) => a.day.localeCompare(b.day));
 }
 
@@ -163,7 +168,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const to = now.getTime();
   const from = to - days * dayMs;
   const previousFrom = from - days * dayMs;
-  const kept = to - analyticsDays * dayMs;
+  const kept = rows.kept.getTime();
   const everyVisit = rows.visits.flatMap(inOrder);
   const visits = startedBetween(everyVisit, from, to);
   const otherSites = visits.flatMap(({ landing, browser }) =>

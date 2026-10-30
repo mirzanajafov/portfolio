@@ -50,7 +50,12 @@ function reportOf(
   visits: VisitRow[],
   { days = 7, ...rows }: Partial<Omit<ReportRows, 'visits'>> & { days?: number } = {},
 ) {
-  return buildReport({ visits, questions: [], dropped: [], ...rows }, content, now, days);
+  return buildReport(
+    { kept: daysAgo(30), visits, questions: [], dropped: [], ...rows },
+    content,
+    now,
+    days,
+  );
 }
 
 describe('buildReport', () => {

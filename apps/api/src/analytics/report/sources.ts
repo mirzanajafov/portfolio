@@ -1,3 +1,4 @@
+import type { Browser } from '../user-agent.js';
 import type { Source } from './report.js';
 
 const google = /^(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/;
@@ -50,7 +51,7 @@ function within(host: string, domain: string): boolean {
   return host === domain || host.endsWith(`.${domain}`);
 }
 
-export function sourceOf(referrerHost: string | null, browser: string): Source {
+export function sourceOf(referrerHost: string | null, browser: Browser): Source {
   if (referrerHost === null) {
     return browser === 'linkedin' ? 'linkedin' : 'direct';
   }

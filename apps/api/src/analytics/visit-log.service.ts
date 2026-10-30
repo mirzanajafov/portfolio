@@ -1,17 +1,18 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { analyticsDays } from '@portfolio/content/analytics';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
+import { keptSince } from './retention.js';
 import type { Browser, Device } from './user-agent.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
-const dayMs = 24 * 60 * 60 * 1000;
 
-type DropReason = 'bot' | 'limited';
+export const dropReasons = ['bot', 'limited'] as const;
+
+export type DropReason = (typeof dropReasons)[number];
 
 type Visitor = Place & { key: string; device: Device; browser: Browser };
 
@@ -105,8 +106,9 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cleanup(): Promise<void> {
-    const cutoff = new Date(this.clock.now().getTime() - analyticsDays * dayMs);
-    await this.prisma.visit.deleteMany({ where: { startedAt: { lt: cutoff } } });
+    await this.prisma.visit.deleteMany({
+      where: { startedAt: { lt: keptSince(this.clock.now()) } },
+    });
   }
 
   private async recordVital({ view, name, value }: EventOf<'vital'>) {

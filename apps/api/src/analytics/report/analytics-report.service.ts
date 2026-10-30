@@ -1,15 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
-import { analyticsDays } from '@portfolio/content/analytics';
 import { z } from 'zod';
 import { ClockService } from '../../common/clock.service.js';
 import { CONTENT } from '../../content.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { keptSince } from '../retention.js';
+import { browsers, devices } from '../user-agent.js';
+import { dropReasons } from '../visit-log.service.js';
 import { buildReport } from './build-report.js';
 import type { Report } from './report.js';
 
-const dayMs = 24 * 60 * 60 * 1000;
 const blockSeconds = z.record(z.string(), z.number());
+const knownDevice = z.enum(devices);
+const knownBrowser = z.enum(browsers);
+const knownDropReason = z.enum(dropReasons);
 
 @Injectable()
 export class AnalyticsReportService {
@@ -21,7 +25,7 @@ export class AnalyticsReportService {
 
   async build(days: number): Promise<Report> {
     const now = this.clock.now();
-    const kept = new Date(now.getTime() - analyticsDays * dayMs);
+    const kept = keptSince(now);
     const [visits, questions, dropped] = await Promise.all([
       this.prisma.visit.findMany({
         where: { startedAt: { gte: kept } },
@@ -56,15 +60,21 @@ export class AnalyticsReportService {
     ]);
     return buildReport(
       {
-        visits: visits.map(({ views, ...visit }) => ({
+        kept,
+        visits: visits.map(({ views, device, browser, ...visit }) => ({
           ...visit,
+          device: knownDevice.parse(device),
+          browser: knownBrowser.parse(browser),
           views: views.map(({ blocks, ...view }) => ({
             ...view,
             blocks: blockSeconds.parse(blocks),
           })),
         })),
         questions,
-        dropped,
+        dropped: dropped.map(({ reason, ...row }) => ({
+          ...row,
+          reason: knownDropReason.parse(reason),
+        })),
       },
       this.content,
       now,
