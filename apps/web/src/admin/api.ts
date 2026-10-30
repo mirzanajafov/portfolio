@@ -92,3 +92,22 @@ export async function fetchReport(
   }
   return reportSchema.parse(await response.json());
 }
+
+export async function isRegistered(
+  apiUrl: string,
+  token: string,
+  code: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const response = await fetchImpl(`${apiUrl}/admin/applications/${code}`, {
+    headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (response.status === 404) {
+    return false;
+  }
+  if (response.status !== 204) {
+    throw unexpected('an application check', response);
+  }
+  return true;
+}
