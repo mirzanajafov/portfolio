@@ -34,10 +34,10 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
 
   async cleanup(): Promise<void> {
     const now = this.clock.now();
-    const rawFrom = firstRawDay(now);
+    const firstKeptRaw = firstRawDay(now);
     for (
       let day = await firstUnrolledDay(this.prisma, now);
-      day < rawFrom;
+      day < firstKeptRaw;
       day = daysAfter(day, 1)
     ) {
       await this.rollUpDay(day);

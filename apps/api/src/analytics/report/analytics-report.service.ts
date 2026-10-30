@@ -3,6 +3,7 @@ import type { Content } from '@portfolio/content';
 import { z } from 'zod';
 import { ClockService } from '../../common/clock.service.js';
 import { CONTENT } from '../../content.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { firstRawDay } from '../retention.js';
 import { dropReasons } from '../visit-log.service.js';
@@ -22,17 +23,25 @@ export class AnalyticsReportService {
 
   async build(days: number): Promise<Report> {
     const now = this.clock.now();
-    const rawFrom = await firstUnrolledDay(this.prisma, now);
-    const periodFrom = firstRawDay(now);
-    const [visits, rolled, questions, dropped] = await Promise.all([
-      findVisits(this.prisma, { startedAt: { gte: rawFrom } }),
-      this.prisma.dailyVisits.findMany({ where: { day: { gte: firstReportedDay(now, days) } } }),
-      this.prisma.askLog.findMany({
-        where: { createdAt: { gte: periodFrom } },
-        select: { createdAt: true, refused: true },
-      }),
-      this.prisma.droppedEvents.findMany({ where: { day: { gte: periodFrom } } }),
-    ]);
+    const firstPeriodDay = firstRawDay(now);
+    const { rawFrom, visits, rolled, questions, dropped } = await this.prisma.$transaction(
+      async (tx) => {
+        const unrolledFrom = await firstUnrolledDay(tx, now);
+        return {
+          rawFrom: unrolledFrom,
+          visits: await findVisits(tx, { startedAt: { gte: unrolledFrom } }),
+          rolled: await tx.dailyVisits.findMany({
+            where: { day: { gte: firstReportedDay(now, days) } },
+          }),
+          questions: await tx.askLog.findMany({
+            where: { createdAt: { gte: firstPeriodDay } },
+            select: { createdAt: true, refused: true },
+          }),
+          dropped: await tx.droppedEvents.findMany({ where: { day: { gte: firstPeriodDay } } }),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 30_000 },
+    );
     return buildReport(
       {
         rawFrom,
