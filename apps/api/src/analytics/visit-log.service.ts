@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
-import { browserOf, deviceOf } from './user-agent.js';
+import type { Browser, Device } from './user-agent.js';
 
 type DropReason = 'bot' | 'limited';
 
-type Visitor = { key: string; userAgent: string };
+type Visitor = { key: string; device: Device; browser: Browser };
 
 type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type: T }>;
 
@@ -63,11 +63,9 @@ export class VisitLogService {
       ON CONFLICT (day, reason) DO UPDATE SET count = "DroppedEvents".count + 1`;
   }
 
-  private async recordView(event: EventOf<'view'>, { key, userAgent }: Visitor, at: Date) {
+  private async recordView(event: EventOf<'view'>, { key, device, browser }: Visitor, at: Date) {
     await this.prisma.visit.createMany({
-      data: [
-        { visitor: key, startedAt: at, device: deviceOf(userAgent), browser: browserOf(userAgent) },
-      ],
+      data: [{ visitor: key, startedAt: at, device, browser }],
       skipDuplicates: true,
     });
     await this.prisma.pageView.createMany({

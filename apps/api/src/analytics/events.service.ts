@@ -4,13 +4,14 @@ import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
+import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
 import { keyed, networkOf } from './visitor-key.js';
 import { VisitorSaltService } from './visitor-salt.service.js';
 
 type Caller = { ip: string; userAgent: string | undefined; optedOut: boolean };
 
-type Outcome = { kind: 'recorded' | 'ignored' } | { kind: 'limited'; retryAfterSeconds: number };
+type Outcome = { kind: 'accepted' } | { kind: 'limited'; retryAfterSeconds: number };
 
 @Injectable()
 export class EventsService {
@@ -24,12 +25,12 @@ export class EventsService {
 
   async accept(event: AnalyticsEvent, { ip, userAgent, optedOut }: Caller): Promise<Outcome> {
     if (optedOut) {
-      return { kind: 'ignored' };
+      return { kind: 'accepted' };
     }
     const now = this.clock.now();
     if (!userAgent || isbot(userAgent)) {
       await this.visits.countDropped('bot', now);
-      return { kind: 'ignored' };
+      return { kind: 'accepted' };
     }
     const key = await this.salts.keyFor(now);
     const network = networkOf(ip);
@@ -53,7 +54,12 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
-    await this.visits.record(event, { key: keyed(key, network, userAgent), userAgent }, now);
-    return { kind: 'recorded' };
+    const visitor = {
+      key: keyed(key, network, userAgent),
+      device: deviceOf(userAgent),
+      browser: browserOf(userAgent),
+    };
+    await this.visits.record(event, visitor, now);
+    return { kind: 'accepted' };
   }
 }
