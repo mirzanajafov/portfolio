@@ -164,7 +164,10 @@ describe('POST /events against a real database', () => {
     ['Sec-GPC', '1'],
     ['DNT', '1'],
   ])('records nothing at all for a browser that sends %s', async (header, value) => {
+    clock.current = new Date('2026-11-01T12:00:00Z');
     await send(app, aView(), { headers: { [header]: value } }).expect(204);
+    const salt = await prisma.visitorSalt.findUnique({ where: { day: new Date('2026-11-01') } });
+    expect(salt).toBeNull();
     expect(await everything()).toEqual({
       visits: [],
       views: [],
@@ -173,6 +176,11 @@ describe('POST /events against a real database', () => {
       dropped: [],
       limits: [],
     });
+  });
+
+  it('refuses a forwarded address that is not an IP address', async () => {
+    await send(app, aView(), { ip: '1:2:3:4:5:6:7::8:9' }).expect(400);
+    expect((await everything()).visits).toEqual([]);
   });
 
   it('deletes visits after 30 days, with their page views, clicks and errors', async () => {

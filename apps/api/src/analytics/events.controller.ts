@@ -10,6 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { isIP } from 'node:net';
 import { EventPipe, type AnalyticsEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';
 
@@ -24,7 +25,7 @@ export class EventsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    if (!req.ip) {
+    if (!req.ip || isIP(req.ip) === 0) {
       throw new BadRequestException('the client has no address');
     }
     const outcome = await this.events.accept(event, {
