@@ -172,6 +172,28 @@ describe('reportText', () => {
     );
   });
 
+  it('leaves out the note about my own bar when no vital misses it', () => {
+    const text = reportText(
+      aReport({
+        quality: {
+          vitals: [
+            {
+              path: '/',
+              device: 'desktop',
+              lcp: { p75: 900, samples: 2, rating: 'good', missesMyBar: false },
+              inp: null,
+              cls: null,
+            },
+          ],
+          errors: [],
+          notFound: [],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).not.toContain('misses my own bar');
+  });
+
   it('prints the control characters a visitor sent as visible escapes, not as terminal commands', () => {
     const text = reportText(
       aReport({

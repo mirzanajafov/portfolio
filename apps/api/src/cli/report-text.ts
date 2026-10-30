@@ -266,7 +266,9 @@ function quality({ quality }: Report, all: boolean): string[][] {
         ]),
         all,
       ),
-      ...(quality.vitals.length > 0
+      ...(quality.vitals.some(({ lcp, inp, cls }) =>
+        [lcp, inp, cls].some((value) => value?.missesMyBar),
+      )
         ? [
             `* misses my own bar: LCP under ${lcpText(vitalBars.lcp.mine)}, INP under ${inpText(vitalBars.inp.mine)}, CLS under ${clsText(vitalBars.cls.mine)}`,
           ]
@@ -306,7 +308,7 @@ function filter({ filter }: Report): string[] {
       ['Filtered out, UTC day', 'bots', 'limited'],
       ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
     ]),
-    'The counters are per day, so the first day is counted whole.',
+    "The counters are per day, so the period's first day is counted whole.",
   ];
 }
 
