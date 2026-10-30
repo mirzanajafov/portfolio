@@ -206,6 +206,43 @@ describe('POST /ask against a real database', () => {
   });
 });
 
+describe('POST /ask when the answer runs past midnight UTC', () => {
+  let app: NestExpressApplication;
+  let clock: FixedClock;
+  let prisma: PrismaService;
+  const slow: AnswerEngine = {
+    name: 'slow',
+    async *answer() {
+      clock.current = new Date('2026-10-03T00:00:05Z');
+      yield { text: 'It asks fewer questions.', sourceIds: ['tuner/fewer-questions'] };
+    },
+  };
+
+  beforeAll(async () => {
+    ({ app, clock, prisma } = await startApp({}, slow));
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(async () => {
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog", "Visit" CASCADE`;
+  });
+
+  it('keeps the time and the visit of the moment the question arrived', async () => {
+    clock.current = new Date('2026-10-02T23:59:58Z');
+    await sendEvent(app, { type: 'view', id: randomUUID(), path: '/' }).expect(204);
+    await ask(app, 'How does Tuner pick its questions?').expect(200);
+
+    const [row] = await loggedRows(prisma, 'How does Tuner pick its questions?');
+    const [visit] = await prisma.visit.findMany();
+    expect(row?.createdAt).toEqual(new Date('2026-10-02T23:59:58Z'));
+    expect(row?.visitor).toMatch(/^[0-9a-f]{32}$/);
+    expect(row?.visitor).toBe(visit?.visitor);
+  });
+});
+
 describe('POST /ask behind a proxy it does not trust', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;

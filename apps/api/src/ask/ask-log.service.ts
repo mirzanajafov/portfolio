@@ -1,7 +1,5 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { askLogDays } from '@portfolio/content/ask';
-import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
-import { isPersonAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -24,7 +22,6 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly salts: VisitorSaltService,
     private readonly clock: ClockService,
   ) {}
 
@@ -34,10 +31,6 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     this.stop?.();
-  }
-
-  async visitorOf({ ip, userAgent, optedOut }: Caller, at: Date): Promise<string | null> {
-    return optedOut || !isPersonAgent(userAgent) ? null : this.salts.visitorKey(ip, userAgent, at);
   }
 
   async record(entry: AskLogEntry): Promise<void> {

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { isPersonAgent, type Caller } from '../common/caller.js';
+import { visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -22,16 +22,18 @@ export class EventsService {
     @Inject(PLACE_LOOKUP) private readonly places: PlaceLookup,
   ) {}
 
-  async accept(event: AnalyticsEvent, { ip, userAgent, optedOut }: Caller): Promise<Outcome> {
-    if (optedOut) {
+  async accept(event: AnalyticsEvent, caller: Caller): Promise<Outcome> {
+    if (caller.optedOut) {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (!isPersonAgent(userAgent)) {
+    const userAgent = visitorAgent(caller);
+    if (userAgent === null) {
       await this.visits.countDropped('bot', now);
       return { kind: 'accepted' };
     }
-    const limitKey = await this.salts.limitKey(ip, now);
+    const keys = await this.salts.dayKeys(now);
+    const limitKey = keys.limit(caller.ip);
     const verdict = await this.limiter.admit(
       [
         {
@@ -53,10 +55,10 @@ export class EventsService {
     }
     if (event.type === 'view') {
       const visitor = {
-        key: await this.salts.visitorKey(ip, userAgent, now),
+        key: keys.visitor(caller.ip, userAgent),
         device: deviceOf(userAgent),
         browser: browserOf(userAgent),
-        ...this.places.placeOf(ip),
+        ...this.places.placeOf(caller.ip),
       };
       await this.visits.recordView(event, visitor, now);
     } else {

@@ -55,7 +55,7 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
 
   async signIn(link: string, ip: string): Promise<SignIn> {
     const now = this.clock.now();
-    const client = await this.salts.limitKey(ip, now);
+    const client = (await this.salts.dayKeys(now)).limit(ip);
     const verdict = await this.limiter.admit(
       [{ key: `admin:10m:${client}`, limit: signInsPerTenMinutes, windowSeconds: 600 }],
       [],

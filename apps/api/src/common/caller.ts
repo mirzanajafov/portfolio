@@ -15,8 +15,10 @@ export function clientAddress({ ip }: Request): string {
   return ip;
 }
 
-export function isPersonAgent(userAgent: string | undefined): userAgent is string {
-  return userAgent !== undefined && userAgent !== '' && !isbot(userAgent);
+export function visitorAgent({ userAgent, optedOut }: Caller): string | null {
+  return optedOut || userAgent === undefined || userAgent === '' || isbot(userAgent)
+    ? null
+    : userAgent;
 }
 
 export function callerOf(request: Request): Caller {

@@ -15,6 +15,11 @@ import { dailyKey, keyed, networkOf } from './visitor-key.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 
+export type DayKeys = {
+  limit: (ip: string) => string;
+  visitor: (ip: string, userAgent: string) => string;
+};
+
 @Injectable()
 export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(VisitorSaltService.name);
@@ -35,12 +40,12 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
     this.stop?.();
   }
 
-  async limitKey(ip: string, now: Date): Promise<string> {
-    return keyed(await this.keyFor(now), 'limit', networkOf(ip));
-  }
-
-  async visitorKey(ip: string, userAgent: string, now: Date): Promise<string> {
-    return keyed(await this.keyFor(now), networkOf(ip), userAgent);
+  async dayKeys(now: Date): Promise<DayKeys> {
+    const key = await this.keyFor(now);
+    return {
+      limit: (ip) => keyed(key, 'limit', networkOf(ip)),
+      visitor: (ip, userAgent) => keyed(key, networkOf(ip), userAgent),
+    };
   }
 
   private async keyFor(now: Date): Promise<Uint8Array> {
