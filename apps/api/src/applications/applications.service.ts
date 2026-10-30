@@ -14,7 +14,7 @@ export type NewApplication = {
   networks: string[];
 };
 
-const attempts = 5;
+const maxDraws = 5;
 
 function isCodeTaken(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
@@ -31,7 +31,7 @@ export class ApplicationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async add({ code, ...application }: NewApplication): Promise<Application> {
-    const tries = code ? 1 : attempts;
+    const tries = code === undefined ? maxDraws : 1;
     for (let attempt = 1; ; attempt += 1) {
       const candidate = code ?? newCode();
       try {
