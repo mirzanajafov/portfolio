@@ -9,7 +9,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { clientAddress } from '../common/client-address.js';
+import { callerOf } from '../common/caller.js';
 import { EventPipe, type AnalyticsEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';
 
@@ -24,11 +24,7 @@ export class EventsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    const outcome = await this.events.accept(event, {
-      ip: clientAddress(req),
-      userAgent: req.get('user-agent'),
-      optedOut: req.get('sec-gpc') === '1' || req.get('dnt') === '1',
-    });
+    const outcome = await this.events.accept(event, callerOf(req));
     if (outcome.kind === 'limited') {
       res.set('Retry-After', String(outcome.retryAfterSeconds));
       throw new HttpException(

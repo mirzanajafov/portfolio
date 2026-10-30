@@ -3,7 +3,7 @@ import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
-import { clientAddress } from '../common/client-address.js';
+import { callerOf } from '../common/caller.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
@@ -29,10 +29,10 @@ export class AskController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const client = this.limits.clientOf(clientAddress(req));
+    const caller = callerOf(req);
     const abort = new AbortController();
     res.on('close', () => abort.abort());
-    const verdict = await this.limits.admit(client);
+    const verdict = await this.limits.admit(caller.ip);
     if (!verdict.allowed) {
       res.set('Retry-After', String(verdict.retryAfterSeconds));
       throw new HttpException(
@@ -61,7 +61,7 @@ export class AskController {
       res.end();
     }
     await this.askLog.record({
-      client,
+      caller,
       question,
       ...outcome,
       durationMs: Math.round(performance.now() - started),

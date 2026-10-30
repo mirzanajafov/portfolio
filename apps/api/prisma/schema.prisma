@@ -20,7 +20,8 @@ model RateLimit {
 model AskLog {
   id         String   @id @default(uuid(7)) @db.Uuid
   createdAt  DateTime @default(now())
-  client     String
+  client     String?
+  visitor    String?
   question   String
   engine     String
   sentences  Json
@@ -29,6 +30,7 @@ model AskLog {
   durationMs Int
 
   @@index([createdAt])
+  @@index([visitor])
 }
 
 model Visit {

@@ -84,8 +84,10 @@ export default function PrivacyPage() {
       <Part title="Questions you ask">
         <p className="max-w-[65ch]">
           I keep questions for {askLogDays} days to see where the answers fail, then they are
-          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
-          used for rate limiting.
+          deleted. A question is tied to the visit it was asked in by the same daily mix of address
+          and User-Agent as above, so I can see what a visit wanted to know. With Global Privacy
+          Control or Do Not Track on, a question is kept but tied to no visit. Your IP address is
+          never stored.
         </p>
       </Part>
 

@@ -9,7 +9,13 @@ describe('forwardAsk', () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('data: {}\n\n', { status: 200 }),
     );
-    const request = ask('{"question":"hi"}', { 'x-forwarded-for': '203.0.113.7' });
+    const request = ask('{"question":"hi"}', {
+      'x-forwarded-for': '203.0.113.7',
+      'user-agent': 'Chrome',
+      'sec-gpc': '1',
+      dnt: '1',
+      cookie: 'unrelated=1',
+    });
     const response = await forwardAsk(request, 'http://api:3201', fetchImpl);
     expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBe(request.signal);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -17,7 +23,13 @@ describe('forwardAsk', () => {
       expect.objectContaining({
         method: 'POST',
         body: '{"question":"hi"}',
-        headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.7' },
+        headers: {
+          'content-type': 'application/json',
+          'x-forwarded-for': '203.0.113.7',
+          'user-agent': 'Chrome',
+          'sec-gpc': '1',
+          dnt: '1',
+        },
       }),
     );
     expect(response.status).toBe(200);

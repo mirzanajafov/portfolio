@@ -159,6 +159,7 @@ describe('POST /events against a real database', () => {
     ['DNT', '1'],
   ])('records nothing at all for a browser that sends %s', async (header, value) => {
     clock.current = new Date('2026-11-01T12:00:00Z');
+    await prisma.visitorSalt.deleteMany({ where: { day: new Date('2026-11-01') } });
     await sendEvent(app, aView(), { headers: { [header]: value } }).expect(204);
     const salt = await prisma.visitorSalt.findUnique({ where: { day: new Date('2026-11-01') } });
     expect(salt).toBeNull();

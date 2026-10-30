@@ -1,6 +1,4 @@
-import { forwardToApi } from '@/lib/forward-to-api';
-
-const passedHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt'];
+import { callerHeaders, forwardToApi } from '@/lib/forward-to-api';
 
 export function forwardEvent(
   request: Request,
@@ -11,7 +9,7 @@ export function forwardEvent(
     request,
     {
       url: `${apiUrl}/events`,
-      headers: passedHeaders,
+      headers: callerHeaders,
       fetchImpl,
       signal: AbortSignal.timeout(5_000),
     },

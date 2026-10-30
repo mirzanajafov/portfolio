@@ -1,10 +1,12 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { askEventSchema, questionMaxLength, type AskEvent } from '@portfolio/content/ask';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { chrome, sendEvent } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
 type Event = { event: string; data: AskEvent };
@@ -36,8 +38,17 @@ async function loggedRows(prisma: PrismaService, question: string) {
   return [];
 }
 
-const ask = (app: NestExpressApplication, question: string, ip = '203.0.113.7') =>
-  request(app.getHttpServer()).post('/ask').set('X-Forwarded-For', ip).send({ question });
+const ask = (
+  app: NestExpressApplication,
+  question: string,
+  ip = '203.0.113.7',
+  headers: Record<string, string> = { 'User-Agent': chrome },
+) =>
+  request(app.getHttpServer())
+    .post('/ask')
+    .set('X-Forwarded-For', ip)
+    .set(headers)
+    .send({ question });
 
 describe('POST /ask against a real database', () => {
   let app: NestExpressApplication;
@@ -53,7 +64,7 @@ describe('POST /ask against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog", "Visit" CASCADE`;
   });
 
   it('streams an answer as server-sent events, with the source of every sentence', async () => {
@@ -91,7 +102,7 @@ describe('POST /ask against a real database', () => {
     expect(await prisma.rateLimit.count()).toBe(0);
   });
 
-  it('logs the question with a hashed caller and the sources it cited, never the address', async () => {
+  it('logs the question with its visit key and the sources it cited, never the address or the browser', async () => {
     await ask(app, 'Have you worked with Stripe payments?').expect(200);
     const rows = await loggedRows(prisma, 'Have you worked with Stripe payments?');
     expect(rows).toHaveLength(1);
@@ -99,11 +110,36 @@ describe('POST /ask against a real database', () => {
     expect(row?.question).toBe('Have you worked with Stripe payments?');
     expect(row?.engine).toBe('keyword');
     expect(row?.refused).toBe(false);
-    expect(row?.client).toMatch(/^[0-9a-f]{32}$/);
+    expect(row?.visitor).toMatch(/^[0-9a-f]{32}$/);
+    expect(row?.client).toBeNull();
     expect(JSON.stringify(row)).not.toContain('203.0.113.7');
+    expect(JSON.stringify(row)).not.toContain('Windows NT');
     expect(row?.sentences).toEqual([
       expect.objectContaining({ sources: ['cv/northwind-2024-01/1'] }),
     ]);
+  });
+
+  it('ties a question to the visit the same browser made that day, and not to a visit after midnight', async () => {
+    await sendEvent(app, { type: 'view', id: randomUUID(), path: '/' }).expect(204);
+    await ask(app, 'Have you worked with Stripe payments?').expect(200);
+    const [row] = await loggedRows(prisma, 'Have you worked with Stripe payments?');
+    const [visit] = await prisma.visit.findMany();
+    expect(row?.visitor).toBe(visit?.visitor);
+
+    clock.current = new Date('2026-10-03T00:00:01Z');
+    await ask(app, 'What did you build with Kafka?').expect(200);
+    const [next] = await loggedRows(prisma, 'What did you build with Kafka?');
+    expect(next?.visitor).not.toBe(visit?.visitor);
+  });
+
+  it.each([
+    ['Global Privacy Control', { 'User-Agent': chrome, 'Sec-GPC': '1' }],
+    ['Do Not Track', { 'User-Agent': chrome, DNT: '1' }],
+    ['no User-Agent', {}],
+  ])('keeps a question asked with %s but ties it to no visit', async (_, headers) => {
+    await ask(app, 'Have you worked with Stripe payments?', '203.0.113.7', headers).expect(200);
+    const [row] = await loggedRows(prisma, 'Have you worked with Stripe payments?');
+    expect(row?.visitor).toBeNull();
   });
 
   it('marks a question it could not answer as refused', async () => {
@@ -121,6 +157,14 @@ describe('POST /ask against a real database', () => {
     );
     expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
     await ask(app, 'Have you worked with Stripe payments?', '198.51.100.2').expect(200);
+  });
+
+  it('limits the addresses of one IPv6 /64 as one caller', async () => {
+    for (let host = 1; host <= 3; host += 1) {
+      await ask(app, 'Stripe?', `2001:db8:1:2::${String(host)}`).expect(200);
+    }
+    await ask(app, 'Stripe?', '2001:db8:1:2:aaaa:bbbb:cccc:dddd').expect(429);
+    await ask(app, 'Stripe?', '2001:db8:1:3::1').expect(200);
   });
 
   it('does not let a refused client use up the budget the whole site shares', async () => {
@@ -144,7 +188,7 @@ describe('POST /ask against a real database', () => {
   });
 
   it('deletes questions older than the retention window and keeps the rest', async () => {
-    const base = { client: 'x', engine: 'keyword', sentences: [], withheld: [], refused: true };
+    const base = { engine: 'keyword', sentences: [], withheld: [], refused: true };
     await prisma.askLog.createMany({
       data: [
         { ...base, question: 'old', durationMs: 1, createdAt: new Date('2026-08-01T00:00:00Z') },

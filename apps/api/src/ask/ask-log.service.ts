@@ -1,5 +1,7 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { askLogDays } from '@portfolio/content/ask';
+import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
+import type { Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -8,7 +10,7 @@ import type { AskOutcome } from './ask.service.js';
 const cleanupEveryMs = 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
 
-type AskLogEntry = AskOutcome & { client: string; question: string; durationMs: number };
+type AskLogEntry = AskOutcome & { caller: Caller; question: string; durationMs: number };
 
 @Injectable()
 export class AskLogService implements OnModuleInit, OnModuleDestroy {
@@ -17,6 +19,7 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly salts: VisitorSaltService,
     private readonly clock: ClockService,
   ) {}
 
@@ -28,9 +31,12 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
     this.stop?.();
   }
 
-  async record(entry: AskLogEntry): Promise<void> {
+  async record({ caller: { ip, userAgent, optedOut }, ...entry }: AskLogEntry): Promise<void> {
+    const createdAt = this.clock.now();
     try {
-      await this.prisma.askLog.create({ data: { ...entry, createdAt: this.clock.now() } });
+      const visitor =
+        optedOut || !userAgent ? null : await this.salts.visitorKey(ip, userAgent, createdAt);
+      await this.prisma.askLog.create({ data: { ...entry, visitor, createdAt } });
     } catch (error) {
       this.log.warn(
         `could not log a question: ${error instanceof Error ? error.message : String(error)}`,

@@ -21,7 +21,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { ApplicationsService } from '../applications/applications.service.js';
-import { clientAddress } from '../common/client-address.js';
+import { clientAddress } from '../common/caller.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
