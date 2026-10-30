@@ -70,6 +70,15 @@ describe('admin sign-in against a real database', () => {
     expect(used.body).toEqual(unknown.body);
   });
 
+  it('starts one session when the same link is spent twice at once', async () => {
+    const link = await sessions.link();
+
+    const statuses = (await Promise.all([signIn(link), signIn(link)])).map(({ status }) => status);
+
+    expect(statuses.sort()).toEqual([201, 404]);
+    expect(await prisma.adminSession.count()).toBe(1);
+  });
+
   it('takes a link in its tenth minute and refuses it from the eleventh', async () => {
     const early = await sessions.link();
     const late = await sessions.link();
