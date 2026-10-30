@@ -51,7 +51,7 @@ function Part({ part, first }: { part: ReportPart; first: boolean }) {
 
 export function ReportView({ sections }: { sections: ReportSection[] }) {
   return sections.map((section, index) => (
-    <section key={index} className="flex flex-col gap-2 border-t border-line pt-6">
+    <section key={index} className="flex flex-col gap-2 border-t border-line pt-6 break-words">
       {section.map((part, position) => (
         <Part key={position} part={part} first={position === 0} />
       ))}
