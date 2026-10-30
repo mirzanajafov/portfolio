@@ -40,6 +40,7 @@ export class AnalyticsReportService {
               path: true,
               notFound: true,
               referrerHost: true,
+              ref: true,
               activeSeconds: true,
               maxScroll: true,
               blocks: true,

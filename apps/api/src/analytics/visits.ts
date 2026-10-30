@@ -7,6 +7,7 @@ export type ViewRow = {
   path: string;
   notFound: boolean;
   referrerHost: string | null;
+  ref: string | null;
   activeSeconds: number;
   maxScroll: number;
   blocks: Record<string, number>;

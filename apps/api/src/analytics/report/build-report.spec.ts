@@ -1,12 +1,9 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
+import { aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
+import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
-import type { ViewRow, VisitRow } from '../visits.js';
 import type { ReportRows } from './rows.js';
-
-const now = new Date('2026-10-30T12:00:00Z');
-const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
-const daysAgo = (days: number) => hoursAgo(days * 24);
 
 const content = await contentOf({
   projects: [
@@ -14,38 +11,6 @@ const content = await contentOf({
     aProject({ slug: 'courier', name: 'Courier', order: 2 }),
   ],
 });
-
-function aView(overrides: Partial<ViewRow> = {}): ViewRow {
-  return {
-    createdAt: hoursAgo(1),
-    path: '/',
-    notFound: false,
-    referrerHost: null,
-    activeSeconds: 30,
-    maxScroll: 50,
-    blocks: {},
-    lcpMs: null,
-    inpMs: null,
-    cls: null,
-    clicks: [],
-    errors: [],
-    ...overrides,
-  };
-}
-
-function aVisit(
-  views: ViewRow[] = [aView()],
-  overrides: Partial<Omit<VisitRow, 'views'>> = {},
-): VisitRow {
-  return {
-    startedAt: hoursAgo(1),
-    device: 'desktop',
-    browser: 'chrome',
-    country: 'AZ',
-    views,
-    ...overrides,
-  };
-}
 
 function reportOf(
   visits: VisitRow[],
