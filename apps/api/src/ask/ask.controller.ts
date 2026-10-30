@@ -1,17 +1,9 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  HttpException,
-  HttpStatus,
-  Post,
-  Req,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, HttpException, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
+import { clientAddress } from '../common/client-address.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
@@ -37,12 +29,9 @@ export class AskController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    if (!req.ip) {
-      throw new BadRequestException('the client has no address');
-    }
+    const client = this.limits.clientOf(clientAddress(req));
     const abort = new AbortController();
     res.on('close', () => abort.abort());
-    const client = this.limits.clientOf(req.ip);
     const verdict = await this.limits.admit(client);
     if (!verdict.allowed) {
       res.set('Retry-After', String(verdict.retryAfterSeconds));
