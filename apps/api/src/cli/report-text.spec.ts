@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuessedVisit, Report, VisitStory } from '@portfolio/content/report';
-import { aReport, noOutcomes, someVisits } from '@portfolio/content/testing';
+import { aReport, anEntry, noOutcomes, someVisits } from '@portfolio/content/testing';
 import { reportText } from './report-text.js';
 
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
@@ -9,19 +9,6 @@ const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   pages: [{ path: '/', seconds: 30, read: [] }],
   clicks: [],
   interacted: true,
-  ...overrides,
-});
-
-const anEntry = (
-  overrides: Partial<Report['applications']['list'][number]> = {},
-): Report['applications']['list'][number] => ({
-  code: 'memh',
-  company: 'Xsolla',
-  role: 'Backend Engineer',
-  appliedOn: '2026-10-29',
-  visits: [],
-  days: [],
-  guesses: [],
   ...overrides,
 });
 

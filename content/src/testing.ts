@@ -6,7 +6,7 @@ import type { z } from 'zod';
 import { caseStudiesIn } from './case-studies.ts';
 import type * as ContentModule from './index.ts';
 import { loadContent } from './load.ts';
-import type { Report, Totals } from './report.ts';
+import type { ApplicationEntry, Report, Totals } from './report.ts';
 import { siteUrl } from './site.ts';
 import type {
   Content,
@@ -211,6 +211,19 @@ export function aReport(overrides: Partial<Report> = {}): Report {
       score: { visits: 0, unplaced: 0, levels: noOutcomes() },
       unknownCodes: [],
     },
+    ...overrides,
+  };
+}
+
+export function anEntry(overrides: Partial<ApplicationEntry> = {}): ApplicationEntry {
+  return {
+    code: 'memh',
+    company: 'Xsolla',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-29',
+    visits: [],
+    days: [],
+    guesses: [],
     ...overrides,
   };
 }
