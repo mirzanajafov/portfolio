@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { siteUrl } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
@@ -8,8 +9,6 @@ import { fetchApplicationCv } from './applications/application-cv.js';
 import { ApplicationsService } from './applications/applications.service.js';
 import { CliModule } from './cli.module.js';
 import { ENV, type Env } from './config/env.js';
-
-const site = 'https://najafov.dev';
 
 const newApplication = z.strictObject({
   company: z.string().trim().min(1),
@@ -73,7 +72,7 @@ try {
       networks: network,
     });
     process.stderr.write(
-      `${application.company}: ${application.code}, ${site}/?r=${application.code}\n`,
+      `${application.company}: ${application.code}, ${siteUrl}/?r=${application.code}\n`,
     );
     await writeCv(application.code, env);
   } else if (area === 'application' && command === 'list') {

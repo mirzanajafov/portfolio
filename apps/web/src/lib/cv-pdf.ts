@@ -1,9 +1,8 @@
 import PDFDocument from 'pdfkit';
-import { caseStudiesIn, type Content, type Role } from '@portfolio/content';
+import { caseStudiesIn, siteUrl, type Content, type Role } from '@portfolio/content';
 import { fontPath } from './fonts';
 import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
 import { palette } from './palette';
-import { siteUrl } from './site';
 
 const { fg: ink, accent, line } = palette.light;
 const muted = '#57524a';

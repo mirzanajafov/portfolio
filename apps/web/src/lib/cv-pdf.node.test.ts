@@ -1,11 +1,10 @@
 import { inflateSync } from 'node:zlib';
-import { content, projectsWithCaseStudy } from '@portfolio/content';
+import { content, projectsWithCaseStudy, siteUrl } from '@portfolio/content';
 import { phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
 import { linkText } from './format';
-import { siteUrl } from './site';
 
 let pdf: Buffer;
 let text = '';

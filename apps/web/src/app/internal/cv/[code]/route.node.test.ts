@@ -1,7 +1,6 @@
-import { content } from '@portfolio/content';
+import { content, siteUrl } from '@portfolio/content';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cvFileName } from '@/lib/cv-pdf';
-import { siteUrl } from '@/lib/site';
 import { GET } from './route';
 
 const token = 'a'.repeat(64);

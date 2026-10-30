@@ -1,9 +1,10 @@
 import { content } from './.generated/data.ts';
 import { caseStudiesIn } from './case-studies.ts';
+import { siteUrl } from './site.ts';
 
 export const { projectsWithCaseStudy, findProjectWithCaseStudy } = caseStudiesIn(content.projects);
 
-export { caseStudiesIn, content };
+export { caseStudiesIn, content, siteUrl };
 export type {
   CaseStudy,
   Content,

@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Schibsted_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
-import { content } from '@portfolio/content';
+import { content, siteUrl } from '@portfolio/content';
 import { VisitTracker } from '@/analytics/tracker';
 import { palette } from '@/lib/palette';
-import { siteUrl } from '@/lib/site';
 import './globals.css';
 
 const body = Schibsted_Grotesk({
