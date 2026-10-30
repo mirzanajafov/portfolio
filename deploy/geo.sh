@@ -4,6 +4,13 @@ cd "$(dirname "$0")/.."
 
 month=$(date -u +%Y-%m)
 dir=geo
+
+if [ "${1:-}" = current ]; then
+  [ "$(cat "$dir/month" 2> /dev/null || true)" = "$month" ] \
+    && [ -s "$dir/dbip-city-lite.mmdb" ] && [ -s "$dir/dbip-asn-lite.mmdb" ]
+  exit
+fi
+
 mkdir -p "$dir"
 trap 'rm -f "$dir"/*.new' EXIT
 for kind in city asn; do

@@ -31,10 +31,6 @@ release() {
   "${compose[@]}" up -d --build --remove-orphans
 }
 
-places_current() {
-  [ "$(cat geo/month 2> /dev/null || true)" = "$(date -u +%Y-%m)" ]     && [ -s geo/dbip-city-lite.mmdb ] && [ -s geo/dbip-asn-lite.mmdb ]
-}
-
 reload_places() {
   if [ "$places_updated" = true ]; then
     "${compose[@]}" up -d --no-deps --force-recreate api
@@ -56,7 +52,7 @@ say "Waiting for the database"
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
 places_updated=false
-if ! places_current; then
+if ! deploy/geo.sh current; then
   if deploy/geo.sh; then
     places_updated=true
   else
@@ -71,7 +67,7 @@ fi
 
 say "The release failed, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
-if release && healthy; then
+if release && reload_places && healthy; then
   echo "Rolled back. Any migration the failed release ran stays applied."
 else
   echo "The rollback failed too. Check: ${compose[*]} logs migrate api web" >&2

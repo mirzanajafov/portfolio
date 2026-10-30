@@ -142,6 +142,9 @@ expect 0 "$new" 1 "$new" "keeps last month's IP databases when a download is not
 deploy RELEASE_FAILS=new
 expect 1 "$old" 2 "$old" "brings the previous release back when the new one fails to build or start" \
   "Rolled back."
+deploy RELEASE_FAILS=new
+expect 1 "$old" 2 "$old" "restarts the API with the new IP databases on the way back too" \
+  "Rolled back." "api recreated"
 deploy UNHEALTHY=portfolio-api
 expect 1 "$old" 2 "$old" "brings the previous release back when the API never gets healthy" \
   "Rolled back."
