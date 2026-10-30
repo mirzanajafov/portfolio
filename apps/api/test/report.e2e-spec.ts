@@ -1,7 +1,7 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { reportSchema, type Report } from '@portfolio/content/report';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { reportSchema, type Report } from '@portfolio/content/report';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AnalyticsReportService } from '../src/analytics/report/analytics-report.service.js';
 import { RetentionService } from '../src/analytics/retention.service.js';
@@ -13,9 +13,9 @@ import { FixedClock, startApp } from './start-app.js';
 
 const iphone =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-const throughJson = (report: Report) => reportSchema.parse(JSON.parse(JSON.stringify(report)));
-
 const crawler = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+
+const throughJson = (report: Report) => reportSchema.parse(JSON.parse(JSON.stringify(report)));
 
 describe('the visitor report against a real database', () => {
   let app: NestExpressApplication;

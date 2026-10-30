@@ -292,7 +292,7 @@ describe('reportText', () => {
             levels: {
               high: { right: 1, wrong: 0, tied: 0 },
               medium: { right: 0, wrong: 1, tied: 0 },
-              low: noOutcomes().low,
+              low: { right: 0, wrong: 0, tied: 0 },
             },
           },
           unknownCodes: [

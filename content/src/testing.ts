@@ -180,10 +180,9 @@ export const someVisits = (visits: number): Totals => ({
   quickExits: 0,
 });
 
-export function noOutcomes(): Report['applications']['score']['levels'] {
-  const none = () => ({ right: 0, wrong: 0, tied: 0 });
-  return { high: none(), medium: none(), low: none() };
-}
+const noOutcome = () => ({ right: 0, wrong: 0, tied: 0 });
+
+export const noOutcomes = () => ({ high: noOutcome(), medium: noOutcome(), low: noOutcome() });
 
 export function aReport(overrides: Partial<Report> = {}): Report {
   return {
