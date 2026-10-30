@@ -1,4 +1,3 @@
-import { defaultReportDays } from '@portfolio/content/report';
 import { reportSections } from '@portfolio/content/report-sections';
 import { bakuTime } from '@portfolio/content/time';
 import Link from 'next/link';
@@ -19,7 +18,10 @@ const periods = [
 
 type Query = Awaited<PageProps<'/admin'>['searchParams']>;
 
-function viewOf({ days = String(defaultReportDays), all }: Query) {
+function viewOf({ days, all }: Query): { days: number | undefined; all: boolean } | null {
+  if (days === undefined) {
+    return { days: undefined, all: all === '1' };
+  }
   const period = periods.find((choice) => String(choice.days) === days);
   return period ? { days: period.days, all: all === '1' } : null;
 }
@@ -61,13 +63,13 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
               key={days}
               href={hrefOf(days, view.all)}
               prefetch={false}
-              aria-current={days === view.days ? 'page' : undefined}
+              aria-current={days === report.period.days ? 'page' : undefined}
               className={`${pill} aria-[current=page]:border-fg`}
             >
               {label}
             </Link>
           ))}
-          <Link href={hrefOf(view.days, !view.all)} prefetch={false} className={pill}>
+          <Link href={hrefOf(report.period.days, !view.all)} prefetch={false} className={pill}>
             {view.all ? 'Cut long lists' : 'Show everything'}
           </Link>
         </nav>

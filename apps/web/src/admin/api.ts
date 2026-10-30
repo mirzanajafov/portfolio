@@ -76,10 +76,11 @@ export async function endSession(
 export async function fetchReport(
   apiUrl: string,
   token: string,
-  days: number,
+  days: number | undefined,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Report | null> {
-  const response = await fetchImpl(`${apiUrl}/admin/report?days=${String(days)}`, {
+  const query = days === undefined ? '' : `?days=${String(days)}`;
+  const response = await fetchImpl(`${apiUrl}/admin/report${query}`, {
     headers: { authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(reportTimeoutMs),
   });

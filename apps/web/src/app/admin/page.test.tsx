@@ -56,9 +56,9 @@ describe('admin page', () => {
     expect(screen.getByRole('columnheader', { name: 'Overview' })).toBeVisible();
   });
 
-  it('reports the last 7 days unless asked for another period, and marks the one it shows', async () => {
+  it('leaves the default period to the API and marks the period the report covers', async () => {
     render(await open());
-    expect(api.fetchReport).toHaveBeenCalledWith('http://api:3201', session, 7);
+    expect(api.fetchReport).toHaveBeenCalledWith('http://api:3201', session, undefined);
     expect(screen.getByRole('link', { name: '7 days' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '30 days' })).toHaveAttribute('href', '/admin?days=30');
   });

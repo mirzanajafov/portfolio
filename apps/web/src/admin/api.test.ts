@@ -107,6 +107,16 @@ describe('fetchReport', () => {
     );
   });
 
+  it('leaves the days to the API when none are given', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(aReport()), { status: 200 }),
+    );
+
+    await fetchReport(api, session, undefined, fetchImpl);
+
+    expect(fetchImpl).toHaveBeenCalledWith('http://api:3201/admin/report', expect.anything());
+  });
+
   it('reads a 404 as no session, and fails on anything else or on a report it cannot read', async () => {
     expect(await fetchReport(api, session, 7, answering(404))).toBeNull();
     await expect(fetchReport(api, session, 7, answering(500))).rejects.toThrow(
