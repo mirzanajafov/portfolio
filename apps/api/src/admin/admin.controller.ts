@@ -7,6 +7,7 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  Param,
   Post,
   Query,
   Req,
@@ -14,10 +15,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { adminToken } from '@portfolio/content/admin';
+import { refCode } from '@portfolio/content/analytics';
 import { reportDaysSchema, type Report } from '@portfolio/content/report';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
+import { ApplicationsService } from '../applications/applications.service.js';
 import { clientAddress } from '../common/client-address.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
@@ -31,11 +34,14 @@ const reportQuery = z.strictObject({ days: reportDaysSchema });
 
 type ReportQuery = z.infer<typeof reportQuery>;
 
+const codeParam = z.string().regex(refCode);
+
 @Controller('admin')
 export class AdminController {
   constructor(
     private readonly sessions: AdminSessionsService,
     private readonly reports: AnalyticsReportService,
+    private readonly applications: ApplicationsService,
   ) {}
 
   @Post('sessions')
@@ -75,5 +81,14 @@ export class AdminController {
   @UseGuards(SignedInGuard)
   report(@Query(new ZodPipe(reportQuery)) { days }: ReportQuery): Promise<Report> {
     return this.reports.build(days);
+  }
+
+  @Get('applications/:code')
+  @UseGuards(SignedInGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async application(@Param('code', new ZodPipe(codeParam)) code: string): Promise<void> {
+    if (!(await this.applications.find(code))) {
+      throw new NotFoundException();
+    }
   }
 }

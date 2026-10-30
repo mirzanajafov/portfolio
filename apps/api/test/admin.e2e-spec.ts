@@ -54,7 +54,7 @@ describe('admin sign-in against a real database', () => {
 
   beforeEach(async () => {
     clock.current = start;
-    await prisma.$executeRaw`TRUNCATE "AdminLoginToken", "AdminSession", "RateLimit"`;
+    await prisma.$executeRaw`TRUNCATE "AdminLoginToken", "AdminSession", "RateLimit", "Application" CASCADE`;
   });
 
   it('starts a 30-day session from a link once, and then answers that link like an unknown one', async () => {
@@ -229,6 +229,25 @@ describe('admin sign-in against a real database', () => {
       .get('/admin/report?days=7')
       .set('Authorization', `Bearer ${unknownToken()}`)
       .expect(404);
+  });
+
+  it('says whether an application with the code is registered', async () => {
+    const token = await sessionFrom(await sessions.link());
+    await prisma.application.create({
+      data: { code: 'memh', company: 'Acme', role: 'Backend Engineer', appliedOn: start },
+    });
+    const ask = (code: string) =>
+      request(app.getHttpServer())
+        .get(`/admin/applications/${code}`)
+        .set('Authorization', `Bearer ${token}`);
+
+    await ask('memh').expect(204);
+    await ask('memj').expect(404);
+    await ask('Memh!').expect(400);
+  });
+
+  it('is a 404 for an application check without a session, before it reads the code', async () => {
+    await request(app.getHttpServer()).get('/admin/applications/Memh!').expect(404);
   });
 
   it('deletes expired links and sessions in the cleanup, and keeps the rest', async () => {
