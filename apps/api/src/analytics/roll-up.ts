@@ -4,7 +4,7 @@ import { rankedGroups } from './statistics.js';
 import type { Device } from './user-agent.js';
 import { inOrder, type ViewRow, type Visit, type VisitRow } from './visits.js';
 
-export type RolledPage = {
+type RolledPage = {
   path: string;
   device: Device;
   views: number;
