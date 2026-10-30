@@ -15,7 +15,7 @@ export type ApplicationRow = {
 
 export type Confidence = 'high' | 'medium' | 'low';
 
-export type Candidate = { application: ApplicationRow; reasons: string[] };
+type Candidate = { application: ApplicationRow; reasons: string[] };
 
 export type Guess = { confidence: Confidence; candidates: Candidate[] };
 
@@ -50,7 +50,7 @@ function signalsOf(visit: Visit, application: ApplicationRow): Signal[] {
   return signals;
 }
 
-export function isCoded(visit: Visit): boolean {
+function isCoded(visit: Visit): boolean {
   return visit.views.some(({ ref }) => ref !== null);
 }
 

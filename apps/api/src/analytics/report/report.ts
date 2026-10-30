@@ -21,7 +21,7 @@ export type VisitStory = {
   interacted: boolean;
 };
 
-export type GuessedVisit = VisitStory & {
+type GuessedVisit = VisitStory & {
   confidence: Confidence;
   companies: string[];
   reasons: string[];
