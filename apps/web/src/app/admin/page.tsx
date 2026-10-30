@@ -1,5 +1,6 @@
-import { analyticsDays } from '@portfolio/content/analytics';
+import { defaultReportDays } from '@portfolio/content/report';
 import { reportSections } from '@portfolio/content/report-sections';
+import { bakuTime } from '@portfolio/content/time';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { signOut } from '@/admin/actions';
@@ -16,20 +17,11 @@ const periods = [
   { days: 30, label: '30 days' },
 ];
 
-const inBaku = new Intl.DateTimeFormat('en-GB', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-  timeZone: 'Asia/Baku',
-});
-
 type Query = Awaited<PageProps<'/admin'>['searchParams']>;
 
-function viewOf({ days = '7', all }: Query): { days: number; all: boolean } | null {
-  if (typeof days !== 'string' || !/^\d{1,2}$/.test(days)) {
-    return null;
-  }
-  const count = Number(days);
-  return count >= 1 && count <= analyticsDays ? { days: count, all: all === '1' } : null;
+function viewOf({ days = String(defaultReportDays), all }: Query) {
+  const period = periods.find((choice) => String(choice.days) === days);
+  return period ? { days: period.days, all: all === '1' } : null;
 }
 
 function hrefOf(days: number, all: boolean) {
@@ -56,7 +48,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
       <header className="flex flex-col gap-4">
         <h1 className="text-4xl font-semibold tracking-tight">Admin</h1>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <p className="text-muted">Signed in until {inBaku.format(expiresAt)}, Baku time.</p>
+          <p className="text-muted">Signed in until {bakuTime(expiresAt)} Baku time.</p>
           <form action={signOut}>
             <button type="submit" className={pill}>
               Sign out

@@ -61,7 +61,7 @@ describe('admin sign-in against a real database', () => {
     const link = await sessions.link();
 
     const { token, expiresAt } = adminSignInSchema.parse((await signIn(link).expect(201)).body);
-    expect(expiresAt).toBe(later(days(30)).toISOString());
+    expect(expiresAt).toEqual(later(days(30)));
     expect((await session(`Bearer ${token}`).expect(200)).body).toEqual({
       expiresAt: later(days(30)).toISOString(),
     });

@@ -46,9 +46,7 @@ describe('admin page', () => {
     render(await open());
 
     expect(api.sessionExpiry).toHaveBeenCalledWith('http://api:3201', session);
-    expect(
-      screen.getByText(/^Signed in until 29 November 2026 at 22:53, Baku time\.$/),
-    ).toBeVisible();
+    expect(screen.getByText('Signed in until 2026-11-29 22:53 Baku time.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
     expect(
       screen.getByText(
@@ -99,15 +97,24 @@ describe('admin page', () => {
   });
 
   it('writes out the control characters a visitor sent, so they cannot reorder the text', async () => {
-    api.fetchReport.mockResolvedValue(aReport({ entries: [{ path: '/‮exe.txt', visits: 1 }] }));
+    const error = {
+      message: 'failed in \u202e.txt',
+      source: '/app.js',
+      count: 1,
+      paths: ['/'],
+      browsers: ['chrome'],
+    };
+    api.fetchReport.mockResolvedValue(
+      aReport({ quality: { vitals: [], errors: [error], notFound: [] } }),
+    );
 
     render(await open());
 
-    expect(screen.getByRole('cell', { name: '/\\u{202e}exe.txt' })).toBeVisible();
-    expect(document.body.textContent).not.toContain('‮');
+    expect(screen.getByRole('cell', { name: 'failed in \\u{202e}.txt' })).toBeVisible();
+    expect(document.body.textContent).not.toContain('\u202e');
   });
 
-  it.each([['0'], ['31'], ['week'], [['1', '7']]])(
+  it.each([['0'], ['14'], ['31'], ['week'], [['1', '7']]])(
     'is the 404 page for %j days, without asking the API',
     async (days) => {
       await expect(open({ days })).rejects.toThrow('not found');
@@ -133,13 +140,19 @@ describe('admin page', () => {
     await expect(open()).rejects.toThrow('not found');
   });
 
-  it('fails rather than shows a 404 when the API fails, so an outage is not a lost session', async () => {
-    api.fetchReport.mockRejectedValue(new Error('the API answered 502 to a report'));
+  it.each([
+    ['session check', api.sessionExpiry],
+    ['report', api.fetchReport],
+  ] as const)(
+    'fails rather than shows a 404 when the %s fails, so an outage is not a lost session',
+    async (what, call) => {
+      call.mockRejectedValue(new Error(`the API answered 502 to a ${what}`));
 
-    await expect(open()).rejects.toThrow('the API answered 502 to a report');
-  });
+      await expect(open()).rejects.toThrow(`the API answered 502 to a ${what}`);
+    },
+  );
 
-  it('is rendered for every request, so Next sends it with no-store', () => {
+  it('is declared dynamic, so Next renders it per request and sends it with no-store', () => {
     expect(dynamic).toBe('force-dynamic');
   });
 });

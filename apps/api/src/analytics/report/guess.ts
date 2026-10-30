@@ -1,4 +1,5 @@
-import { inBaku, type Confidence, type Signal } from '@portfolio/content/report';
+import type { Confidence, Signal } from '@portfolio/content/report';
+import { inBaku } from '@portfolio/content/time';
 import { daysBetween } from '../days.js';
 import type { Visit } from '../visits.js';
 import type { ApplicationRow } from './rows.js';

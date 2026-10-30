@@ -1,7 +1,7 @@
 import { analyticsDays, hostName, refCode } from '@portfolio/content/analytics';
+import { reportDaysSchema } from '@portfolio/content/report';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import { reportDays } from '../analytics/report/analytics-report.service.js';
 import type { NewApplication } from '../applications/applications.service.js';
 
 export type Command =
@@ -27,7 +27,7 @@ const reportOptions = {
 } as const;
 
 const reportRequest = z.strictObject({
-  days: reportDays,
+  days: reportDaysSchema,
   all: z.boolean(),
 });
 

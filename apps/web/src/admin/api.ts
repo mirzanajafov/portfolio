@@ -37,8 +37,7 @@ export async function startSession(
   if (response.status !== 201) {
     throw unexpected('a sign-in', response);
   }
-  const { token, expiresAt } = adminSignInSchema.parse(await response.json());
-  return { kind: 'signed in', token, expiresAt: new Date(expiresAt) };
+  return { kind: 'signed in', ...adminSignInSchema.parse(await response.json()) };
 }
 
 export async function sessionExpiry(
@@ -56,7 +55,7 @@ export async function sessionExpiry(
   if (response.status !== 200) {
     throw unexpected('a session check', response);
   }
-  return new Date(adminSessionSchema.parse(await response.json()).expiresAt);
+  return adminSessionSchema.parse(await response.json()).expiresAt;
 }
 
 export async function endSession(

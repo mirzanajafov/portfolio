@@ -1,6 +1,5 @@
 import { geolocationCredit } from './analytics.ts';
 import {
-  inBaku,
   quickExitSeconds,
   readSeconds,
   vitalBars,
@@ -15,6 +14,7 @@ import {
   type Vital,
   type VisitStory,
 } from './report.ts';
+import { bakuTime } from './time.ts';
 
 export type ReportPart =
   | { kind: 'line'; text: string; indent: boolean }
@@ -51,10 +51,6 @@ function printable(text: string): string {
 
 function counted(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? '' : 's'}`;
-}
-
-function bakuTime(date: Date): string {
-  return inBaku(date).toISOString().slice(0, 16).replace('T', ' ');
 }
 
 function share(part: number, whole: number): string {

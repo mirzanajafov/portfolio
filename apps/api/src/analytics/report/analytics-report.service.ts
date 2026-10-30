@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
-import { analyticsDays } from '@portfolio/content/analytics';
 import type { Report } from '@portfolio/content/report';
 import { z } from 'zod';
 import { ClockService } from '../../common/clock.service.js';
@@ -13,8 +12,6 @@ import { findVisits, firstUnrolledDay } from '../visit-rows.js';
 import { buildReport, firstReportedDay } from './build-report.js';
 
 const knownDropReason = z.enum(dropReasons);
-
-export const reportDays = z.coerce.number().int().min(1).max(analyticsDays).default(7);
 
 @Injectable()
 export class AnalyticsReportService {

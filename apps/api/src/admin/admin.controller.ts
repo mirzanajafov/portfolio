@@ -14,13 +14,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { adminToken } from '@portfolio/content/admin';
-import type { Report } from '@portfolio/content/report';
+import { reportDaysSchema, type Report } from '@portfolio/content/report';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import {
-  AnalyticsReportService,
-  reportDays,
-} from '../analytics/report/analytics-report.service.js';
+import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { clientAddress } from '../common/client-address.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
@@ -30,7 +27,7 @@ const signInSchema = z.strictObject({ token: z.string().regex(adminToken) });
 
 type SignInRequest = z.infer<typeof signInSchema>;
 
-const reportQuery = z.strictObject({ days: reportDays });
+const reportQuery = z.strictObject({ days: reportDaysSchema });
 
 type ReportQuery = z.infer<typeof reportQuery>;
 

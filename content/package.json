@@ -27,6 +27,10 @@
       "types": "./dist/report-sections.d.ts",
       "default": "./dist/report-sections.js"
     },
+    "./time": {
+      "types": "./dist/time.d.ts",
+      "default": "./dist/time.js"
+    },
     "./admin": {
       "types": "./dist/admin.d.ts",
       "default": "./dist/admin.js"

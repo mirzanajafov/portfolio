@@ -1,6 +1,8 @@
 import * as z from 'zod/mini';
+import { analyticsDays } from './analytics.ts';
+import { isoDate } from './time.ts';
 
-export const sources = [
+const sources = [
   'google',
   'search',
   'linkedin',
@@ -15,6 +17,12 @@ export type Source = (typeof sources)[number];
 
 export const readSeconds = 2;
 export const quickExitSeconds = 10;
+export const defaultReportDays = 7;
+
+export const reportDaysSchema = z._default(
+  z.pipe(z.coerce.number(), z.int().check(z.gte(1), z.lte(analyticsDays))),
+  defaultReportDays,
+);
 
 export type Bars = { good: number; poor: number; mine: number };
 
@@ -24,10 +32,6 @@ export const vitalBars = {
   cls: { good: 0.1, poor: 0.25, mine: 0.05 },
 } satisfies Record<string, Bars>;
 
-const date = z.pipe(
-  z.iso.datetime(),
-  z.transform((value: string) => new Date(value)),
-);
 const day = z.string();
 const named = z.object({ name: z.string(), visits: z.number() });
 
@@ -53,7 +57,7 @@ const signalSchema = z.discriminatedUnion('kind', [
 const outcomesSchema = z.object({ right: z.number(), wrong: z.number(), tied: z.number() });
 
 const visitStorySchema = z.object({
-  at: date,
+  at: isoDate,
   from: z.nullable(z.string()),
   pages: z.array(z.object({ path: z.string(), seconds: z.number(), read: z.array(z.string()) })),
   clicks: z.array(z.string()),
@@ -87,7 +91,7 @@ const vitalSchema = z.object({
 });
 
 export const reportSchema = z.object({
-  period: z.object({ from: date, to: date, days: z.number(), visits: z.number() }),
+  period: z.object({ from: isoDate, to: isoDate, days: z.number(), visits: z.number() }),
   rollupBehind: z.nullable(z.object({ from: day, to: day })),
   overview: z.object({
     today: totalsSchema,
@@ -130,7 +134,7 @@ export const reportSchema = z.object({
     outbound: z.array(z.object({ label: z.string(), clicks: z.number() })),
   }),
   ask: z.object({
-    since: z.nullable(date),
+    since: z.nullable(isoDate),
     questions: z.number(),
     refused: z.number(),
     days: z.array(z.object({ day, questions: z.number(), refused: z.number() })),
@@ -171,7 +175,7 @@ export const reportSchema = z.object({
       unplaced: z.number(),
       levels: z.object({ high: outcomesSchema, medium: outcomesSchema, low: outcomesSchema }),
     }),
-    unknownCodes: z.array(z.object({ code: z.string(), visits: z.number(), firstSeen: date })),
+    unknownCodes: z.array(z.object({ code: z.string(), visits: z.number(), firstSeen: isoDate })),
   }),
 });
 
@@ -186,9 +190,3 @@ export type GuessedVisit = z.infer<typeof guessedVisitSchema>;
 export type ApplicationEntry = z.infer<typeof applicationEntrySchema>;
 export type Rating = z.infer<typeof ratingSchema>;
 export type Vital = z.infer<typeof vitalSchema>;
-
-const bakuOffsetMs = 4 * 60 * 60 * 1000;
-
-export function inBaku(date: Date): Date {
-  return new Date(date.getTime() + bakuOffsetMs);
-}
