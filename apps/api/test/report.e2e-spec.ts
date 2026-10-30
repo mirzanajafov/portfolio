@@ -3,12 +3,12 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AnalyticsReportService } from '../src/analytics/report/analytics-report.service.js';
+import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
+import { sendEvent, type Sender } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
-const chrome =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 const iphone =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const crawler = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -19,13 +19,7 @@ describe('the visitor report against a real database', () => {
   let prisma: PrismaService;
   let reports: AnalyticsReportService;
 
-  const send = (event: object, { ip = '203.0.113.7', userAgent = chrome } = {}) =>
-    request(app.getHttpServer())
-      .post('/events')
-      .set('X-Forwarded-For', ip)
-      .set('User-Agent', userAgent)
-      .send(event)
-      .expect(204);
+  const send = (event: object, sender?: Sender) => sendEvent(app, event, sender).expect(204);
 
   const at = (time: string) => {
     clock.current = new Date(`2026-10-02T${time}Z`);
@@ -41,7 +35,7 @@ describe('the visitor report against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog"`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication"`;
   });
 
   it('reports a scripted visit the way it happened, from events sent to the API', async () => {
@@ -97,15 +91,17 @@ describe('the visitor report against a real database', () => {
 
     const report = await reports.build(7);
 
+    const none = {
+      visits: 0,
+      pageViews: 0,
+      medianVisitSeconds: null,
+      phoneVisits: 0,
+      quickExits: 0,
+    };
     expect(report.overview).toEqual({
-      current: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
-      previous: {
-        visits: 0,
-        pageViews: 0,
-        medianVisitSeconds: null,
-        phoneVisits: 0,
-        quickExits: 0,
-      },
+      today: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
+      current: none,
+      previous: none,
     });
     expect(report.sources).toEqual([
       { source: 'google', visits: 1 },
@@ -142,10 +138,65 @@ describe('the visitor report against a real database', () => {
       { path: '/old', views: 1, referrers: ['news.ycombinator.com'] },
     ]);
     expect(report.ask).toEqual({
+      since: null,
       questions: 1,
       refused: 0,
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
     });
     expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);
+  });
+
+  it('gives a day the same totals before and after it is rolled up', async () => {
+    const reading = randomUUID();
+    at('12:00:00');
+    await send({ type: 'view', id: reading, path: '/' });
+    await send({
+      type: 'read',
+      view: reading,
+      seq: 1,
+      activeSeconds: 40,
+      maxScroll: 60,
+      blocks: {},
+    });
+    await send(
+      { type: 'view', id: randomUUID(), path: '/cv' },
+      { ip: '198.51.100.4', userAgent: iphone },
+    );
+    const weekOf = async () =>
+      (await reports.build(7)).weeks.find(({ start }) => start === '2026-09-28');
+
+    clock.current = new Date('2026-10-03T12:00:00Z');
+    const raw = await weekOf();
+    clock.current = new Date('2026-11-02T00:00:00Z');
+    await app.get(RetentionService).cleanup();
+    expect(await prisma.visit.count()).toBe(0);
+    const rolled = await weekOf();
+
+    const totals = (week: typeof raw) => ({
+      visits: week?.visits,
+      pageViews: week?.pageViews,
+      medianVisitSeconds: week?.medianVisitSeconds,
+      phoneVisits: week?.phoneVisits,
+      quickExits: week?.quickExits,
+    });
+    expect(totals(raw)).toEqual({
+      visits: 2,
+      pageViews: 2,
+      medianVisitSeconds: 0,
+      phoneVisits: 1,
+      quickExits: 1,
+    });
+    expect(totals(rolled)).toEqual(totals(raw));
+  });
+
+  it('counts a day that is due but not rolled up yet from its raw rows', async () => {
+    at('12:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/' });
+    clock.current = new Date('2026-11-02T00:30:00Z');
+
+    const report = await reports.build(7);
+
+    expect(report.weeks.find(({ start }) => start === '2026-09-28')?.visits).toBe(1);
+    expect(report.rollupBehind).toBeNull();
   });
 });

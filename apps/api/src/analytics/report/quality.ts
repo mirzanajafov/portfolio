@@ -1,6 +1,6 @@
 import type { Rating, Report, Vital } from './report.js';
-import type { Visit } from './rows.js';
-import { percentile, rankedGroups } from './statistics.js';
+import { percentile, rankedGroups } from '../statistics.js';
+import type { Visit } from '../visits.js';
 
 type Bars = { good: number; poor: number; mine: number };
 

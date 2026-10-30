@@ -1,6 +1,7 @@
 import type { CaseStudy, Content } from './schema.ts';
 
 export const analyticsDays = 30;
+export const dailyTotalsMonths = 25;
 export const refCode = /^[a-z0-9]{3,16}$/;
 export const errorMessageMaxLength = 200;
 export const maxSeconds = 86_400;

@@ -1,7 +1,12 @@
-import { analyticsDays } from '@portfolio/content/analytics';
+import { analyticsDays, dailyTotalsMonths } from '@portfolio/content/analytics';
+import { daysAfter, utcDay } from './days.js';
 
-const dayMs = 24 * 60 * 60 * 1000;
+export function firstRawDay(now: Date): Date {
+  return daysAfter(utcDay(now), -analyticsDays);
+}
 
-export function keptSince(now: Date): Date {
-  return new Date(now.getTime() - analyticsDays * dayMs);
+export function firstDailyDay(now: Date): Date {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - dailyTotalsMonths, now.getUTCDate()),
+  );
 }

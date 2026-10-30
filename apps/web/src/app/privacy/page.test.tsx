@@ -1,5 +1,5 @@
 import { content } from '@portfolio/content';
-import { analyticsDays } from '@portfolio/content/analytics';
+import { analyticsDays, dailyTotalsMonths } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 import { phoneNumber } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
@@ -10,7 +10,10 @@ describe('the privacy page', () => {
   it('says how long visits and questions are kept, from the numbers the API uses', () => {
     const { container } = render(<PrivacyPage />);
     expect(container.textContent).toContain(
-      `These records are deleted after ${analyticsDays} days.`,
+      `These records are deleted once their UTC day is ${String(analyticsDays)} full days old, so each lives ${String(analyticsDays)} to ${String(analyticsDays + 1)} days.`,
+    );
+    expect(container.textContent).toContain(
+      `For each day I keep, for ${String(dailyTotalsMonths)} months, how long each visit lasted`,
     );
     expect(container.textContent).toContain(`I keep questions for ${askLogDays} days`);
   });

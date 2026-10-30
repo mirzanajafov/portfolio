@@ -13,11 +13,13 @@ const someVisits = (visits: number): Totals => ({
 function aReport(overrides: Partial<Report> = {}): Report {
   return {
     period: {
-      from: new Date('2026-10-23T12:00:00Z'),
+      from: new Date('2026-10-23T00:00:00Z'),
       to: new Date('2026-10-30T12:00:00Z'),
       days: 7,
+      visits: 14,
     },
-    overview: { current: someVisits(12), previous: someVisits(8) },
+    rollupBehind: null,
+    overview: { today: someVisits(2), current: someVisits(12), previous: someVisits(8) },
     weeks: [],
     sources: [],
     otherSites: [],
@@ -26,7 +28,7 @@ function aReport(overrides: Partial<Report> = {}): Report {
     pages: [],
     reading: [],
     links: { cvViews: 0, cvPdf: [], outbound: [] },
-    ask: { questions: 0, refused: 0, days: [] },
+    ask: { since: null, questions: 0, refused: 0, days: [] },
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
@@ -35,34 +37,35 @@ function aReport(overrides: Partial<Report> = {}): Report {
 }
 
 describe('reportText', () => {
-  it('heads the report with the period in Baku time', () => {
+  it('heads the report with the UTC days of the period and the time in Baku', () => {
     expect(reportText(aReport(), { all: false })).toMatch(
-      /^Visits in the last 7 days, 2026-10-23 16:00 to 2026-10-30 16:00 Baku time\n/,
+      /^Visits in the last 7 full days and today: 2026-10-23 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time\n/,
     );
   });
 
-  it('puts the period and the one before side by side', () => {
+  it('puts today, the full days and the days before them side by side', () => {
     const text = reportText(aReport(), { all: false });
-    expect(text).toMatch(/^Overview +last 7 days +7 days before$/m);
-    expect(text).toMatch(/^visits +12 +8$/m);
-    expect(text).toMatch(/^on a phone +8% +13%$/m);
+    expect(text).toMatch(/^Overview +today so far +last 7 days +7 days before$/m);
+    expect(text).toMatch(/^visits +2 +12 +8$/m);
+    expect(text).toMatch(/^on a phone +50% +8% +13%$/m);
   });
 
-  it('says when the period before is no longer kept', () => {
+  it('says when the period before was never collected', () => {
     const text = reportText(
       aReport({
         period: {
-          from: new Date('2026-10-14T12:00:00Z'),
+          from: new Date('2026-10-15T00:00:00Z'),
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
+          visits: 14,
         },
-        overview: { current: someVisits(12), previous: null },
+        overview: { today: someVisits(2), current: someVisits(12), previous: null },
       }),
       { all: false },
     );
-    expect(text).toMatch(/^Overview +last 16 days$/m);
+    expect(text).toMatch(/^Overview +today so far +last 16 days$/m);
     expect(text).toContain(
-      'The 16 days before reach past the 30 days kept, so there is nothing to compare with.',
+      'Some of the 16 days before were never collected, so there is nothing to compare with.',
     );
   });
 
@@ -86,7 +89,7 @@ describe('reportText', () => {
       questions: 1,
       refused: 0,
     }));
-    const text = reportText(aReport({ ask: { questions: 30, refused: 0, days } }), {
+    const text = reportText(aReport({ ask: { since: null, questions: 30, refused: 0, days } }), {
       all: false,
     });
     expect(text).toMatch(/^2026-10-30 +1 +0$/m);
@@ -96,7 +99,7 @@ describe('reportText', () => {
   it('prints every section in order, and says so when one has nothing in it', () => {
     const text = reportText(aReport(), { all: false });
     const headings = [
-      'Visits in the last 7 days',
+      'Visits in the last 7 full days and today',
       'Overview',
       'Weeks from Monday, UTC',
       'Sources: none',
@@ -228,6 +231,29 @@ describe('reportText', () => {
     );
     expect(text).toContain('\\u{1b}]52;c;aGk=\\u{7}\\u{1b}[2J\\u{a}visits  9999');
     expect(text).not.toMatch(/\p{Cc}(?<!\n)/u);
+  });
+
+  it('warns when the daily rollup is behind', () => {
+    expect(
+      reportText(aReport({ rollupBehind: { from: '2026-09-27', to: '2026-09-29' } }), {
+        all: false,
+      }),
+    ).toContain(
+      'The daily rollup is behind: the visits of 2026-09-27 to 2026-09-29 should have been rolled up and deleted.',
+    );
+    expect(reportText(aReport(), { all: false })).not.toContain('rollup is behind');
+  });
+
+  it('says from when the questions are counted when the log does not reach back to the period', () => {
+    const text = reportText(
+      aReport({
+        ask: { since: new Date('2026-09-30T12:00:00Z'), questions: 1, refused: 0, days: [] },
+      }),
+      { all: false },
+    );
+    expect(text).toContain(
+      'Ask: 1 question, 0 refused, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
+    );
   });
 
   it('ends with the credit the IP database asks for', () => {

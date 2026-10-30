@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
-import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
+import { analyticsDays, dailyTotalsMonths, geolocationCredit } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 
 const { profile } = content;
@@ -64,7 +64,16 @@ export default function PrivacyPage() {
           result is stored. Your IP address is never stored, and once that value is gone nobody, me
           included, can work out which address a record came from.
         </p>
-        <p className="max-w-[65ch]">These records are deleted after {analyticsDays} days.</p>
+        <p className="max-w-[65ch]">
+          These records are deleted once their UTC day is {analyticsDays} full days old, so each
+          lives {analyticsDays} to {analyticsDays + 1} days. What stays after that has no visitor in
+          it. For each day I keep, for {dailyTotalsMonths} months, how long each visit lasted and
+          how many were on a phone, how each page was read on each kind of device (views, seconds,
+          scroll, the parts read, how fast it loaded, answered and held still), which missing pages
+          were asked for, where visits came from, their countries and the links clicked. On a quiet
+          day those totals may cover a single visit. Whether a link I sent with a job application
+          was opened is kept as a daily count for as long as I track that application.
+        </p>
         <p className="max-w-[65ch]">
           If your browser sends Global Privacy Control or Do Not Track, nothing is recorded, not
           even a count. Without JavaScript nothing is sent. Visits from known bots aren&apos;t

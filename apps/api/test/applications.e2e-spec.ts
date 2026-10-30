@@ -41,7 +41,7 @@ describe('applications against a real database', () => {
 
   beforeEach(async () => {
     vi.mocked(newCode).mockReset();
-    await prisma.$executeRaw`TRUNCATE "Application"`;
+    await prisma.$executeRaw`TRUNCATE "Application" CASCADE`;
   });
 
   it('gives a new application a fresh code a link can carry', async () => {

@@ -1,11 +1,11 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
+import type { DayTotals } from '../day-totals.js';
+import { utcDay } from '../days.js';
+import { aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
+import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
-import type { ReportRows, ViewRow, VisitRow } from './rows.js';
-
-const now = new Date('2026-10-30T12:00:00Z');
-const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
-const daysAgo = (days: number) => hoursAgo(days * 24);
+import type { ReportRows } from './rows.js';
 
 const content = await contentOf({
   projects: [
@@ -14,59 +14,89 @@ const content = await contentOf({
   ],
 });
 
-function aView(overrides: Partial<ViewRow> = {}): ViewRow {
-  return {
-    createdAt: hoursAgo(1),
-    path: '/',
-    notFound: false,
-    referrerHost: null,
-    activeSeconds: 30,
-    maxScroll: 50,
-    blocks: {},
-    lcpMs: null,
-    inpMs: null,
-    cls: null,
-    clicks: [],
-    errors: [],
-    ...overrides,
-  };
-}
-
-function aVisit(
-  views: ViewRow[] = [aView()],
-  overrides: Partial<Omit<VisitRow, 'views'>> = {},
-): VisitRow {
-  return {
-    startedAt: hoursAgo(1),
-    device: 'desktop',
-    browser: 'chrome',
-    country: 'AZ',
-    views,
-    ...overrides,
-  };
-}
-
 function reportOf(
   visits: VisitRow[],
   { days = 7, ...rows }: Partial<Omit<ReportRows, 'visits'>> & { days?: number } = {},
 ) {
   return buildReport(
-    { kept: daysAgo(30), visits, questions: [], dropped: [], ...rows },
+    { rawFrom: utcDay(daysAgo(30)), visits, rolled: [], questions: [], dropped: [], ...rows },
     content,
     now,
     days,
   );
 }
 
+function rolledDays(from: string, count: number): (DayTotals & { day: Date })[] {
+  return Array.from({ length: count }, (_, index) => ({
+    day: new Date(new Date(from).getTime() + index * 24 * 60 * 60 * 1000),
+    visits: 1,
+    pageViews: 2,
+    phoneVisits: 0,
+    quickExits: 0,
+    visitSeconds: [10],
+  }));
+}
+
 describe('buildReport', () => {
-  it('compares the period with the one before only while the rows of that one are kept', () => {
-    const visits = [
-      aVisit([aView()], { startedAt: daysAgo(1) }),
-      aVisit([aView()], { startedAt: daysAgo(10) }),
-    ];
-    expect(reportOf(visits, { days: 7 }).overview.current.visits).toBe(1);
-    expect(reportOf(visits, { days: 15 }).overview.previous?.visits).toBe(0);
-    expect(reportOf(visits, { days: 16 }).overview.previous).toBeNull();
+  it('compares the last full days with as many before them, and counts today on its own', () => {
+    const report = reportOf(
+      [
+        aVisit([aView()], { startedAt: new Date('2026-10-30T01:00:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-23T00:30:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-22T23:30:00Z') }),
+      ],
+      { days: 7 },
+    );
+    expect(report.period.from).toEqual(new Date('2026-10-23T00:00:00Z'));
+    expect(report.overview.today.visits).toBe(1);
+    expect(report.overview.current.visits).toBe(1);
+    expect(report.overview.previous?.visits).toBe(1);
+  });
+
+  it('reads the days before the period from their rolled totals once the raw ones are gone', () => {
+    const report = reportOf([], { days: 30, rolled: rolledDays('2026-08-31', 30) });
+    expect(report.overview.previous).toEqual({
+      visits: 30,
+      pageViews: 60,
+      medianVisitSeconds: 10,
+      phoneVisits: 0,
+      quickExits: 0,
+    });
+  });
+
+  it('counts a day the rollup has not reached yet from its raw rows', () => {
+    const report = reportOf(
+      [aVisit([aView({ activeSeconds: 30 })], { startedAt: new Date('2026-09-29T10:00:00Z') })],
+      {
+        days: 30,
+        rawFrom: new Date('2026-09-29T00:00:00Z'),
+        rolled: rolledDays('2026-08-31', 29),
+      },
+    );
+    expect(report.overview.previous?.visits).toBe(30);
+    expect(report.rollupBehind).toBeNull();
+  });
+
+  it('says which days the rollup should have reached once it has missed a whole one', () => {
+    const report = reportOf([], { rawFrom: new Date('2026-09-28T00:00:00Z') });
+    expect(report.rollupBehind).toEqual({ from: '2026-09-28', to: '2026-09-29' });
+  });
+
+  it('counts questions only as far back as the log keeps them', () => {
+    const report = reportOf([], {
+      days: 30,
+      questions: [
+        { createdAt: new Date('2026-09-30T08:00:00Z'), refused: false },
+        { createdAt: new Date('2026-09-30T13:00:00Z'), refused: false },
+      ],
+    });
+    expect(report.ask).toMatchObject({ since: new Date('2026-09-30T12:00:00Z'), questions: 1 });
+    expect(reportOf([], { days: 7 }).ask.since).toBeNull();
+  });
+
+  it('has nothing to compare with when a day before the period was never collected', () => {
+    const report = reportOf([], { days: 30, rolled: rolledDays('2026-09-01', 29) });
+    expect(report.overview.previous).toBeNull();
   });
 
   it("adds up a visit's seconds over its pages and counts one short page as a quick exit", () => {
@@ -75,7 +105,7 @@ describe('buildReport', () => {
       aVisit([aView({ activeSeconds: 9 })], { device: 'phone' }),
       aVisit([aView({ activeSeconds: 12 })]),
     ]);
-    expect(report.overview.current).toEqual({
+    expect(report.overview.today).toEqual({
       visits: 3,
       pageViews: 4,
       medianVisitSeconds: 12,
@@ -91,10 +121,10 @@ describe('buildReport', () => {
         aView({ createdAt: hoursAgo(1), activeSeconds: 3 }),
       ]),
     ]);
-    expect(report.overview.current.quickExits).toBe(1);
+    expect(report.overview.today.quickExits).toBe(1);
   });
 
-  it('marks the weeks at either end of the kept days as partial', () => {
+  it('starts the weeks at the first collected day and marks the incomplete ones as partial', () => {
     const report = reportOf([aVisit([aView()], { startedAt: daysAgo(3) })]);
     expect(report.weeks.map(({ start, partial, visits }) => [start, partial, visits])).toEqual([
       ['2026-09-28', true, 0],
@@ -103,6 +133,15 @@ describe('buildReport', () => {
       ['2026-10-19', false, 0],
       ['2026-10-26', true, 1],
     ]);
+  });
+
+  it('goes back 12 weeks at most, adding rolled days to raw ones', () => {
+    const report = reportOf([aVisit([aView()], { startedAt: daysAgo(3) })], {
+      rolled: rolledDays('2026-07-01', 91),
+    });
+    expect(report.weeks).toHaveLength(12);
+    expect(report.weeks[0]).toMatchObject({ start: '2026-08-10', partial: false, visits: 7 });
+    expect(report.weeks.at(-1)).toMatchObject({ start: '2026-10-26', partial: true, visits: 1 });
   });
 
   it('takes the source of a visit from its landing page only', () => {
@@ -205,6 +244,7 @@ describe('buildReport', () => {
       ],
     });
     expect(report.ask).toEqual({
+      since: null,
       questions: 3,
       refused: 1,
       days: [
@@ -282,19 +322,21 @@ describe('buildReport', () => {
     ]);
   });
 
-  it('adds up the dropped events per day from the first day of the period', () => {
+  it('adds up the dropped events of each UTC day in the period', () => {
     const report = reportOf([], {
       days: 2,
       dropped: [
         { day: new Date('2026-10-28'), reason: 'bot', count: 5 },
         { day: new Date('2026-10-29'), reason: 'bot', count: 3 },
         { day: new Date('2026-10-29'), reason: 'limited', count: 1 },
+        { day: new Date('2026-10-30'), reason: 'bot', count: 2 },
         { day: new Date('2026-10-27'), reason: 'bot', count: 9 },
       ],
     });
     expect(report.filter).toEqual([
       { day: '2026-10-28', bot: 5, limited: 0 },
       { day: '2026-10-29', bot: 3, limited: 1 },
+      { day: '2026-10-30', bot: 2, limited: 0 },
     ]);
   });
 });

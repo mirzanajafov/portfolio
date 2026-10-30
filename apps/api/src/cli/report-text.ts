@@ -1,13 +1,9 @@
-import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
+import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
-import {
-  quickExitSeconds,
-  readSeconds,
-  type Report,
-  type Source,
-  type Totals,
-  type Vital,
-} from '../analytics/report/report.js';
+import { dayOf } from '../analytics/days.js';
+import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
+import type { Source } from '../analytics/sources.js';
+import { quickExitSeconds } from '../analytics/visits.js';
 
 const listLength = 10;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
@@ -98,7 +94,7 @@ function totalsColumn(totals: Totals): string[] {
   ];
 }
 
-function overview({ period, overview: { current, previous } }: Report): string[] {
+function overview({ period, overview: { today, current, previous } }: Report): string[] {
   const labels = [
     'visits',
     'page views',
@@ -107,19 +103,22 @@ function overview({ period, overview: { current, previous } }: Report): string[]
     `one page under ${String(quickExitSeconds)} s`,
   ];
   const days = counted(period.days, 'day');
-  const columns = previous
-    ? [totalsColumn(current), totalsColumn(previous)]
-    : [totalsColumn(current)];
+  const columns: [string, Totals][] = [
+    ['today so far', today],
+    [`last ${days}`, current],
+  ];
+  if (previous) {
+    columns.push([`${days} before`, previous]);
+  }
+  const values = columns.map(([, totals]) => totalsColumn(totals));
   return [
     ...table([
-      ['Overview', `last ${days}`, ...(previous ? [`${days} before`] : [])],
-      ...labels.map((label, row) => [label, ...columns.map((column) => column[row] ?? '')]),
+      ['Overview', ...columns.map(([heading]) => heading)],
+      ...labels.map((label, row) => [label, ...values.map((column) => column[row] ?? '')]),
     ]),
     ...(previous
       ? []
-      : [
-          `The ${days} before reach past the ${String(analyticsDays)} days kept, so there is nothing to compare with.`,
-        ]),
+      : [`Some of the ${days} before were never collected, so there is nothing to compare with.`]),
   ];
 }
 
@@ -134,12 +133,12 @@ function weeks({ weeks }: Report): string[] {
         optional(week.medianVisitSeconds),
       ]),
     ]),
-    '* only part of the week is kept or has passed',
+    '* some days of the week were never collected or have not come yet',
   ];
 }
 
 function traffic(report: Report, all: boolean): string[][] {
-  const visits = report.overview.current.visits;
+  const visits = report.period.visits;
   return [
     section(
       'Sources',
@@ -222,7 +221,7 @@ function links({ links }: Report, all: boolean): string[][] {
 
 function ask({ ask }: Report): string[] {
   return [
-    `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused`,
+    `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ...(ask.days.length > 0
       ? table([
           ['UTC day', 'questions', 'refused'],
@@ -236,8 +235,8 @@ function ask({ ask }: Report): string[] {
   ];
 }
 
-function audience({ audience, overview }: Report, all: boolean): string[][] {
-  const visits = overview.current.visits;
+function audience({ audience, period }: Report, all: boolean): string[][] {
+  const visits = period.visits;
   const rows = (counts: { name: string; visits: number }[]) =>
     counts.map(({ name, visits: count }) => [name, String(count), share(count, visits)]);
   return [
@@ -307,21 +306,25 @@ function filter({ filter }: Report): string[] {
   if (filter.length === 0) {
     return ['Filtered out: none'];
   }
-  return [
-    ...table([
-      ['Filtered out, UTC day', 'bots', 'limited'],
-      ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
-    ]),
-    "The counters are per day, so the period's first day is counted whole.",
-  ];
+  return table([
+    ['Filtered out, UTC day', 'bots', 'limited'],
+    ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
+  ]);
 }
 
 export function reportText(report: Report, { all }: { all: boolean }): string {
   const { period } = report;
   const blocks = [
     [
-      `Visits in the last ${counted(period.days, 'day')}, ${bakuTime(period.from)} to ${bakuTime(period.to)} Baku time`,
+      `Visits in the last ${counted(period.days, 'full day')} and today: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
     ],
+    ...(report.rollupBehind
+      ? [
+          [
+            `The daily rollup is behind: the visits of ${report.rollupBehind.from} to ${report.rollupBehind.to} should have been rolled up and deleted. The API's log says why.`,
+          ],
+        ]
+      : []),
     overview(report),
     weeks(report),
     ...traffic(report, all),

@@ -1,53 +1,11 @@
-import type { Browser, Device } from '../user-agent.js';
+import type { DayTotals } from '../day-totals.js';
 import type { DropReason } from '../visit-log.service.js';
-
-export type ViewRow = {
-  createdAt: Date;
-  path: string;
-  notFound: boolean;
-  referrerHost: string | null;
-  activeSeconds: number;
-  maxScroll: number;
-  blocks: Record<string, number>;
-  lcpMs: number | null;
-  inpMs: number | null;
-  cls: number | null;
-  clicks: { href: string }[];
-  errors: { message: string; source: string }[];
-};
-
-export type VisitRow = {
-  startedAt: Date;
-  device: Device;
-  browser: Browser;
-  country: string | null;
-  views: ViewRow[];
-};
+import type { VisitRow } from '../visits.js';
 
 export type ReportRows = {
-  kept: Date;
+  rawFrom: Date;
   visits: VisitRow[];
+  rolled: (DayTotals & { day: Date })[];
   questions: { createdAt: Date; refused: boolean }[];
   dropped: { day: Date; reason: DropReason; count: number }[];
 };
-
-export type Visit = VisitRow & {
-  landing: ViewRow;
-  exit: ViewRow;
-  pages: string[];
-  found: ViewRow[];
-};
-
-export function inOrder({ views, ...visit }: VisitRow): Visit[] {
-  const sorted = views.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const [landing] = sorted;
-  const exit = sorted.at(-1);
-  if (!landing || !exit) {
-    return [];
-  }
-  const pages = sorted
-    .map(({ path }) => path)
-    .filter((path, index, paths) => path !== paths[index - 1]);
-  const found = sorted.filter(({ notFound }) => !notFound);
-  return [{ ...visit, views: sorted, landing, exit, pages, found }];
-}

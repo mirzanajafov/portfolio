@@ -1,8 +1,6 @@
-export const readSeconds = 2;
-export const quickExitSeconds = 10;
+import type { Source } from '../sources.js';
 
-export type Source =
-  'google' | 'search' | 'linkedin' | 'github' | 'jobs' | 'demos' | 'direct' | 'other';
+export const readSeconds = 2;
 
 export type Totals = {
   visits: number;
@@ -19,8 +17,9 @@ export type Rating = 'good' | 'needs improvement' | 'poor';
 export type Vital = { p75: number; samples: number; rating: Rating; missesMyBar: boolean };
 
 export type Report = {
-  period: { from: Date; to: Date; days: number };
-  overview: { current: Totals; previous: Totals | null };
+  period: { from: Date; to: Date; days: number; visits: number };
+  rollupBehind: { from: string; to: string } | null;
+  overview: { today: Totals; current: Totals; previous: Totals | null };
   weeks: Week[];
   sources: { source: Source; visits: number }[];
   otherSites: { host: string; visits: number }[];
@@ -47,6 +46,7 @@ export type Report = {
     outbound: { label: string; clicks: number }[];
   };
   ask: {
+    since: Date | null;
     questions: number;
     refused: number;
     days: { day: string; questions: number; refused: number }[];
