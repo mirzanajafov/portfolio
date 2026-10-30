@@ -1,7 +1,10 @@
 export const analyticsDays = 30;
 export const errorMessageMaxLength = 200;
+export const maxSeconds = 86_400;
 
-export type WebVital = 'LCP' | 'INP' | 'CLS';
+export const webVitals = ['LCP', 'INP', 'CLS'] as const;
+
+export type WebVital = (typeof webVitals)[number];
 
 export type VisitEvent =
   | { type: 'view'; id: string; path: string; referrer?: string; ref?: string; notFound?: boolean }
