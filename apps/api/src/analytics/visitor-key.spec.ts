@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keyed, networkOf } from './visitor-key.js';
+import { dailyKey, keyed, networkOf } from './visitor-key.js';
 
 describe('networkOf', () => {
   it('keeps an IPv4 address whole', () => {
@@ -39,9 +39,16 @@ describe('keyed', () => {
     );
   });
 
-  it('never contains the address it was made from', () => {
-    const key = keyed(salt, '203.0.113.7', 'Chrome');
-    expect(key).toMatch(/^[0-9a-f]{32}$/);
-    expect(key).not.toContain('203');
+  it('is 32 hex characters, never the address it was made from', () => {
+    expect(keyed(salt, '203.0.113.7', 'Chrome')).toMatch(/^[0-9a-f]{32}$/);
+  });
+});
+
+describe('dailyKey', () => {
+  it('depends on the secret as well as the salt, so the database alone rebuilds nothing', () => {
+    const salt = new Uint8Array(32).fill(7);
+    expect(dailyKey('secret', salt)).toEqual(dailyKey('secret', salt));
+    expect(dailyKey('other secret', salt)).not.toEqual(dailyKey('secret', salt));
+    expect(dailyKey('secret', new Uint8Array(32).fill(8))).not.toEqual(dailyKey('secret', salt));
   });
 });

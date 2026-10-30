@@ -31,9 +31,9 @@ export class EventsService {
       await this.visits.countDropped('bot', now);
       return { kind: 'ignored' };
     }
-    const salt = await this.salts.today();
+    const key = await this.salts.keyFor(now);
     const network = networkOf(ip);
-    const limitKey = keyed(salt, 'limit', network);
+    const limitKey = keyed(key, 'limit', network);
     const verdict = await this.limiter.admit(
       [
         {
@@ -53,7 +53,7 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
-    await this.visits.record(event, { key: keyed(salt, network, userAgent), userAgent }, now);
+    await this.visits.record(event, { key: keyed(key, network, userAgent), userAgent }, now);
     return { kind: 'recorded' };
   }
 }

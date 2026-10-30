@@ -1,8 +1,16 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
+import { ENV, type Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { dailyKey } from './visitor-key.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 
@@ -10,11 +18,12 @@ const cleanupEveryMs = 60 * 60 * 1000;
 export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(VisitorSaltService.name);
   private stop?: () => void;
-  private current?: { day: string; salt: Uint8Array };
+  private current?: { day: string; key: Uint8Array };
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: ClockService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   onModuleInit(): void {
@@ -25,10 +34,10 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
     this.stop?.();
   }
 
-  async today(): Promise<Uint8Array> {
-    const day = this.clock.now().toISOString().slice(0, 10);
+  async keyFor(now: Date): Promise<Uint8Array> {
+    const day = now.toISOString().slice(0, 10);
     if (this.current?.day === day) {
-      return this.current.salt;
+      return this.current.key;
     }
     const [row] = await this.prisma.$queryRaw<{ salt: Uint8Array }[]>`
       INSERT INTO "VisitorSalt" (day, salt) VALUES (${day}::date, ${randomBytes(32)})
@@ -37,9 +46,10 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
     if (!row) {
       throw new Error(`storing the salt for ${day} returned no row`);
     }
-    this.current = { day, salt: row.salt };
+    const key = dailyKey(this.env.CLIENT_HASH_SECRET, row.salt);
+    this.current = { day, key };
     await this.deleteBefore(day);
-    return row.salt;
+    return key;
   }
 
   async cleanup(): Promise<void> {

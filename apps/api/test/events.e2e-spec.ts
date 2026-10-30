@@ -2,9 +2,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
-import { keyed } from '../src/analytics/visitor-key.js';
+import { dailyKey, keyed } from '../src/analytics/visitor-key.js';
 import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
-import { clientKey } from '../src/ask/client-key.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -121,11 +120,22 @@ describe('POST /events against a real database', () => {
     expect(days).not.toContain('2026-10-20');
 
     const yesterday = visits.find(({ startedAt }) => startedAt.getUTCDate() === 20)?.visitor;
-    const rebuilt = salts.map(({ salt }) => keyed(salt, address, chrome));
+    const secret = process.env.CLIENT_HASH_SECRET ?? '';
+    const rebuilt = salts.map(({ salt }) => keyed(dailyKey(secret, salt), address, chrome));
     expect(rebuilt).not.toContain(yesterday);
-    expect(
-      clientKey(address, 'test-secret-for-e2e-only', new Date('2026-10-20T23:59:00Z')),
-    ).not.toBe(yesterday);
+  });
+
+  it('needs the secret from the environment as well as the salt to rebuild a visitor', async () => {
+    clock.current = new Date('2026-10-22T10:00:00Z');
+    await send(app, aView()).expect(204);
+
+    const [visit] = (await everything()).visits;
+    const { salt } = await prisma.visitorSalt.findUniqueOrThrow({
+      where: { day: new Date('2026-10-22') },
+    });
+    const secret = process.env.CLIENT_HASH_SECRET ?? '';
+    expect(keyed(salt, address, chrome)).not.toBe(visit?.visitor);
+    expect(keyed(dailyKey(secret, salt), address, chrome)).toBe(visit?.visitor);
   });
 
   it('deletes the old salt within the hour even when nobody visits the next day', async () => {

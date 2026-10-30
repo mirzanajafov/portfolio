@@ -21,6 +21,10 @@ export function networkOf(ip: string): string {
   return `${prefix.join(':')}::/64`;
 }
 
-export function keyed(salt: Uint8Array, ...parts: string[]): string {
-  return createHmac('sha256', salt).update(parts.join('\n')).digest('hex').slice(0, 32);
+export function dailyKey(secret: string, salt: Uint8Array): Uint8Array {
+  return createHmac('sha256', secret).update(salt).digest();
+}
+
+export function keyed(key: Uint8Array, ...parts: string[]): string {
+  return createHmac('sha256', key).update(parts.join('\n')).digest('hex').slice(0, 32);
 }
