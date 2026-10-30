@@ -1,8 +1,6 @@
-export const readSeconds = 2;
-export const quickExitSeconds = 10;
+import type { Source } from '../sources.js';
 
-export type Source =
-  'google' | 'search' | 'linkedin' | 'github' | 'jobs' | 'demos' | 'direct' | 'other';
+export const readSeconds = 2;
 
 export type Totals = {
   visits: number;

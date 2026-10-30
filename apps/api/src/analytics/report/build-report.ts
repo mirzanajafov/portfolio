@@ -3,10 +3,11 @@ import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
 import type { DropReason } from '../visit-log.service.js';
 import { qualityOf } from './quality.js';
-import { quickExitSeconds, readSeconds, type Report, type Totals, type Week } from './report.js';
-import { inOrder, type ReportRows, type Visit } from './rows.js';
-import { sourceOf } from './sources.js';
-import { median, rankedGroups, tally } from './statistics.js';
+import { sourceOf } from '../sources.js';
+import { median, rankedGroups, tally } from '../statistics.js';
+import { inOrder, isQuickExit, secondsOf, type Visit } from '../visits.js';
+import { readSeconds, type Report, type Totals, type Week } from './report.js';
+import type { ReportRows } from './rows.js';
 
 const dayMs = 24 * 60 * 60 * 1000;
 const weekMs = 7 * dayMs;
@@ -21,10 +22,6 @@ function mondayOf(date: Date): number {
   return midnight - ((date.getUTCDay() + 6) % 7) * dayMs;
 }
 
-function secondsOf({ views }: Visit): number {
-  return views.reduce((total, { activeSeconds }) => total + activeSeconds, 0);
-}
-
 function startedBetween(visits: readonly Visit[], from: number, to: number): Visit[] {
   return visits.filter(({ startedAt }) => startedAt.getTime() >= from && startedAt.getTime() < to);
 }
@@ -35,9 +32,7 @@ function totalsOf(visits: readonly Visit[]): Totals {
     pageViews: visits.reduce((total, { views }) => total + views.length, 0),
     medianVisitSeconds: median(visits.map(secondsOf)),
     phoneVisits: visits.filter(({ device }) => device === 'phone').length,
-    quickExits: visits.filter(
-      (visit) => visit.pages.length === 1 && secondsOf(visit) < quickExitSeconds,
-    ).length,
+    quickExits: visits.filter(isQuickExit).length,
   };
 }
 

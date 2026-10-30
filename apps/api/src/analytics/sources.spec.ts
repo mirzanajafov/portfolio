@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Browser } from '../user-agent.js';
-import type { Source } from './report.js';
-import { sourceOf } from './sources.js';
+import { sourceOf, type Source } from './sources.js';
+import type { Browser } from './user-agent.js';
 
 describe('sourceOf', () => {
   it.each<[string | null, Browser, Source]>([

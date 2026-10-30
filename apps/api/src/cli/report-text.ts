@@ -1,13 +1,8 @@
 import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
-import {
-  quickExitSeconds,
-  readSeconds,
-  type Report,
-  type Source,
-  type Totals,
-  type Vital,
-} from '../analytics/report/report.js';
+import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
+import type { Source } from '../analytics/sources.js';
+import { quickExitSeconds } from '../analytics/visits.js';
 
 const listLength = 10;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;

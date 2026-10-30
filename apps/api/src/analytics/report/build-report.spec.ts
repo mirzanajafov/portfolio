@@ -1,7 +1,8 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import { buildReport } from './build-report.js';
-import type { ReportRows, ViewRow, VisitRow } from './rows.js';
+import type { ViewRow, VisitRow } from '../visits.js';
+import type { ReportRows } from './rows.js';
 
 const now = new Date('2026-10-30T12:00:00Z');
 const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
