@@ -158,8 +158,7 @@
         "carwash-ledger/idempotency-fence"
       ],
       "cited": [
-        "carwash-ledger/case-study/decision-3",
-        "carwash-ledger/idempotency-fence"
+        "carwash-ledger/case-study/decision-3"
       ],
       "hit": true,
       "refused": false
