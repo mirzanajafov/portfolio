@@ -1,6 +1,6 @@
 const maxBodyBytes = 2_000;
 
-export const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt'];
+export const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt'] as const;
 
 type Forward = {
   url: string;

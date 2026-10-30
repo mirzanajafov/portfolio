@@ -1,10 +1,10 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { adminLinkMinutes, adminSessionDays } from '@portfolio/content/admin';
 import { createHash, randomBytes } from 'node:crypto';
+import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import type { AdminSession } from '../generated/prisma/client.js';
-import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
 
