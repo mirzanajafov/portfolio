@@ -8,6 +8,7 @@ const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   from: null,
   pages: [{ path: '/', seconds: 30, read: [] }],
   clicks: [],
+  questions: [],
   interacted: true,
   ...overrides,
 });
@@ -65,7 +66,8 @@ describe('reportText', () => {
       questions: 1,
       refused: 0,
     }));
-    const text = reportText(aReport({ ask: { since: null, questions: 30, refused: 0, days } }), {
+    const ask = { since: null, questions: 30, refused: 0, inVisits: 0, visits: 0, days };
+    const text = reportText(aReport({ ask }), {
       all: false,
     });
     expect(text).toMatch(/^2026-10-30 +1 +0$/m);
@@ -87,7 +89,7 @@ describe('reportText', () => {
       'CV page views: 0',
       'CV PDF clicks from: none',
       'Link clicks: none',
-      'Ask: 0 questions, 0 refused',
+      'Ask: 0 questions, 0 refused, 0 of them in 0 visits I can see',
       'Devices: none',
       'Browsers: none',
       'Countries: none',
@@ -221,15 +223,22 @@ describe('reportText', () => {
     expect(reportText(aReport(), { all: false })).not.toContain('rollup is behind');
   });
 
-  it('says from when the questions are counted when the log does not reach back to the period', () => {
+  it('says how many questions came from visits it can see, and from when they are counted when the log does not reach back to the period', () => {
     const text = reportText(
       aReport({
-        ask: { since: new Date('2026-09-30T12:00:00Z'), questions: 1, refused: 0, days: [] },
+        ask: {
+          since: new Date('2026-09-30T12:00:00Z'),
+          questions: 3,
+          refused: 0,
+          inVisits: 2,
+          visits: 1,
+          days: [],
+        },
       }),
       { all: false },
     );
     expect(text).toContain(
-      'Ask: 1 question, 0 refused, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
+      'Ask: 3 questions, 0 refused, 2 of them in 1 visit I can see, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
     );
   });
 
@@ -248,6 +257,7 @@ describe('reportText', () => {
                     { path: '/cv', seconds: 8, read: [] },
                   ],
                   clicks: ['CV PDF'],
+                  questions: ['Do you know Go?', 'What did you build with Kafka?'],
                 }),
                 aStory({
                   at: new Date('2026-10-30T11:00:00Z'),
@@ -293,7 +303,7 @@ describe('reportText', () => {
       [
         'Applications, every visit kept rather than only the period, times in Baku',
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
-        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
+        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',

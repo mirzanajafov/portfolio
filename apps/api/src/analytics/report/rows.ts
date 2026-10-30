@@ -25,7 +25,7 @@ export type ReportRows = {
   rawFrom: Date;
   visits: VisitRow[];
   rolled: (DayTotals & { day: Date })[];
-  questions: { createdAt: Date; refused: boolean }[];
+  questions: { createdAt: Date; refused: boolean; visitor: string | null; question: string }[];
   dropped: { day: Date; reason: DropReason; count: number }[];
   applications: ApplicationRow[];
   rolledApplications: RolledApplicationDay[];

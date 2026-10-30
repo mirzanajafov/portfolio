@@ -267,7 +267,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function ask({ ask }: Report): ReportSection {
   return [
     line(
-      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
+      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused, ${String(ask.inVisits)} of them in ${counted(ask.visits, 'visit')} I can see${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ),
     ...(ask.days.length > 0
       ? [
@@ -354,7 +354,7 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
   ];
 }
 
-function storyText({ at, from, pages, clicks, interacted }: VisitStory): string {
+function storyText({ at, from, pages, clicks, questions, interacted }: VisitStory): string {
   const read = pages.map(
     ({ path, seconds, read }) =>
       `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
@@ -362,6 +362,9 @@ function storyText({ at, from, pages, clicks, interacted }: VisitStory): string 
   return [
     `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
     ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
+    ...(questions.length > 0
+      ? [`asked ${questions.map((question) => `"${question}"`).join(', ')}`]
+      : []),
     ...(interacted ? [] : ['no interaction']),
   ].join(', ');
 }

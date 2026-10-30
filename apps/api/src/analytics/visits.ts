@@ -18,6 +18,7 @@ export type ViewRow = {
 };
 
 export type VisitRow = {
+  visitor: string;
   startedAt: Date;
   device: Device;
   browser: Browser;

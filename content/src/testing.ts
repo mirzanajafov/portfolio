@@ -202,7 +202,7 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     pages: [],
     reading: [],
     links: { cvViews: 0, cvPdf: [], outbound: [] },
-    ask: { since: null, questions: 0, refused: 0, days: [] },
+    ask: { since: null, questions: 0, refused: 0, inVisits: 0, visits: 0, days: [] },
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],

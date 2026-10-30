@@ -11,10 +11,13 @@ import { codeOf, secondsOf, type Visit } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
-function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory {
+type Asked = ReadonlyMap<string, readonly string[]>;
+
+function storyOf(visit: Visit, labels: ReadonlyMap<string, string>, asked: Asked): VisitStory {
   const clicks = visit.views.flatMap(({ clicks }) =>
     clicks.map(({ href }) => labels.get(href) ?? href),
   );
+  const questions = [...(asked.get(visit.visitor) ?? [])];
   return {
     at: visit.startedAt,
     from: visit.landing.referrerHost,
@@ -26,7 +29,8 @@ function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory 
         .map(([block]) => block),
     })),
     clicks,
-    interacted: secondsOf(visit) > 0 || clicks.length > 0,
+    questions,
+    interacted: secondsOf(visit) > 0 || clicks.length > 0 || questions.length > 0,
   };
 }
 
@@ -63,6 +67,7 @@ export function applicationsOf(
   applications: readonly ApplicationRow[],
   rolled: readonly RolledApplicationDay[],
   labels: ReadonlyMap<string, string>,
+  asked: Asked,
 ): Report['applications'] {
   const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
@@ -84,7 +89,7 @@ export function applicationsOf(
     }));
     for (const { application, signals, daysAfter } of guessed.candidates) {
       const entry = {
-        ...storyOf(visit, labels),
+        ...storyOf(visit, labels, asked),
         confidence: guessed.confidence,
         candidates,
         signals,
@@ -117,7 +122,7 @@ export function applicationsOf(
         appliedOn: dayOf(application.appliedOn),
         visits: coded
           .filter((each) => each.application.id === application.id)
-          .map(({ visit }) => storyOf(visit, labels)),
+          .map(({ visit }) => storyOf(visit, labels, asked)),
         days: rolled
           .filter(({ applicationId }) => applicationId === application.id)
           .toSorted((a, b) => b.day.getTime() - a.day.getTime())

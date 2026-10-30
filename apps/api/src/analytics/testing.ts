@@ -35,6 +35,7 @@ export function aVisit(
   overrides: Partial<Omit<VisitRow, 'views'>> = {},
 ): VisitRow {
   return {
+    visitor: 'a visitor',
     startedAt: hoursAgo(1),
     device: 'desktop',
     browser: 'chrome',

@@ -10,8 +10,9 @@ function sectionOf(
   rows: VisitRow[],
   applications: ApplicationRow[] = [anApplication()],
   rolled: RolledApplicationDay[] = [],
+  asked = new Map<string, string[]>(),
 ) {
-  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels);
+  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels, asked);
 }
 
 describe('applicationsOf', () => {
@@ -43,6 +44,7 @@ describe('applicationsOf', () => {
         from: null,
         pages: [{ path: '/', seconds: 0, read: [] }],
         clicks: [],
+        questions: [],
         interacted: false,
       },
       {
@@ -53,9 +55,20 @@ describe('applicationsOf', () => {
           { path: '/cv', seconds: 8, read: [] },
         ],
         clicks: ['CV PDF'],
+        questions: [],
         interacted: true,
       },
     ]);
+  });
+
+  it('counts a visit that only asked a question as one with interaction', () => {
+    const { list } = sectionOf(
+      [aVisit([aView({ ref: 'memh', activeSeconds: 0 })], { visitor: 'asker' })],
+      [anApplication()],
+      [],
+      new Map([['asker', ['Do you know Go?']]]),
+    );
+    expect(list[0]?.visits).toMatchObject([{ questions: ['Do you know Go?'], interacted: true }]);
   });
 
   it('adds the days that were rolled up, newest first', () => {

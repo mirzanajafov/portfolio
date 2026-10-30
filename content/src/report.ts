@@ -63,6 +63,7 @@ const visitStorySchema = z.object({
   from: z.nullable(z.string()),
   pages: z.array(z.object({ path: z.string(), seconds: z.number(), read: z.array(z.string()) })),
   clicks: z.array(z.string()),
+  questions: z.array(z.string()),
   interacted: z.boolean(),
 });
 
@@ -139,6 +140,8 @@ export const reportSchema = z.object({
     since: z.nullable(isoDate),
     questions: z.number(),
     refused: z.number(),
+    inVisits: z.number(),
+    visits: z.number(),
     days: z.array(z.object({ day, questions: z.number(), refused: z.number() })),
   }),
   audience: z.object({

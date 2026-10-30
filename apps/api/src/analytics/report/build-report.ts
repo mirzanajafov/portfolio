@@ -162,17 +162,38 @@ function linksOf(visits: readonly Visit[], labels: ReadonlyMap<string, string>):
   };
 }
 
-function askOf(questions: ReportRows['questions'], from: Date, now: Date): Report['ask'] {
+function askedIn(questions: ReportRows['questions']): Map<string, string[]> {
+  const asked = new Map<string, string[]>();
+  for (const { visitor, question } of questions.toSorted(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  )) {
+    if (visitor !== null) {
+      asked.set(visitor, [...(asked.get(visitor) ?? []), question]);
+    }
+  }
+  return asked;
+}
+
+function askOf(
+  questions: ReportRows['questions'],
+  visits: readonly Visit[],
+  from: Date,
+  now: Date,
+): Report['ask'] {
   const kept = daysAfter(now, -askLogDays);
   const since = kept > from ? kept : null;
   const asked = questions.filter(
     ({ createdAt }) => createdAt >= (since ?? from) && createdAt < now,
   );
   const refused = (rows: typeof asked) => rows.filter((row) => row.refused).length;
+  const known = new Set(visits.map(({ visitor }) => visitor));
+  const placed = asked.filter(({ visitor }) => visitor !== null && known.has(visitor));
   return {
     since,
     questions: asked.length,
     refused: refused(asked),
+    inVisits: placed.length,
+    visits: new Set(placed.map(({ visitor }) => visitor)).size,
     days: rankedGroups(asked, ({ createdAt }) => dayOf(createdAt))
       .map(([day, rows]) => ({ day, questions: rows.length, refused: refused(rows) }))
       .toSorted((a, b) => a.day.localeCompare(b.day, 'en')),
@@ -236,10 +257,16 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    ask: askOf(rows.questions, from, now),
+    ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
-    applications: applicationsOf(everyVisit, rows.applications, rows.rolledApplications, labels),
+    applications: applicationsOf(
+      everyVisit,
+      rows.applications,
+      rows.rolledApplications,
+      labels,
+      askedIn(rows.questions),
+    ),
   };
 }
