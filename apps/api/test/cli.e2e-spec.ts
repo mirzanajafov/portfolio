@@ -42,7 +42,7 @@ const drawCv: SiteAnswer = (request, response) => {
   response.writeHead(200, { 'content-type': 'application/pdf' }).end(`%PDF ${request.url ?? ''}`);
 };
 
-describe('the application commands', () => {
+describe('the CLI commands', () => {
   let context: INestApplicationContext;
   let applications: ApplicationsService;
   let prisma: PrismaService;

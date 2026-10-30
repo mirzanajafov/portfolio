@@ -87,6 +87,12 @@ describe('the visitor report against a real database', () => {
       { ip: '198.51.100.4', userAgent: iphone },
     );
     await send({ type: 'view', id: randomUUID(), path: '/' }, { userAgent: crawler });
+    await request(app.getHttpServer())
+      .post('/ask')
+      .set('X-Forwarded-For', '203.0.113.7')
+      .send({ question: 'How does Tuner decide which questions to ask each user?' })
+      .expect(200);
+    await expect.poll(() => prisma.askLog.count()).toBe(1);
     at('12:10:00');
 
     const report = await reports.build(7);
@@ -135,6 +141,11 @@ describe('the visitor report against a real database', () => {
     expect(report.quality.notFound).toEqual([
       { path: '/old', views: 1, referrers: ['news.ycombinator.com'] },
     ]);
+    expect(report.ask).toEqual({
+      questions: 1,
+      refused: 0,
+      days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
+    });
     expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);
   });
 });
