@@ -9,6 +9,7 @@ import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
 import { inOrder, type Visit } from '../visits.js';
+import { applicationsOf } from './applications.js';
 import { qualityOf } from './quality.js';
 import { readSeconds, type Report, type Totals, type Week } from './report.js';
 import type { ReportRows } from './rows.js';
@@ -145,8 +146,7 @@ function readingOf(visits: readonly Visit[], content: Content): Report['reading'
   });
 }
 
-function linksOf(visits: readonly Visit[], content: Content): Report['links'] {
-  const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
+function linksOf(visits: readonly Visit[], labels: ReadonlyMap<string, string>): Report['links'] {
   const views = visits.flatMap(({ views }) => views);
   const clicks = views.flatMap(({ path, clicks }) => clicks.map(({ href }) => ({ path, href })));
   return {
@@ -175,7 +175,7 @@ function askOf(questions: ReportRows['questions'], from: Date, now: Date): Repor
     refused: refused(asked),
     days: rankedGroups(asked, ({ createdAt }) => dayOf(createdAt))
       .map(([day, rows]) => ({ day, questions: rows.length, refused: refused(rows) }))
-      .toSorted((a, b) => a.day.localeCompare(b.day)),
+      .toSorted((a, b) => a.day.localeCompare(b.day, 'en')),
   };
 }
 
@@ -201,13 +201,14 @@ function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] 
       bot: droppedFor(rows, 'bot'),
       limited: droppedFor(rows, 'limited'),
     }))
-    .toSorted((a, b) => a.day.localeCompare(b.day));
+    .toSorted((a, b) => a.day.localeCompare(b.day, 'en'));
 }
 
 export function buildReport(rows: ReportRows, content: Content, now: Date, days: number): Report {
   const today = utcDay(now);
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
+  const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
   const visits = startedBetween(everyVisit, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
@@ -234,10 +235,11 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     ...pathsOf(visits),
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
-    links: linksOf(visits, content),
+    links: linksOf(visits, labels),
     ask: askOf(rows.questions, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
+    applications: applicationsOf(everyVisit, rows.applications, rows.rolledApplications, labels),
   };
 }

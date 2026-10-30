@@ -20,6 +20,8 @@ export async function findVisits(
       device: true,
       browser: true,
       country: true,
+      city: true,
+      network: true,
       views: {
         select: {
           createdAt: true,

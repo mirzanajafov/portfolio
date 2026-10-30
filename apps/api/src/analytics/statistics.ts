@@ -22,7 +22,7 @@ export function rankedGroups<T, K extends string>(
     }
   }
   return [...groups].sort(
-    ([a, groupA], [b, groupB]) => groupB.length - groupA.length || a.localeCompare(b),
+    ([a, groupA], [b, groupB]) => groupB.length - groupA.length || a.localeCompare(b, 'en'),
   );
 }
 

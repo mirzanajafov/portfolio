@@ -59,6 +59,18 @@ describe('parseCommand', () => {
     });
   });
 
+  it('keeps only the lowercase host of an ATS link pasted whole', () => {
+    expect(
+      parseCommand([
+        'application',
+        'add',
+        ...required,
+        '--ats',
+        'https://Boards.Greenhouse.io/acme/jobs/1',
+      ]),
+    ).toMatchObject({ application: { atsHost: 'boards.greenhouse.io' } });
+  });
+
   it('reads list and cv', () => {
     expect(parseCommand(['application', 'list'])).toEqual({ name: 'application list' });
     expect(parseCommand(['application', 'cv', 'memh'])).toEqual({
@@ -89,6 +101,7 @@ describe('parseCommand', () => {
       ['application', 'add', ...required, '--country', 'az'],
     ],
     ['with a flag it does not know', ['application', 'add', ...required, '--salary', '1']],
+    ['with an ATS that is not a host', ['application', 'add', ...required, '--ats', 'my ats']],
     ['with a code a link could not carry', ['application', 'cv', 'Memh!']],
     ['with two codes', ['application', 'cv', 'memh', 'kxqtz']],
     ['with arguments list does not take', ['application', 'list', '--all']],

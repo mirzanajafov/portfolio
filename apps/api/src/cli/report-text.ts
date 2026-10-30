@@ -1,13 +1,23 @@
 import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
-import { dayOf } from '../analytics/days.js';
-import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
+import { dayOf, inBaku } from '../analytics/days.js';
+import {
+  readSeconds,
+  type ApplicationEntry,
+  type Confidence,
+  type Outcome,
+  type Report,
+  type Signal,
+  type Totals,
+  type Vital,
+  type VisitStory,
+} from '../analytics/report/report.js';
 import type { Source } from '../analytics/sources.js';
 import { quickExitSeconds } from '../analytics/visits.js';
 
 const listLength = 10;
+const candidateLength = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
-const bakuOffsetMs = 4 * 60 * 60 * 1000;
 
 const sourceNames: Record<Source, string> = {
   google: 'Google',
@@ -29,7 +39,7 @@ function counted(count: number, noun: string): string {
 }
 
 function bakuTime(date: Date): string {
-  return new Date(date.getTime() + bakuOffsetMs).toISOString().slice(0, 16).replace('T', ' ');
+  return inBaku(date).toISOString().slice(0, 16).replace('T', ' ');
 }
 
 function share(part: number, whole: number): string {
@@ -67,6 +77,10 @@ function shownOf<T>(rows: readonly T[], all: boolean): readonly T[] {
   return all ? rows : rows.slice(0, listLength);
 }
 
+function moreLine(hidden: number, indent = ''): string[] {
+  return hidden > 0 ? [`${indent}and ${String(hidden)} more, --all shows them`] : [];
+}
+
 function section(
   title: string,
   columns: readonly string[],
@@ -77,11 +91,7 @@ function section(
     return [`${title}: none`];
   }
   const shown = shownOf(rows, all);
-  const hidden = rows.length - shown.length;
-  return [
-    ...table([[title, ...columns], ...shown]),
-    ...(hidden > 0 ? [`and ${String(hidden)} more, --all shows them`] : []),
-  ];
+  return [...table([[title, ...columns], ...shown]), ...moreLine(rows.length - shown.length)];
 }
 
 function totalsColumn(totals: Totals): string[] {
@@ -302,6 +312,114 @@ function quality({ quality }: Report, all: boolean): string[][] {
   ];
 }
 
+function storyText({ at, from, pages, clicks, interacted }: VisitStory): string {
+  const read = pages.map(
+    ({ path, seconds, read }) =>
+      `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
+  );
+  return printable(
+    [
+      `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
+      ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
+      ...(interacted ? [] : ['no interaction']),
+    ].join(', '),
+  );
+}
+
+function signalText(signal: Signal): string {
+  switch (signal.kind) {
+    case 'network':
+      return `network ${signal.name}`;
+    case 'ats':
+      return `from ${signal.host}`;
+    case 'city':
+      return signal.city;
+    case 'country':
+      return signal.country;
+  }
+}
+
+function candidatesText(candidates: readonly { company: string; role: string }[]): string {
+  const names = [
+    ...new Set(
+      candidates.map(({ company, role }) =>
+        candidates.filter((other) => other.company === company).length > 1
+          ? `${company} (${role})`
+          : company,
+      ),
+    ),
+  ];
+  const named = names.slice(0, candidateLength);
+  const others = names.length - named.length;
+  return others > 0 ? `${named.join(', ')} or ${String(others)} more` : named.join(' or ');
+}
+
+function listed<T>(
+  items: readonly T[],
+  all: boolean,
+  line: (item: T) => string,
+  indent = '  ',
+): string[] {
+  const shown = shownOf(items, all);
+  return [...shown.map(line), ...moreLine(items.length - shown.length, indent)];
+}
+
+function applicationLines(application: ApplicationEntry, all: boolean): string[] {
+  const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
+  const lowHidden = application.guesses.length - guesses.length;
+  const heading = printable(
+    `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`,
+  );
+  const lines = [
+    ...listed(application.visits, all, (visit) => `  ${storyText(visit)}`),
+    ...listed(
+      application.days,
+      all,
+      ({ day, visits, views }) =>
+        `  UTC day ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
+    ),
+    ...listed(
+      guesses,
+      all,
+      (guess) =>
+        `  possibly ${printable(candidatesText(guess.candidates))}, ${guess.confidence} (${printable(
+          [
+            ...guess.signals.map(signalText),
+            `${counted(guess.daysAfter, 'day')} after applying`,
+          ].join(', '),
+        )}): ${storyText(guess)}`,
+    ),
+    ...(lowHidden > 0 ? [`  low guesses not shown: ${String(lowHidden)}, --all shows them`] : []),
+  ];
+  return lines.length === 0 ? [`${heading}: no visits yet`] : [heading, ...lines];
+}
+
+function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
+  return `${confidence} ${String(outcomes.right)} right, ${String(outcomes.wrong)} wrong, ${String(outcomes.tied)} tied`;
+}
+
+function applications({ applications }: Report, all: boolean): string[] {
+  const { list, score, unknownCodes } = applications;
+  const { high, medium, low } = score.levels;
+  return [
+    ...(list.length === 0
+      ? ['Applications: none registered']
+      : [
+          'Applications, every visit kept rather than only the period, times in Baku',
+          ...listed(list, all, (application) => applicationLines(application, all).join('\n'), ''),
+          `Guesses checked on ${counted(score.visits, 'coded visit')}: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
+        ]),
+    ...(unknownCodes.length > 0
+      ? [
+          'Unknown codes, first seen in Baku time',
+          ...listed(unknownCodes, all, ({ code, visits, firstSeen }) =>
+            printable(`  ${code}: ${counted(visits, 'visit')}, first ${bakuTime(firstSeen)}`),
+          ),
+        ]
+      : []),
+  ];
+}
+
 function filter({ filter }: Report): string[] {
   if (filter.length === 0) {
     return ['Filtered out: none'];
@@ -333,6 +451,7 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
     ask(report),
     ...audience(report, all),
     ...quality(report, all),
+    applications(report, all),
     filter(report),
     [`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`],
   ];

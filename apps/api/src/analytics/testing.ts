@@ -1,3 +1,4 @@
+import type { ApplicationRow } from './report/rows.js';
 import type { ViewRow, VisitRow } from './visits.js';
 
 export const now = new Date('2026-10-30T12:00:00Z');
@@ -38,7 +39,24 @@ export function aVisit(
     device: 'desktop',
     browser: 'chrome',
     country: 'AZ',
+    city: 'Baku',
+    network: null,
     views,
+    ...overrides,
+  };
+}
+
+export function anApplication(overrides: Partial<ApplicationRow> = {}): ApplicationRow {
+  return {
+    id: 'xsolla',
+    code: 'memh',
+    company: 'Xsolla',
+    role: 'Backend Engineer',
+    appliedOn: new Date('2026-10-29'),
+    country: null,
+    city: null,
+    atsHost: null,
+    networks: [],
     ...overrides,
   };
 }

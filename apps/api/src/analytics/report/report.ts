@@ -2,6 +2,16 @@ import type { Source } from '../sources.js';
 
 export const readSeconds = 2;
 
+export type Confidence = 'high' | 'medium' | 'low';
+
+export type Signal =
+  | { kind: 'network'; name: string }
+  | { kind: 'ats'; host: string }
+  | { kind: 'city'; city: string }
+  | { kind: 'country'; country: string };
+
+export type Outcome = 'right' | 'wrong' | 'tied';
+
 export type Totals = {
   visits: number;
   pageViews: number;
@@ -11,6 +21,31 @@ export type Totals = {
 };
 
 export type Week = Totals & { start: string; partial: boolean };
+
+export type VisitStory = {
+  at: Date;
+  from: string | null;
+  pages: { path: string; seconds: number; read: string[] }[];
+  clicks: string[];
+  interacted: boolean;
+};
+
+export type GuessedVisit = VisitStory & {
+  confidence: Confidence;
+  candidates: { company: string; role: string }[];
+  signals: Signal[];
+  daysAfter: number;
+};
+
+export type ApplicationEntry = {
+  code: string;
+  company: string;
+  role: string;
+  appliedOn: string;
+  visits: VisitStory[];
+  days: { day: string; visits: number; views: number }[];
+  guesses: GuessedVisit[];
+};
 
 export type Rating = 'good' | 'needs improvement' | 'poor';
 
@@ -74,4 +109,13 @@ export type Report = {
     notFound: { path: string; views: number; referrers: string[] }[];
   };
   filter: { day: string; bot: number; limited: number }[];
+  applications: {
+    list: ApplicationEntry[];
+    score: {
+      visits: number;
+      unplaced: number;
+      levels: Record<Confidence, Record<Outcome, number>>;
+    };
+    unknownCodes: { code: string; visits: number; firstSeen: Date }[];
+  };
 };
