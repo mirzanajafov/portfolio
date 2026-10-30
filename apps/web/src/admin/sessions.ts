@@ -1,6 +1,6 @@
 import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
 
-type SignIn =
+type SessionStart =
   | { kind: 'signed in'; token: string; expiresAt: Date }
   | { kind: 'refused' }
   | { kind: 'limited'; retryAfterSeconds: number };
@@ -16,7 +16,7 @@ export async function startSession(
   link: string,
   forwardedFor: string | null,
   fetchImpl: typeof fetch = fetch,
-): Promise<SignIn> {
+): Promise<SessionStart> {
   const response = await fetchImpl(`${apiUrl}/admin/sessions`, {
     method: 'POST',
     headers: {
