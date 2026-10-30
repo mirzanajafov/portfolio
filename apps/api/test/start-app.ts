@@ -1,6 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { PLACE_LOOKUP, type Place } from '../src/analytics/place-lookup.js';
+import { PLACE_LOOKUP, nowhere, type Place } from '../src/analytics/place-lookup.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
@@ -15,7 +15,7 @@ export const knownPlaces = new Map<string, Place>([
 ]);
 
 const placeLookup = {
-  placeOf: (ip: string) => knownPlaces.get(ip) ?? { country: null, city: null, network: null },
+  placeOf: (ip: string) => knownPlaces.get(ip) ?? nowhere,
 };
 
 export class FixedClock extends ClockService {
