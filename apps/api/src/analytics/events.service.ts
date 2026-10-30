@@ -27,7 +27,7 @@ export class EventsService {
       return { kind: 'ignored' };
     }
     const now = this.clock.now();
-    if (userAgent === undefined || isbot(userAgent)) {
+    if (!userAgent || isbot(userAgent)) {
       await this.visits.countDropped('bot', now);
       return { kind: 'ignored' };
     }
