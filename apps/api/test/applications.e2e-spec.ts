@@ -1,13 +1,19 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { refCode } from '@portfolio/content/analytics';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ApplicationsService,
   type NewApplication,
 } from '../src/applications/applications.service.js';
+import { newCode } from '../src/applications/code.js';
 import { CliModule } from '../src/cli.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+
+vi.mock(import('../src/applications/code.js'), async (importOriginal) => {
+  const original = await importOriginal();
+  return { newCode: vi.fn(original.newCode) };
+});
 
 const anApplication = (overrides: Partial<NewApplication> = {}): NewApplication => ({
   company: 'Acme',
@@ -34,6 +40,7 @@ describe('applications against a real database', () => {
   });
 
   beforeEach(async () => {
+    vi.mocked(newCode).mockReset();
     await prisma.$executeRaw`TRUNCATE "Application"`;
   });
 
@@ -62,7 +69,28 @@ describe('applications against a real database', () => {
     await applications.add(anApplication({ code: 'memh' }));
     await expect(
       applications.add(anApplication({ company: 'Other', code: 'memh' })),
-    ).rejects.toThrow(/Unique constraint/);
+    ).rejects.toThrow('code memh already belongs to another application');
+  });
+
+  it('draws another code when the one it drew is taken', async () => {
+    await applications.add(anApplication({ code: 'kxqtz' }));
+    vi.mocked(newCode).mockReturnValueOnce('kxqtz').mockReturnValueOnce('mpw7r');
+    expect((await applications.add(anApplication({ company: 'Other' }))).code).toBe('mpw7r');
+  });
+
+  it('gives up after five codes that are all taken', async () => {
+    await applications.add(anApplication({ code: 'kxqtz' }));
+    vi.mocked(newCode).mockReturnValue('kxqtz');
+    await expect(applications.add(anApplication({ company: 'Other' }))).rejects.toThrow(
+      /Unique constraint/,
+    );
+    expect(newCode).toHaveBeenCalledTimes(5);
+  });
+
+  it('finds an application by its code, and none for a code nobody has', async () => {
+    await applications.add(anApplication({ code: 'memh' }));
+    expect(await applications.find('memh')).toMatchObject({ company: 'Acme' });
+    expect(await applications.find('memj')).toBeNull();
   });
 
   it('lists the newest application first', async () => {
