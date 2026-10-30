@@ -127,4 +127,33 @@ describe('reportText', () => {
     expect(text).toMatch(/^\/ +phone +2\.1 s good\* \(4\) +- +0\.02 good \(4\)$/m);
     expect(text).toContain('* over my own bar: LCP 2.0 s, INP 200 ms, CLS 0.05');
   });
+
+  it('prints the control characters a visitor sent as visible escapes, not as terminal commands', () => {
+    const text = reportText(
+      aReport({
+        quality: {
+          vitals: [],
+          errors: [
+            {
+              message: '\u001b]52;c;aGk=\u0007\u001b[2J\nvisits  9999',
+              source: '/_next/static/chunks/a.js',
+              count: 1,
+              paths: ['/'],
+              browsers: ['chrome'],
+            },
+          ],
+          notFound: [],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).toContain('\\u{1b}]52;c;aGk=\\u{7}\\u{1b}[2J\\u{a}visits  9999');
+    expect(text).not.toMatch(/\p{Cc}(?<!\n)/u);
+  });
+
+  it('ends with the credit the IP database asks for', () => {
+    expect(reportText(aReport(), { all: false })).toMatch(
+      /Countries and networks: IP Geolocation by DB-IP, https:\/\/db-ip\.com\n$/,
+    );
+  });
 });

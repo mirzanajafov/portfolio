@@ -1,8 +1,9 @@
-import { analyticsDays } from '@portfolio/content/analytics';
+import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
 import type { Report, Source, Totals, Vital } from '../analytics/report/report.js';
 
 const listLength = 10;
+const unprintable = /[\p{Cc}\p{Cf}]/gu;
 const bakuOffsetMs = 4 * 60 * 60 * 1000;
 
 const sourceNames: Record<Source, string> = {
@@ -36,7 +37,15 @@ function optional(value: number | null, unit = ''): string {
   return value === null ? '-' : `${String(value)}${unit}`;
 }
 
-function table(rows: readonly (readonly string[])[]): string[] {
+function printable(text: string): string {
+  return text.replace(
+    unprintable,
+    (character) => `\\u{${(character.codePointAt(0) ?? 0).toString(16)}}`,
+  );
+}
+
+function table(cells: readonly (readonly string[])[]): string[] {
+  const rows = cells.map((row) => row.map(printable));
   const widths = rows.reduce<number[]>(
     (widest, row) => row.map((cell, column) => Math.max(widest[column] ?? 0, cell.length)),
     [],
@@ -298,6 +307,7 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
     ...audience(report, all),
     ...quality(report, all),
     filter(report, all),
+    [`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`],
   ];
   return `${blocks.map((lines) => lines.join('\n')).join('\n\n')}\n`;
 }
