@@ -51,8 +51,6 @@ function describeRole(role: Role): string {
     .join(' ');
 }
 
-export const CONTENT = Symbol('CONTENT');
-
 export function buildKnowledge(content: Content): Knowledge {
   const { profile, cv, projects } = content;
   const documents: KnowledgeDocument[] = [
