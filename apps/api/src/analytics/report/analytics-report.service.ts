@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
+import type { Report } from '@portfolio/content/report';
 import { z } from 'zod';
 import { ClockService } from '../../common/clock.service.js';
 import { CONTENT } from '../../content.js';
@@ -9,7 +10,6 @@ import { firstRawDay } from '../retention.js';
 import { dropReasons } from '../visit-log.service.js';
 import { findVisits, firstUnrolledDay } from '../visit-rows.js';
 import { buildReport, firstReportedDay } from './build-report.js';
-import type { Report } from './report.js';
 
 const knownDropReason = z.enum(dropReasons);
 

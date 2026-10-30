@@ -1,4 +1,5 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { reportSchema, type Report } from '@portfolio/content/report';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -13,6 +14,8 @@ import { FixedClock, startApp } from './start-app.js';
 const iphone =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const crawler = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+
+const throughJson = (report: Report) => reportSchema.parse(JSON.parse(JSON.stringify(report)));
 
 describe('the visitor report against a real database', () => {
   let app: NestExpressApplication;
@@ -39,7 +42,7 @@ describe('the visitor report against a real database', () => {
     await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication", "Application" CASCADE`;
   });
 
-  it('reports a scripted visit the way it happened, from events sent to the API', async () => {
+  it('reports a scripted visit the way it happened, from events sent to the API, in a shape the site reads back whole', async () => {
     const home = randomUUID();
     const caseStudy = randomUUID();
     at('12:00:00');
@@ -145,6 +148,7 @@ describe('the visitor report against a real database', () => {
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
     });
     expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);
+    expect(throughJson(report)).toEqual(report);
   });
 
   it('gives a day the same totals before and after it is rolled up', async () => {
@@ -201,7 +205,7 @@ describe('the visitor report against a real database', () => {
     expect(report.rollupBehind).toBeNull();
   });
 
-  it('puts a coded visit and a guessed one under the company the application went to', async () => {
+  it('puts a coded visit and a guessed one under the company the application went to, and the site reads both back', async () => {
     await prisma.application.create({
       data: {
         code: 'memh',
@@ -231,5 +235,6 @@ describe('the visitor report against a real database', () => {
     expect(reportText(report, { all: false })).toContain(
       'possibly Xsolla, medium (Baku, 1 day after applying)',
     );
+    expect(throughJson(report)).toEqual(report);
   });
 });

@@ -1,5 +1,6 @@
+import type { Source } from '@portfolio/content/report';
 import { dayTotals, type DayTotals } from './day-totals.js';
-import { sourceOf, type Source } from './sources.js';
+import { sourceOf } from './sources.js';
 import { rankedGroups } from './statistics.js';
 import type { Device } from './user-agent.js';
 import { codeOf, inOrder, type ViewRow, type Visit, type VisitRow } from './visits.js';

@@ -1,6 +1,7 @@
 import type { Content } from '@portfolio/content';
 import { readingBlocks } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
+import { readSeconds, type Report, type Totals, type Week } from '@portfolio/content/report';
 import { outboundLinks } from '../links.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
 import { dayOf, daysAfter, mondayOf, utcDay } from '../days.js';
@@ -11,7 +12,6 @@ import type { DropReason } from '../visit-log.service.js';
 import { inOrder, type Visit } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import { qualityOf } from './quality.js';
-import { readSeconds, type Report, type Totals, type Week } from './report.js';
 import type { ReportRows } from './rows.js';
 
 const journeyLength = 3;

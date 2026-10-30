@@ -1,5 +1,6 @@
+import type { Source } from '@portfolio/content/report';
 import { describe, expect, it } from 'vitest';
-import { sourceOf, type Source } from './sources.js';
+import { sourceOf } from './sources.js';
 import type { Browser } from './user-agent.js';
 
 describe('sourceOf', () => {

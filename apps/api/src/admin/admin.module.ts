@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AnalyticsReportModule } from '../analytics/report/analytics-report.module.js';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { AdminController } from './admin.controller.js';
 
 @Module({
-  imports: [RateLimitModule],
+  imports: [RateLimitModule, AnalyticsReportModule],
   controllers: [AdminController],
   providers: [AdminSessionsService],
   exports: [AdminSessionsService],

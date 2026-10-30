@@ -1,4 +1,5 @@
 import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
+import { reportSchema, type Report } from '@portfolio/content/report';
 
 type SessionStart =
   | { kind: 'signed in'; token: string; expiresAt: Date }
@@ -6,6 +7,7 @@ type SessionStart =
   | { kind: 'limited'; retryAfterSeconds: number };
 
 const timeoutMs = 5_000;
+const reportTimeoutMs = 30_000;
 
 function unexpected(what: string, { status }: Response): Error {
   return new Error(`the API answered ${String(status)} to ${what}`);
@@ -35,8 +37,7 @@ export async function startSession(
   if (response.status !== 201) {
     throw unexpected('a sign-in', response);
   }
-  const { token, expiresAt } = adminSignInSchema.parse(await response.json());
-  return { kind: 'signed in', token, expiresAt: new Date(expiresAt) };
+  return { kind: 'signed in', ...adminSignInSchema.parse(await response.json()) };
 }
 
 export async function sessionExpiry(
@@ -54,7 +55,7 @@ export async function sessionExpiry(
   if (response.status !== 200) {
     throw unexpected('a session check', response);
   }
-  return new Date(adminSessionSchema.parse(await response.json()).expiresAt);
+  return adminSessionSchema.parse(await response.json()).expiresAt;
 }
 
 export async function endSession(
@@ -70,4 +71,24 @@ export async function endSession(
   if (response.status !== 204 && response.status !== 404) {
     throw unexpected('a sign-out', response);
   }
+}
+
+export async function fetchReport(
+  apiUrl: string,
+  token: string,
+  days: number | undefined,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Report | null> {
+  const query = days === undefined ? '' : `?days=${String(days)}`;
+  const response = await fetchImpl(`${apiUrl}/admin/report${query}`, {
+    headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(reportTimeoutMs),
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (response.status !== 200) {
+    throw unexpected('a report', response);
+  }
+  return reportSchema.parse(await response.json());
 }

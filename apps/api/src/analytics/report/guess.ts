@@ -1,6 +1,7 @@
-import { daysBetween, inBaku } from '../days.js';
+import type { Confidence, Signal } from '@portfolio/content/report';
+import { inBaku } from '@portfolio/content/time';
+import { daysBetween } from '../days.js';
 import type { Visit } from '../visits.js';
-import type { Confidence, Signal } from './report.js';
 import type { ApplicationRow } from './rows.js';
 
 type Candidate = { application: ApplicationRow; signals: Signal[]; daysAfter: number };
