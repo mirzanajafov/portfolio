@@ -48,6 +48,7 @@ describe('eventSchema', () => {
       expect(schema.safeParse(aView({ path })).success).toBe(true);
     }
     expect(schema.safeParse(aView({ path: 'https://elsewhere.example/' })).success).toBe(false);
+    expect(schema.safeParse(aView({ path: '//elsewhere.example/x' })).success).toBe(false);
     expect(schema.safeParse(aView({ path: '/?r=memh' })).success).toBe(false);
     expect(schema.safeParse(aView({ path: `/${'a'.repeat(201)}` })).success).toBe(false);
   });
@@ -105,6 +106,7 @@ describe('eventSchema', () => {
     for (const source of [
       'https://najafov.dev/_next/static/a.js?r=memh',
       'chrome-extension://abcdefghijklmnop/content.js',
+      '//cdn.elsewhere.example/a.js',
     ]) {
       expect(schema.safeParse({ ...error, source }).success).toBe(false);
     }

@@ -5,7 +5,7 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
-const path = z.string().regex(/^\/[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/);
+const path = z.string().regex(/^\/(?!\/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/);
 const pageView = z.uuid();
 const seconds = z.int().min(0).max(86_400);
 
