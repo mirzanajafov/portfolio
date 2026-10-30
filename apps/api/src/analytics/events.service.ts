@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { isbot } from 'isbot';
-import { networkOf } from '../common/client-key.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -8,7 +7,6 @@ import type { AnalyticsEvent } from './event.schema.js';
 import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
-import { keyed } from './visitor-key.js';
 import { VisitorSaltService } from './visitor-salt.service.js';
 
 type Caller = { ip: string; userAgent: string | undefined; optedOut: boolean };
@@ -35,9 +33,7 @@ export class EventsService {
       await this.visits.countDropped('bot', now);
       return { kind: 'accepted' };
     }
-    const key = await this.salts.keyFor(now);
-    const network = networkOf(ip);
-    const limitKey = keyed(key, 'limit', network);
+    const limitKey = await this.salts.limitKey(ip, now);
     const verdict = await this.limiter.admit(
       [
         {
@@ -59,7 +55,7 @@ export class EventsService {
     }
     if (event.type === 'view') {
       const visitor = {
-        key: keyed(key, network, userAgent),
+        key: await this.salts.visitorKey(ip, userAgent, now),
         device: deviceOf(userAgent),
         browser: browserOf(userAgent),
         ...this.places.placeOf(ip),

@@ -1,17 +1,10 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { adminLinkMinutes, adminSessionDays } from '@portfolio/content/admin';
 import { createHash, randomBytes } from 'node:crypto';
-import { clientKey, networkOf } from '../common/client-key.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
-import { ENV, type Env } from '../config/env.js';
 import type { AdminSession } from '../generated/prisma/client.js';
+import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
 
@@ -41,8 +34,8 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly limiter: RateLimiterService,
+    private readonly salts: VisitorSaltService,
     private readonly clock: ClockService,
-    @Inject(ENV) private readonly env: Env,
   ) {}
 
   onModuleInit(): void {
@@ -62,7 +55,7 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
 
   async signIn(link: string, ip: string): Promise<SignIn> {
     const now = this.clock.now();
-    const client = clientKey(networkOf(ip), this.env.CLIENT_HASH_SECRET, now);
+    const client = await this.salts.limitKey(ip, now);
     const verdict = await this.limiter.admit(
       [{ key: `admin:10m:${client}`, limit: signInsPerTenMinutes, windowSeconds: 600 }],
       [],

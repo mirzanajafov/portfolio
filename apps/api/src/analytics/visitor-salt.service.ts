@@ -11,7 +11,7 @@ import { runEvery } from '../common/run-every.js';
 import { ENV, type Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { dayOf } from './days.js';
-import { dailyKey } from './visitor-key.js';
+import { dailyKey, keyed, networkOf } from './visitor-key.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 
@@ -35,7 +35,15 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
     this.stop?.();
   }
 
-  async keyFor(now: Date): Promise<Uint8Array> {
+  async limitKey(ip: string, now: Date): Promise<string> {
+    return keyed(await this.keyFor(now), 'limit', networkOf(ip));
+  }
+
+  async visitorKey(ip: string, userAgent: string, now: Date): Promise<string> {
+    return keyed(await this.keyFor(now), networkOf(ip), userAgent);
+  }
+
+  private async keyFor(now: Date): Promise<Uint8Array> {
     const day = dayOf(now);
     if (this.current?.day === day) {
       return this.current.key;
