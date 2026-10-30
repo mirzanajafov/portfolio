@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished }
 import { VisitLogService } from '../src/analytics/visit-log.service.js';
 import { dailyKey, keyed } from '../src/analytics/visitor-key.js';
 import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
+import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -42,6 +43,7 @@ describe('POST /events against a real database', () => {
   let app: NestExpressApplication;
   let clock: FixedClock;
   let prisma: PrismaService;
+  let secret: string;
 
   const everything = async () => ({
     visits: await prisma.visit.findMany(),
@@ -54,6 +56,7 @@ describe('POST /events against a real database', () => {
 
   beforeAll(async () => {
     ({ app, clock, prisma } = await startApp());
+    secret = app.get<Env>(ENV).CLIENT_HASH_SECRET;
   });
 
   afterAll(async () => {
@@ -121,7 +124,6 @@ describe('POST /events against a real database', () => {
     expect(days).not.toContain('2026-10-20');
 
     const yesterday = visits.find(({ startedAt }) => startedAt.getUTCDate() === 20)?.visitor;
-    const secret = process.env.CLIENT_HASH_SECRET ?? '';
     const rebuilt = salts.map(({ salt }) => keyed(dailyKey(secret, salt), address, chrome));
     expect(rebuilt).not.toContain(yesterday);
   });
@@ -134,8 +136,8 @@ describe('POST /events against a real database', () => {
     const { salt } = await prisma.visitorSalt.findUniqueOrThrow({
       where: { day: new Date('2026-10-22') },
     });
-    const secret = process.env.CLIENT_HASH_SECRET ?? '';
     expect(keyed(salt, address, chrome)).not.toBe(visit?.visitor);
+    expect(keyed(Buffer.from(secret), address, chrome)).not.toBe(visit?.visitor);
     expect(keyed(dailyKey(secret, salt), address, chrome)).toBe(visit?.visitor);
   });
 
