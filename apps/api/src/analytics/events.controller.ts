@@ -25,8 +25,11 @@ export class EventsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    if (!req.ip || isIP(req.ip) === 0) {
+    if (!req.ip) {
       throw new BadRequestException('the client has no address');
+    }
+    if (isIP(req.ip) === 0) {
+      throw new BadRequestException('the forwarded client address is not an IP address');
     }
     const outcome = await this.events.accept(event, {
       ip: req.ip,
