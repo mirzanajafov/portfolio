@@ -104,15 +104,80 @@ model DroppedEvents {
   @@id([day, reason])
 }
 
+model DailyVisits {
+  day          DateTime @id @db.Date
+  visits       Int
+  pageViews    Int
+  phoneVisits  Int
+  quickExits   Int
+  visitSeconds Int[]
+}
+
+model DailyPage {
+  day           DateTime @db.Date
+  path          String
+  device        String
+  views         Int
+  visits        Int
+  exits         Int
+  notFoundViews Int
+  activeSeconds Int[]
+  maxScroll     Int[]
+  blockSeconds  Json
+  lcpMs         Int[]
+  inpMs         Int[]
+  cls           Float[]
+
+  @@id([day, path, device])
+}
+
+model DailySource {
+  day    DateTime @db.Date
+  source String
+  host   String
+  visits Int
+
+  @@id([day, source, host])
+}
+
+model DailyCountry {
+  day     DateTime @db.Date
+  country String
+  visits  Int
+
+  @@id([day, country])
+}
+
+model DailyClick {
+  day    DateTime @db.Date
+  path   String
+  href   String
+  clicks Int
+
+  @@id([day, path, href])
+}
+
+model DailyApplication {
+  day           DateTime    @db.Date
+  applicationId String      @db.Uuid
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  visits        Int
+  views         Int
+
+  @@id([day, applicationId])
+  @@index([applicationId])
+}
+
 model Application {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  code      String   @unique
+  id        String             @id @default(uuid(7)) @db.Uuid
+  code      String             @unique
   company   String
   role      String
-  appliedOn DateTime @db.Date
-  createdAt DateTime @default(now())
+  appliedOn DateTime           @db.Date
+  createdAt DateTime           @default(now())
   country   String?
   city      String?
   atsHost   String?
   networks  String[]
+  days      DailyApplication[]
 }
