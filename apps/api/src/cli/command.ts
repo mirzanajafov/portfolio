@@ -1,7 +1,6 @@
-import { analyticsDays, refCode } from '@portfolio/content/analytics';
+import { analyticsDays, hostName, refCode } from '@portfolio/content/analytics';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import { hostName } from '../analytics/event.schema.js';
 import type { NewApplication } from '../applications/applications.service.js';
 
 export type Command =

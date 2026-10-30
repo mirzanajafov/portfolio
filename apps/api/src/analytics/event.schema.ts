@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
 import {
   errorMessageMaxLength,
+  hostName,
   maxPathLength,
   maxSeconds,
   refCode,
@@ -12,7 +13,6 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 import { outboundLinks } from './links.js';
 
-export const hostName = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 const path = z
   .string()
   .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength - 1)}}$`));
