@@ -45,11 +45,12 @@ export default function PrivacyPage() {
         </p>
         <p className="max-w-[65ch]">
           When a page is shown, it sends me which page it is and the domain of the site that linked
-          to it, how long the page was in front of you and how far down you read, which links to my
-          repos, demos, CV, LinkedIn or email you clicked, how fast the page loaded and whether a
-          script failed. If the link you followed has a short code after{' '}
-          <code className="whitespace-nowrap">?r=</code>, I put it there when I sent a job
-          application, so a visit with a code most likely comes from that company.
+          to it, how long the page and each of its parts were in front of you and how far down you
+          read, which links to my repos, demos, CV, LinkedIn or email you clicked, how fast the page
+          loaded and answered, and the message of any error in the site&apos;s own scripts. If the
+          link you followed has a short code after <code className="whitespace-nowrap">?r=</code>, I
+          put it there when I sent a job application, so a visit with a code most likely comes from
+          that company.
         </p>
         <p className="max-w-[65ch]">
           From the request itself, the server works out the kind of device and browser, and the
@@ -58,15 +59,16 @@ export default function PrivacyPage() {
             IP Geolocation by DB-IP
           </a>
           ). To tell that two pages were seen by the same visitor on the same day, it mixes your IP
-          address and browser version with a random value that is replaced at midnight UTC, and the
-          old one is deleted within hours. Only the result is stored. Your IP address is never
-          stored, and once that value is gone nobody, me included, can work out which address a
-          record came from.
+          address (for IPv6, its network part) and your browser&apos;s User-Agent with a random
+          value that is replaced at midnight UTC, and the old one is deleted within hours. Only the
+          result is stored. Your IP address is never stored, and once that value is gone nobody, me
+          included, can work out which address a record came from.
         </p>
         <p className="max-w-[65ch]">These records are deleted after {analyticsDays} days.</p>
         <p className="max-w-[65ch]">
           If your browser sends Global Privacy Control or Do Not Track, nothing is recorded, not
-          even a count. Without JavaScript nothing is sent. Known bots aren&apos;t counted.
+          even a count. Without JavaScript nothing is sent. Visits from known bots aren&apos;t
+          recorded, only counted.
         </p>
       </Part>
 
