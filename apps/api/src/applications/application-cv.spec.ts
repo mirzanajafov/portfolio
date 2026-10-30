@@ -27,14 +27,42 @@ describe('fetchApplicationCv', () => {
     );
   });
 
-  it('says which code the site never answered for, and why', async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => {
-      throw new TypeError('fetch failed');
-    });
+  it.each([
+    [
+      'a refused connection',
+      new TypeError('fetch failed', {
+        cause: Object.assign(new Error('connect ECONNREFUSED 172.18.0.3:3200'), {
+          code: 'ECONNREFUSED',
+        }),
+      }),
+      'ECONNREFUSED',
+    ],
+    [
+      'the time limit',
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+      'The operation was aborted due to timeout',
+    ],
+  ])('says which code the site did not send, and why, after %s', async (_, failure, reason) => {
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.reject(failure));
     await expect(fetchApplicationCv('memh', site, fetchImpl)).rejects.toThrow(
       new CvFetchError(
         'memh',
-        'the site at http://portfolio-web:3200 did not answer for the CV of memh (fetch failed)',
+        `the site at http://portfolio-web:3200 did not send the CV of memh (${reason})`,
+      ),
+    );
+  });
+
+  it('says which code the site stopped sending halfway', async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.error(new TypeError('terminated'));
+      },
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response(body, { status: 200 }));
+    await expect(fetchApplicationCv('memh', site, fetchImpl)).rejects.toThrow(
+      new CvFetchError(
+        'memh',
+        'the site at http://portfolio-web:3200 did not send the CV of memh (terminated)',
       ),
     );
   });
