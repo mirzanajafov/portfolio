@@ -2,7 +2,7 @@ import { content } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
 import { timingSafeEqual } from 'node:crypto';
 import { BlockList, isIP } from 'node:net';
-import { buildCvPdf, cvFileName } from '@/lib/cv-pdf';
+import { cvAttachment } from '@/lib/cv-pdf';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,12 +43,5 @@ export async function GET(
   if (!refCode.test(code) || !holdsToken(request) || !fromInside(request)) {
     return new Response(null, { status: 404 });
   }
-  const pdf = await buildCvPdf(content, { ref: code });
-  return new Response(new Uint8Array(pdf), {
-    headers: {
-      'content-type': 'application/pdf',
-      'content-disposition': `attachment; filename="${cvFileName(content)}"`,
-      'cache-control': 'no-store',
-    },
-  });
+  return cvAttachment(content, code);
 }

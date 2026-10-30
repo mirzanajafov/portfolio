@@ -62,6 +62,17 @@ export function cvFileName({ profile }: Content): string {
   return `${profile.name.replace(/\s+/g, '-')}-CV.pdf`;
 }
 
+export async function cvAttachment(content: Content, ref: string): Promise<Response> {
+  const pdf = await buildCvPdf(content, { ref });
+  return new Response(new Uint8Array(pdf), {
+    headers: {
+      'content-type': 'application/pdf',
+      'content-disposition': `attachment; filename="${cvFileName(content)}"`,
+      'cache-control': 'no-store',
+    },
+  });
+}
+
 export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Promise<Buffer> {
   const { profile, cv, projects } = content;
   const onSite = (path = '') => {
