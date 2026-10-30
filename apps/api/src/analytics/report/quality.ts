@@ -22,7 +22,12 @@ function vitalOf(values: number[], bars: Bars): Vital | null {
   if (p75 === null) {
     return null;
   }
-  return { p75, samples: values.length, rating: ratingOf(p75, bars), overMyBar: p75 >= bars.mine };
+  return {
+    p75,
+    samples: values.length,
+    rating: ratingOf(p75, bars),
+    missesMyBar: p75 >= bars.mine,
+  };
 }
 
 function vitalsOf(visits: readonly Visit[]): Report['quality']['vitals'] {

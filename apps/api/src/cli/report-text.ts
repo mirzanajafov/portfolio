@@ -1,6 +1,13 @@
 import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
-import type { Report, Source, Totals, Vital } from '../analytics/report/report.js';
+import {
+  quickExitSeconds,
+  readSeconds,
+  type Report,
+  type Source,
+  type Totals,
+  type Vital,
+} from '../analytics/report/report.js';
 
 const listLength = 10;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
@@ -17,12 +24,12 @@ const sourceNames: Record<Source, string> = {
   other: 'other sites',
 };
 
-const lcpText = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+const lcpText = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
 const inpText = (ms: number) => `${String(ms)} ms`;
 const clsText = (score: number) => score.toFixed(2);
 
-function daysText(days: number): string {
-  return days === 1 ? '1 day' : `${String(days)} days`;
+function counted(count: number, noun: string): string {
+  return `${String(count)} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 function bakuTime(date: Date): string {
@@ -93,9 +100,9 @@ function overview({ period, overview: { current, previous } }: Report): string[]
     'page views',
     'median seconds a visit',
     'on a phone',
-    'one page under 10 s',
+    `one page under ${String(quickExitSeconds)} s`,
   ];
-  const days = daysText(period.days);
+  const days = counted(period.days, 'day');
   const columns = previous
     ? [totalsColumn(current), totalsColumn(previous)]
     : [totalsColumn(current)];
@@ -106,7 +113,9 @@ function overview({ period, overview: { current, previous } }: Report): string[]
     ]),
     ...(previous
       ? []
-      : [`The ${days} before are older than the ${String(analyticsDays)} days kept.`]),
+      : [
+          `The ${days} before reach past the ${String(analyticsDays)} days kept, so there is nothing to compare with.`,
+        ]),
   ];
 }
 
@@ -173,10 +182,13 @@ function traffic(report: Report, all: boolean): string[][] {
 }
 
 function reading({ reading }: Report): string[][] {
+  if (reading.length === 0) {
+    return [['Reading: no views of the home page or a case study']];
+  }
   return reading.map((page) => [
-    `Reading ${page.path}: ${String(page.views)} views, median ${optional(page.medianSeconds, ' s')}, scroll ${optional(page.medianScroll, '%')}`,
+    `Reading ${page.path}: ${counted(page.views, 'view')}, median ${optional(page.medianSeconds, ' s')}, scroll ${optional(page.medianScroll, '%')}`,
     ...table([
-      ['block', 'read 2 s or more', 'median s'],
+      ['block', `read ${String(readSeconds)} s or more`, 'median s'],
       ...page.blocks.map(({ block, readers, medianSeconds }) => [
         block,
         share(readers, page.views),
@@ -204,16 +216,18 @@ function links({ links }: Report, all: boolean): string[][] {
   ];
 }
 
-function ask({ ask }: Report, all: boolean): string[] {
+function ask({ ask }: Report): string[] {
   return [
-    `Ask: ${String(ask.questions)} questions, ${String(ask.refused)} refused`,
+    `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused`,
     ...(ask.days.length > 0
-      ? section(
-          'day',
-          ['questions', 'refused'],
-          ask.days.map(({ day, questions, refused }) => [day, String(questions), String(refused)]),
-          all,
-        )
+      ? table([
+          ['UTC day', 'questions', 'refused'],
+          ...ask.days.map(({ day, questions, refused }) => [
+            day,
+            String(questions),
+            String(refused),
+          ]),
+        ])
       : []),
   ];
 }
@@ -233,7 +247,7 @@ function vital(value: Vital | null, shown: (p75: number) => string): string {
   if (value === null) {
     return '-';
   }
-  const mark = value.overMyBar ? '*' : '';
+  const mark = value.missesMyBar ? '*' : '';
   return `${shown(value.p75)} ${value.rating}${mark} (${String(value.samples)})`;
 }
 
@@ -254,7 +268,7 @@ function quality({ quality }: Report, all: boolean): string[][] {
       ),
       ...(quality.vitals.length > 0
         ? [
-            `* over my own bar: LCP ${lcpText(vitalBars.lcp.mine)}, INP ${inpText(vitalBars.inp.mine)}, CLS ${clsText(vitalBars.cls.mine)}`,
+            `* misses my own bar: LCP under ${lcpText(vitalBars.lcp.mine)}, INP under ${inpText(vitalBars.inp.mine)}, CLS under ${clsText(vitalBars.cls.mine)}`,
           ]
         : []),
     ],
@@ -283,30 +297,34 @@ function quality({ quality }: Report, all: boolean): string[][] {
   ];
 }
 
-function filter({ filter }: Report, all: boolean): string[] {
-  return section(
-    'Filtered out',
-    ['bots', 'limited'],
-    filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
-    all,
-  );
+function filter({ filter }: Report): string[] {
+  if (filter.length === 0) {
+    return ['Filtered out: none'];
+  }
+  return [
+    ...table([
+      ['Filtered out, UTC day', 'bots', 'limited'],
+      ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
+    ]),
+    'The counters are per day, so the first day is counted whole.',
+  ];
 }
 
 export function reportText(report: Report, { all }: { all: boolean }): string {
   const { period } = report;
   const blocks = [
     [
-      `Visits in the last ${daysText(period.days)}, ${bakuTime(period.from)} to ${bakuTime(period.to)} Baku time`,
+      `Visits in the last ${counted(period.days, 'day')}, ${bakuTime(period.from)} to ${bakuTime(period.to)} Baku time`,
     ],
     overview(report),
     weeks(report),
     ...traffic(report, all),
     ...reading(report),
     ...links(report, all),
-    ask(report, all),
+    ask(report),
     ...audience(report, all),
     ...quality(report, all),
-    filter(report, all),
+    filter(report),
     [`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`],
   ];
   return `${blocks.map((lines) => lines.join('\n')).join('\n\n')}\n`;

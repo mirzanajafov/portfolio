@@ -118,7 +118,7 @@ describe('the visitor report against a real database', () => {
       {
         path: '/',
         device: 'desktop',
-        lcp: { p75: 1800, samples: 1, rating: 'good', overMyBar: false },
+        lcp: { p75: 1800, samples: 1, rating: 'good', missesMyBar: false },
         inp: null,
         cls: null,
       },

@@ -16,7 +16,7 @@ export type Week = Totals & { start: string; partial: boolean };
 
 export type Rating = 'good' | 'needs improvement' | 'poor';
 
-export type Vital = { p75: number; samples: number; rating: Rating; overMyBar: boolean };
+export type Vital = { p75: number; samples: number; rating: Rating; missesMyBar: boolean };
 
 export type Report = {
   period: { from: Date; to: Date; days: number };

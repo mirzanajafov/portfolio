@@ -245,11 +245,20 @@ describe('buildReport', () => {
       {
         path: '/',
         device: 'desktop',
-        lcp: { p75: 2100, samples: 4, rating: 'good', overMyBar: true },
+        lcp: { p75: 2100, samples: 4, rating: 'good', missesMyBar: true },
         inp: null,
-        cls: { p75: 0.02, samples: 4, rating: 'good', overMyBar: false },
+        cls: { p75: 0.02, samples: 4, rating: 'good', missesMyBar: false },
       },
     ]);
+  });
+
+  it("rates a p75 right at Google's limit as good, but as missing my bar, which asks for under", () => {
+    const report = reportOf([aVisit([aView({ lcpMs: 2000, inpMs: 200, cls: 0.05 })])]);
+    expect(report.quality.vitals[0]).toMatchObject({
+      lcp: { p75: 2000, rating: 'good', missesMyBar: true },
+      inp: { p75: 200, rating: 'good', missesMyBar: true },
+      cls: { p75: 0.05, rating: 'good', missesMyBar: true },
+    });
   });
 
   it('groups script errors by message and source with their pages and browsers', () => {

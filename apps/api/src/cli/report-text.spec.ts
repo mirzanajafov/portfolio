@@ -61,7 +61,9 @@ describe('reportText', () => {
       { all: false },
     );
     expect(text).toMatch(/^Overview +last 16 days$/m);
-    expect(text).toContain('The 16 days before are older than the 30 days kept.');
+    expect(text).toContain(
+      'The 16 days before reach past the 30 days kept, so there is nothing to compare with.',
+    );
   });
 
   it('cuts a list at ten rows unless asked for all of them', () => {
@@ -78,8 +80,47 @@ describe('reportText', () => {
     expect(full).not.toContain('more, --all');
   });
 
-  it('says none for a list with nothing in it', () => {
-    expect(reportText(aReport(), { all: false })).toContain('Sources: none');
+  it('keeps every day of a day by day table, newest included', () => {
+    const days = Array.from({ length: 30 }, (_, index) => ({
+      day: `2026-10-${String(index + 1).padStart(2, '0')}`,
+      questions: 1,
+      refused: 0,
+    }));
+    const text = reportText(aReport({ ask: { questions: 30, refused: 0, days } }), {
+      all: false,
+    });
+    expect(text).toMatch(/^2026-10-30 +1 +0$/m);
+    expect(text).not.toContain('more, --all');
+  });
+
+  it('prints every section in order, and says so when one has nothing in it', () => {
+    const text = reportText(aReport(), { all: false });
+    const headings = [
+      'Visits in the last 7 days',
+      'Overview',
+      'Weeks from Monday, UTC',
+      'Sources: none',
+      'Other sites: none',
+      'Entry pages: none',
+      'First pages of a visit: none',
+      'Pages: none',
+      'Reading: no views of the home page or a case study',
+      'CV page views: 0',
+      'CV PDF clicks from: none',
+      'Link clicks: none',
+      'Ask: 0 questions, 0 refused',
+      'Devices: none',
+      'Browsers: none',
+      'Countries: none',
+      'Web Vitals, p75 (samples): none',
+      'Script errors: none',
+      '404s: none',
+      'Filtered out: none',
+      'Countries and networks: IP Geolocation by DB-IP',
+    ];
+    const positions = headings.map((heading) => text.indexOf(heading));
+    expect(positions).not.toContain(-1);
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b));
   });
 
   it('shows the share of views that read each block', () => {
@@ -101,11 +142,12 @@ describe('reportText', () => {
       { all: false },
     );
     expect(text).toContain('Reading /projects/tuner: 4 views, median 90 s, scroll 70%');
+    expect(text).toMatch(/^block +read 2 s or more +median s$/m);
     expect(text).toMatch(/^problem +75% +6$/m);
     expect(text).toMatch(/^proof +0% +-$/m);
   });
 
-  it('shows each Web Vital with its rating and samples, and marks one over my own bar', () => {
+  it('shows each Web Vital with its rating and samples, and marks one that misses my own bar', () => {
     const text = reportText(
       aReport({
         quality: {
@@ -113,9 +155,9 @@ describe('reportText', () => {
             {
               path: '/',
               device: 'phone',
-              lcp: { p75: 2100, samples: 4, rating: 'good', overMyBar: true },
+              lcp: { p75: 2100, samples: 4, rating: 'good', missesMyBar: true },
               inp: null,
-              cls: { p75: 0.02, samples: 4, rating: 'good', overMyBar: false },
+              cls: { p75: 0.02, samples: 4, rating: 'good', missesMyBar: false },
             },
           ],
           errors: [],
@@ -124,8 +166,10 @@ describe('reportText', () => {
       }),
       { all: false },
     );
-    expect(text).toMatch(/^\/ +phone +2\.1 s good\* \(4\) +- +0\.02 good \(4\)$/m);
-    expect(text).toContain('* over my own bar: LCP 2.0 s, INP 200 ms, CLS 0.05');
+    expect(text).toMatch(/^\/ +phone +2\.10 s good\* \(4\) +- +0\.02 good \(4\)$/m);
+    expect(text).toContain(
+      '* misses my own bar: LCP under 2.00 s, INP under 200 ms, CLS under 0.05',
+    );
   });
 
   it('prints the control characters a visitor sent as visible escapes, not as terminal commands', () => {
