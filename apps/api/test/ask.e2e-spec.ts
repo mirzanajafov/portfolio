@@ -64,6 +64,7 @@ describe('POST /ask against a real database', () => {
   });
 
   beforeEach(async () => {
+    clock.current = new Date('2026-10-02T12:00:00Z');
     await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog", "Visit" CASCADE`;
   });
 
@@ -123,19 +124,23 @@ describe('POST /ask against a real database', () => {
     await sendEvent(app, { type: 'view', id: randomUUID(), path: '/' }).expect(204);
     await ask(app, 'Have you worked with Stripe payments?').expect(200);
     const [row] = await loggedRows(prisma, 'Have you worked with Stripe payments?');
-    const [visit] = await prisma.visit.findMany();
-    expect(row?.visitor).toBe(visit?.visitor);
+    const visits = await prisma.visit.findMany();
+    expect(visits).toHaveLength(1);
+    expect(row?.visitor).toMatch(/^[0-9a-f]{32}$/);
+    expect(row?.visitor).toBe(visits[0]?.visitor);
 
     clock.current = new Date('2026-10-03T00:00:01Z');
     await ask(app, 'What did you build with Kafka?').expect(200);
     const [next] = await loggedRows(prisma, 'What did you build with Kafka?');
-    expect(next?.visitor).not.toBe(visit?.visitor);
+    expect(next?.visitor).toMatch(/^[0-9a-f]{32}$/);
+    expect(next?.visitor).not.toBe(row?.visitor);
   });
 
   it.each([
     ['Global Privacy Control', { 'User-Agent': chrome, 'Sec-GPC': '1' }],
     ['Do Not Track', { 'User-Agent': chrome, DNT: '1' }],
     ['no User-Agent', {}],
+    ['the User-Agent of a bot', { 'User-Agent': 'node' }],
   ])('keeps a question asked with %s but ties it to no visit', async (_, headers) => {
     await ask(app, 'Have you worked with Stripe payments?', '203.0.113.7', headers).expect(200);
     const [row] = await loggedRows(prisma, 'Have you worked with Stripe payments?');

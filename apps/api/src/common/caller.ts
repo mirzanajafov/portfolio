@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { Request } from 'express';
+import { isbot } from 'isbot';
 import { isIP } from 'node:net';
 
 export type Caller = { ip: string; userAgent: string | undefined; optedOut: boolean };
@@ -12,6 +13,10 @@ export function clientAddress({ ip }: Request): string {
     throw new BadRequestException('the forwarded client address is not an IP address');
   }
   return ip;
+}
+
+export function isPersonAgent(userAgent: string | undefined): userAgent is string {
+  return userAgent !== undefined && userAgent !== '' && !isbot(userAgent);
 }
 
 export function callerOf(request: Request): Caller {

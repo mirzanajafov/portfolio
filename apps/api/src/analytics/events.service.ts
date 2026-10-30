@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { isbot } from 'isbot';
-import type { Caller } from '../common/caller.js';
+import { isPersonAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -28,7 +27,7 @@ export class EventsService {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (!userAgent || isbot(userAgent)) {
+    if (!isPersonAgent(userAgent)) {
       await this.visits.countDropped('bot', now);
       return { kind: 'accepted' };
     }
