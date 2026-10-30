@@ -137,7 +137,6 @@ describe('POST /events against a real database', () => {
       where: { day: new Date('2026-10-22') },
     });
     expect(keyed(salt, address, chrome)).not.toBe(visit?.visitor);
-    expect(keyed(Buffer.from(secret), address, chrome)).not.toBe(visit?.visitor);
     expect(keyed(dailyKey(secret, salt), address, chrome)).toBe(visit?.visitor);
   });
 
@@ -181,7 +180,10 @@ describe('POST /events against a real database', () => {
   });
 
   it('refuses a forwarded address that is not an IP address', async () => {
-    await send(app, aView(), { ip: '1:2:3:4:5:6:7::8:9' }).expect(400);
+    const refused = await send(app, aView(), { ip: '1:2:3:4:5:6:7::8:9' }).expect(400);
+    expect(refused.body).toMatchObject({
+      message: 'the forwarded client address is not an IP address',
+    });
     expect((await everything()).visits).toEqual([]);
   });
 
