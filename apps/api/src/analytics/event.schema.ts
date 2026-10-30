@@ -16,6 +16,7 @@ export function linksIn({ profile, projects }: Content): Set<string> {
     profile.links.github,
     profile.links.linkedin,
     '/cv.pdf',
+    'https://db-ip.com',
     ...projects.flatMap(({ links, facts }) => [
       links.live,
       ...(links.repo ? [links.repo] : []),

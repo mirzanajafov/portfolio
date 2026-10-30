@@ -122,7 +122,7 @@ describe('the contract with the site', () => {
 });
 
 describe('linksIn', () => {
-  it('lists every outbound link the site renders, and the CV', async () => {
+  it('lists every outbound link the site renders, the CV and the IP database credit', async () => {
     const content = await contentOf({
       projects: [
         aProject({ slug: 'tuner' }),
@@ -135,6 +135,7 @@ describe('linksIn', () => {
         'https://github.com/ada',
         'https://www.linkedin.com/in/ada',
         '/cv.pdf',
+        'https://db-ip.com',
         'https://tuner.example.com',
         'https://github.com/someone/tuner',
         'https://github.com/someone/tuner/blob/main/README.md',
