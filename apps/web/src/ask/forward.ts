@@ -1,4 +1,4 @@
-import { forwardToApi } from '@/lib/forward-to-api';
+import { callerHeaders, forwardToApi } from '@/lib/forward-to-api';
 
 export function forwardAsk(
   request: Request,
@@ -7,7 +7,7 @@ export function forwardAsk(
 ): Promise<Response> {
   return forwardToApi(
     request,
-    { url: `${apiUrl}/ask`, headers: ['x-forwarded-for'], fetchImpl, signal: request.signal },
+    { url: `${apiUrl}/ask`, headers: callerHeaders, fetchImpl, signal: request.signal },
     (upstream) =>
       upstream.body
         ? new Response(upstream.body, {

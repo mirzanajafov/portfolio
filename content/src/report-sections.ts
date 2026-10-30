@@ -26,6 +26,7 @@ export type ReportSection = ReportPart[];
 
 const listLength = 10;
 const candidateLength = 3;
+const questionsInStory = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -82,8 +83,8 @@ function more(text: string, hidden: number, indent: boolean): ReportPart[] {
   return hidden > 0 ? [{ kind: 'more', text, indent }] : [];
 }
 
-function shownOf<T>(rows: readonly T[], all: boolean): readonly T[] {
-  return all ? rows : rows.slice(0, listLength);
+function shownOf<T>(rows: readonly T[], all: boolean, length = listLength): readonly T[] {
+  return all ? rows : rows.slice(0, length);
 }
 
 function listed<T>(
@@ -267,7 +268,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function ask({ ask }: Report): ReportSection {
   return [
     line(
-      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
+      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${placedText(ask)}${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ),
     ...(ask.days.length > 0
       ? [
@@ -282,6 +283,15 @@ function ask({ ask }: Report): ReportSection {
         ]
       : []),
   ];
+}
+
+function placedText({ questions, inVisits, visits }: Report['ask']): string {
+  if (questions === 0) {
+    return '';
+  }
+  return inVisits === 0
+    ? ', none of them in a visit I can see'
+    : `, ${String(inVisits)} of them in ${counted(visits, 'visit')} I can see`;
 }
 
 function audience({ audience, period }: Report, all: boolean): ReportSection[] {
@@ -354,7 +364,12 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
   ];
 }
 
-function storyText({ at, from, pages, clicks, interacted }: VisitStory): string {
+function storyText(
+  { at, from, pages, clicks, questions, interacted }: VisitStory,
+  all: boolean,
+): string {
+  const asked = shownOf(questions, all, questionsInStory);
+  const unshown = questions.length - asked.length;
   const read = pages.map(
     ({ path, seconds, read }) =>
       `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
@@ -362,6 +377,11 @@ function storyText({ at, from, pages, clicks, interacted }: VisitStory): string 
   return [
     `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
     ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
+    ...(questions.length > 0
+      ? [
+          `asked ${asked.map((question) => JSON.stringify(question)).join(', ')}${unshown > 0 ? ` and ${String(unshown)} more` : ''}`,
+        ]
+      : []),
     ...(interacted ? [] : ['no interaction']),
   ].join(', ');
 }
@@ -394,12 +414,12 @@ function candidatesText(candidates: readonly { company: string; role: string }[]
   return others > 0 ? `${named.join(', ')} or ${String(others)} more` : named.join(' or ');
 }
 
-function guessText(guess: GuessedVisit): string {
+function guessText(guess: GuessedVisit, all: boolean): string {
   const why = [
     ...guess.signals.map(signalText),
     `${counted(guess.daysAfter, 'day')} after applying`,
   ].join(', ');
-  return `possibly ${candidatesText(guess.candidates)}, ${guess.confidence} (${why}): ${storyText(guess)}`;
+  return `possibly ${candidatesText(guess.candidates)}, ${guess.confidence} (${why}): ${storyText(guess, all)}`;
 }
 
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
@@ -407,13 +427,13 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   const lowHidden = application.guesses.length - guesses.length;
   const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`;
   const parts = [
-    ...listed(application.visits, all, (visit) => [item(storyText(visit))]),
+    ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [
       item(
         `UTC day ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
       ),
     ]),
-    ...listed(guesses, all, (guess) => [item(guessText(guess))]),
+    ...listed(guesses, all, (guess) => [item(guessText(guess, all))]),
     ...more(`low guesses not shown: ${String(lowHidden)}`, lowHidden, true),
   ];
   const { code } = application;

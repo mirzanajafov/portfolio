@@ -8,7 +8,12 @@ import type { AskOutcome } from './ask.service.js';
 const cleanupEveryMs = 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
 
-type AskLogEntry = AskOutcome & { client: string; question: string; durationMs: number };
+type AskLogEntry = AskOutcome & {
+  visitor: string | null;
+  createdAt: Date;
+  question: string;
+  durationMs: number;
+};
 
 @Injectable()
 export class AskLogService implements OnModuleInit, OnModuleDestroy {
@@ -30,7 +35,7 @@ export class AskLogService implements OnModuleInit, OnModuleDestroy {
 
   async record(entry: AskLogEntry): Promise<void> {
     try {
-      await this.prisma.askLog.create({ data: { ...entry, createdAt: this.clock.now() } });
+      await this.prisma.askLog.create({ data: entry });
     } catch (error) {
       this.log.warn(
         `could not log a question: ${error instanceof Error ? error.message : String(error)}`,

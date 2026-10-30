@@ -6,10 +6,10 @@ import { EventsService } from './events.service.js';
 import { PLACE_LOOKUP, openPlaceLookup } from './place-lookup.js';
 import { RetentionService } from './retention.service.js';
 import { VisitLogService } from './visit-log.service.js';
-import { VisitorSaltService } from './visitor-salt.service.js';
+import { VisitorSaltModule } from './visitor-salt.module.js';
 
 @Module({
-  imports: [RateLimitModule],
+  imports: [RateLimitModule, VisitorSaltModule],
   controllers: [EventsController],
   providers: [
     {
@@ -20,7 +20,6 @@ import { VisitorSaltService } from './visitor-salt.service.js';
     EventsService,
     RetentionService,
     VisitLogService,
-    VisitorSaltService,
   ],
 })
 export class AnalyticsModule {}

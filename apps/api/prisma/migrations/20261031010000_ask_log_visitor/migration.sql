@@ -1,0 +1,1 @@
+ALTER TABLE "AskLog" ADD COLUMN "visitor" TEXT;

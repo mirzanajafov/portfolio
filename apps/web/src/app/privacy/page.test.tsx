@@ -16,6 +16,9 @@ describe('the privacy page', () => {
       `For each day I keep, for ${String(dailyTotalsMonths)} months, how long each visit lasted`,
     );
     expect(container.textContent).toContain(`I keep questions for ${askLogDays} days`);
+    expect(container.textContent).toContain(
+      'With Global Privacy Control or Do Not Track on, a question is still answered and kept, but tied to no visit.',
+    );
   });
 
   it('credits DB-IP and gives the address to write to, and no phone number', () => {

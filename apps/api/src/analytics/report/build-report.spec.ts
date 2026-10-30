@@ -2,7 +2,7 @@ import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import type { DayTotals } from '../day-totals.js';
 import { utcDay } from '../days.js';
-import { aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
+import { anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
 import type { ReportRows } from './rows.js';
@@ -12,6 +12,17 @@ const content = await contentOf({
     aProject({ slug: 'tuner', name: 'Tuner', caseStudy: aCaseStudy() }),
     aProject({ slug: 'courier', name: 'Courier', order: 2 }),
   ],
+});
+
+const aQuestion = (
+  createdAt: Date,
+  overrides: Partial<ReportRows['questions'][number]> = {},
+): ReportRows['questions'][number] => ({
+  createdAt,
+  refused: false,
+  visitor: null,
+  question: 'Have you used Kafka?',
+  ...overrides,
 });
 
 function reportOf(
@@ -95,8 +106,8 @@ describe('buildReport', () => {
     const report = reportOf([], {
       days: 30,
       questions: [
-        { createdAt: new Date('2026-09-30T08:00:00Z'), refused: false },
-        { createdAt: new Date('2026-09-30T13:00:00Z'), refused: false },
+        aQuestion(new Date('2026-09-30T08:00:00Z'), { refused: false }),
+        aQuestion(new Date('2026-09-30T13:00:00Z'), { refused: false }),
       ],
     });
     expect(report.ask).toMatchObject({ since: new Date('2026-09-30T12:00:00Z'), questions: 1 });
@@ -243,19 +254,48 @@ describe('buildReport', () => {
     });
   });
 
+  it('puts a question in the story of the visit with its key, and counts one without a visit only in the Ask line', () => {
+    const report = reportOf(
+      [
+        aVisit([aView({ createdAt: hoursAgo(3), ref: 'memh' })], {
+          visitor: 'coded',
+          startedAt: hoursAgo(3),
+        }),
+        aVisit([aView({ createdAt: hoursAgo(2) })], { visitor: 'other', startedAt: hoursAgo(2) }),
+      ],
+      {
+        applications: [anApplication()],
+        questions: [
+          aQuestion(hoursAgo(2), { visitor: 'coded', question: 'What did you build with Kafka?' }),
+          aQuestion(hoursAgo(3), { visitor: 'coded', question: 'Do you know Go?' }),
+          aQuestion(hoursAgo(2), { visitor: 'other' }),
+          aQuestion(hoursAgo(1), { visitor: 'blocked tracker' }),
+          aQuestion(hoursAgo(1), { visitor: null }),
+        ],
+      },
+    );
+
+    expect(report.applications.list[0]?.visits.map(({ questions }) => questions)).toEqual([
+      ['Do you know Go?', 'What did you build with Kafka?'],
+    ]);
+    expect(report.ask).toMatchObject({ questions: 5, inVisits: 3, visits: 2 });
+  });
+
   it('counts questions and refusals per day within the period', () => {
     const report = reportOf([], {
       questions: [
-        { createdAt: new Date('2026-10-29T08:00:00Z'), refused: false },
-        { createdAt: new Date('2026-10-29T09:00:00Z'), refused: true },
-        { createdAt: new Date('2026-10-30T09:00:00Z'), refused: false },
-        { createdAt: daysAgo(8), refused: false },
+        aQuestion(new Date('2026-10-29T08:00:00Z'), { refused: false }),
+        aQuestion(new Date('2026-10-29T09:00:00Z'), { refused: true }),
+        aQuestion(new Date('2026-10-30T09:00:00Z'), { refused: false }),
+        aQuestion(daysAgo(8), { refused: false }),
       ],
     });
     expect(report.ask).toEqual({
       since: null,
       questions: 3,
       refused: 1,
+      inVisits: 0,
+      visits: 0,
       days: [
         { day: '2026-10-29', questions: 2, refused: 1 },
         { day: '2026-10-30', questions: 1, refused: 0 },

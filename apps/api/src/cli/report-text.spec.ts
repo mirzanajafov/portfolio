@@ -8,6 +8,7 @@ const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   from: null,
   pages: [{ path: '/', seconds: 30, read: [] }],
   clicks: [],
+  questions: [],
   interacted: true,
   ...overrides,
 });
@@ -65,7 +66,8 @@ describe('reportText', () => {
       questions: 1,
       refused: 0,
     }));
-    const text = reportText(aReport({ ask: { since: null, questions: 30, refused: 0, days } }), {
+    const ask = { since: null, questions: 30, refused: 0, inVisits: 0, visits: 0, days };
+    const text = reportText(aReport({ ask }), {
       all: false,
     });
     expect(text).toMatch(/^2026-10-30 +1 +0$/m);
@@ -221,15 +223,22 @@ describe('reportText', () => {
     expect(reportText(aReport(), { all: false })).not.toContain('rollup is behind');
   });
 
-  it('says from when the questions are counted when the log does not reach back to the period', () => {
+  it('says how many questions came from visits it can see, and from when they are counted when the log does not reach back to the period', () => {
     const text = reportText(
       aReport({
-        ask: { since: new Date('2026-09-30T12:00:00Z'), questions: 1, refused: 0, days: [] },
+        ask: {
+          since: new Date('2026-09-30T12:00:00Z'),
+          questions: 3,
+          refused: 0,
+          inVisits: 2,
+          visits: 1,
+          days: [],
+        },
       }),
       { all: false },
     );
     expect(text).toContain(
-      'Ask: 1 question, 0 refused, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
+      'Ask: 3 questions, 0 refused, 2 of them in 1 visit I can see, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
     );
   });
 
@@ -248,6 +257,7 @@ describe('reportText', () => {
                     { path: '/cv', seconds: 8, read: [] },
                   ],
                   clicks: ['CV PDF'],
+                  questions: ['Do you know Go?', 'What did you build with Kafka?'],
                 }),
                 aStory({
                   at: new Date('2026-10-30T11:00:00Z'),
@@ -293,7 +303,7 @@ describe('reportText', () => {
       [
         'Applications, every visit kept rather than only the period, times in Baku',
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
-        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
+        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
@@ -302,6 +312,29 @@ describe('reportText', () => {
         '  check1: 2 visits, first 2026-10-30 12:00',
       ].join('\n'),
     );
+  });
+
+  it('says when no question came from a visit it can see', () => {
+    const ask = { since: null, questions: 12, refused: 0, inVisits: 0, visits: 0, days: [] };
+    expect(reportText(aReport({ ask }), { all: false })).toContain(
+      'Ask: 12 questions, 0 refused, none of them in a visit I can see',
+    );
+  });
+
+  it('quotes each question a visit asked on its line, shows three unless asked for all, and keeps a line break from starting a new line', () => {
+    const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
+    const report = aReport({
+      applications: {
+        list: [anEntry({ visits: [aStory({ questions })] })],
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+        unknownCodes: [],
+      },
+    });
+
+    const short = reportText(report, { all: false });
+    expect(short).toContain('asked "Line one\\nline two", "Kafka?", "Go?" and 2 more');
+    expect(short).not.toMatch(/^line two/m);
+    expect(reportText(report, { all: true })).toContain(', "Rust?", "Zig?"');
   });
 
   it('names at most three candidates of a guess, and each of them once', () => {

@@ -16,6 +16,7 @@ export async function findVisits(
   const visits = await db.visit.findMany({
     where,
     select: {
+      visitor: true,
       startedAt: true,
       device: true,
       browser: true,

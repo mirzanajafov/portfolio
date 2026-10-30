@@ -8,7 +8,7 @@ import { RetentionService } from '../src/analytics/retention.service.js';
 import { reportText } from '../src/cli/report-text.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
-import { sendEvent, type Sender } from './send-event.js';
+import { chrome, sendEvent, type Sender } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
 const iphone =
@@ -88,6 +88,7 @@ describe('the visitor report against a real database', () => {
     await request(app.getHttpServer())
       .post('/ask')
       .set('X-Forwarded-For', '203.0.113.7')
+      .set('User-Agent', chrome)
       .send({ question: 'How does Tuner decide which questions to ask each user?' })
       .expect(200);
     await expect.poll(() => prisma.askLog.count()).toBe(1);
@@ -145,6 +146,8 @@ describe('the visitor report against a real database', () => {
       since: null,
       questions: 1,
       refused: 0,
+      inVisits: 1,
+      visits: 1,
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
     });
     expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);

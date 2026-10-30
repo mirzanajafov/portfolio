@@ -36,7 +36,7 @@ export class AnalyticsReportService {
             }),
             questions: await tx.askLog.findMany({
               where: { createdAt: { gte: firstPeriodDay } },
-              select: { createdAt: true, refused: true },
+              select: { createdAt: true, refused: true, visitor: true, question: true },
             }),
             dropped: await tx.droppedEvents.findMany({ where: { day: { gte: firstPeriodDay } } }),
             applications: await tx.application.findMany({

@@ -84,8 +84,11 @@ export default function PrivacyPage() {
       <Part title="Questions you ask">
         <p className="max-w-[65ch]">
           I keep questions for {askLogDays} days to see where the answers fail, then they are
-          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
-          used for rate limiting.
+          deleted. A question is tied to the visit it was asked in by the same daily mix of address
+          and User-Agent as above, so I can see what a visit wanted to know. With Global Privacy
+          Control or Do Not Track on, a question is still answered and kept, but tied to no visit.
+          Questions are rate limited by your network mixed with that same daily value, so the
+          address itself is never stored.
         </p>
       </Part>
 
@@ -93,10 +96,11 @@ export default function PrivacyPage() {
         <p className="max-w-[65ch]">
           I rely on my legitimate interest in knowing whether the site works for the people it is
           for and whether my applications reach anyone (Article 6(1)(f) GDPR). You can object at any
-          time: turning on Global Privacy Control or Do Not Track stops it for every later visit,
-          and if you email me the day and rough time of a visit, I&apos;ll find and delete what was
-          recorded. You can ask what I have about you, and you can complain to a data protection
-          authority. Nothing is sold or shared, and the site loads no third-party scripts.
+          time: turning on Global Privacy Control or Do Not Track stops it for every later visit (a
+          question you ask is still kept, tied to no visit), and if you email me the day and rough
+          time of a visit, I&apos;ll find and delete what was recorded. You can ask what I have
+          about you, and you can complain to a data protection authority. Nothing is sold or shared,
+          and the site loads no third-party scripts.
         </p>
       </Part>
 
