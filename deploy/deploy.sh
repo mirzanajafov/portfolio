@@ -45,6 +45,7 @@ say "Waiting for the database"
 
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
+deploy/geo.sh || say "Keeping the IP databases from before, because the download failed"
 if release && healthy; then
   docker image prune -f --filter "label=com.docker.compose.project=portfolio" > /dev/null
   say "Live: $(git log --oneline -1)"

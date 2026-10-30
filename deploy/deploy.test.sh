@@ -22,8 +22,13 @@ case "$*" in
   *) echo "unexpected: docker $*" >&2; exit 2 ;;
 esac
 EOF
+cat > "$work/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+[ -z "${GEO_DOWN:-}" ] || exit 22
+printf 'tree\xab\xcd\xefMaxMind.com' | gzip
+EOF
 printf '#!/bin/sh\n' > "$work/bin/sleep"
-chmod +x "$work/bin/docker" "$work/bin/sleep"
+chmod +x "$work/bin/docker" "$work/bin/curl" "$work/bin/sleep"
 
 commit() {
   echo "$1" > release
@@ -40,6 +45,7 @@ deploy() {
   cd "$dir/app"
   mkdir deploy
   cp "$script" deploy/deploy.sh
+  cp "$(dirname "$script")/geo.sh" deploy/geo.sh
   git remote add origin "$dir/origin.git"
   commit old
   old=$(git rev-parse HEAD)
@@ -70,6 +76,10 @@ expect() {
 
 deploy
 expect 0 "$new" 1 "$new" "Live:" "deploys a healthy release"
+deploy
+expect 0 "$new" 1 "$new" "IP databases updated to" "fetches this month's IP databases before the release"
+deploy GEO_DOWN=1
+expect 0 "$new" 1 "$new" "Keeping the IP databases from before" "deploys anyway when the IP databases can't be downloaded"
 deploy RELEASE_FAILS=new
 expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the new one fails to build or start"
 deploy UNHEALTHY=portfolio-api
