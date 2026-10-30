@@ -11,7 +11,6 @@ export function GET(request: NextRequest): Response {
     headers: {
       location: '/admin/login',
       'cache-control': 'no-store',
-      'referrer-policy': 'no-referrer',
     },
   });
   if (token !== null && adminToken.test(token)) {

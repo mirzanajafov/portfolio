@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
         source: '/admin/:path*',
         headers: [
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Referrer-Policy', value: 'same-origin' },
         ],
       },
     ];

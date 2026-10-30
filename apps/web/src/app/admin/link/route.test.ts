@@ -10,7 +10,6 @@ describe('GET /admin/link', () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('/admin/login');
-    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
     expect(response.headers.get('cache-control')).toBe('no-store');
     const attributes = response.headers.get('set-cookie')?.split('; ') ?? [];
     expect(attributes.filter((attribute) => !attribute.startsWith('Expires='))).toEqual([
