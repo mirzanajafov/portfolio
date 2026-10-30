@@ -13,7 +13,7 @@ describe('the privacy page', () => {
       `These records are deleted once their UTC day is ${String(analyticsDays)} full days old, so each lives ${String(analyticsDays)} to ${String(analyticsDays + 1)} days.`,
     );
     expect(container.textContent).toContain(
-      `For each day I keep, for ${String(dailyTotalsMonths)} months, how each page was read`,
+      `For each day I keep, for ${String(dailyTotalsMonths)} months, how long each visit lasted`,
     );
     expect(container.textContent).toContain(`I keep questions for ${askLogDays} days`);
   });
