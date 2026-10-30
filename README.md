@@ -57,6 +57,14 @@ Questions are rate limited per caller (20 per 10 minutes, 100 a day) and overall
 
 Every question that gets an answer or a refusal is logged with what was cited and what the gate withheld, and deleted after 30 days. A question the engine fails on mid-answer isn't, because the log only says what visitors were told, and the server log has the error. That log is how I'll find out where the answers fail, which matters more than anything I can think of in advance. The page says so next to the box.
 
+## What the site records about visits
+
+I wanted to know whether anyone reads past the first screen, which case studies hold people and where they stop, and whether a job application led to a visit, without putting a cookie banner in front of recruiters. So the page sends a few small events to the API with `navigator.sendBeacon`: a page view, a reading of how long it was in front of the visitor and which parts they stopped at, clicks on links that leave the site, Web Vitals and script errors. There are no cookies and nothing is stored in the browser, and `/privacy` says all of it in plain words.
+
+Reading is measured in blocks, not only as scroll depth: every part of a case study (the problem, the demo, each decision, the proof, what's next) and every tour stop on the home page counts the seconds it spends in the middle half of the screen while someone is actually there, which means a scroll, a tap or a key in the last 30 seconds and a visible tab. A fling to the bottom of the page reads nothing, and a tab left open in the background adds nothing.
+
+A visitor is an HMAC of the network address and the User-Agent under a key that changes every UTC day. That key mixes a random salt kept in Postgres with a secret from the environment, so a copy of the database alone can't turn a visitor back into an address, and the salt is deleted once its day is over. The price is that a visit across midnight UTC counts as two visitors, and so does one person on a phone and a laptop. I think that's the right trade for not following anyone from one day to the next. A browser that sends Global Privacy Control or Do Not Track records nothing at all, known bots are only counted, and visits are deleted after 30 days.
+
 ## The CV and link previews
 
 `/cv` is the CV as a page, and `/cv.pdf` is the same data drawn with pdfkit when the site is built: two A4 pages, 33 KB. Keeping a separate PDF meant two documents that would drift apart the first time I changed a job title, so there is only one. I chose pdfkit over printing the page in headless Chrome, which would put a browser in the image for one file, and over Typst, which would add a second toolchain and a template language for one page. The price is that the layout is code, line by line, instead of CSS.
