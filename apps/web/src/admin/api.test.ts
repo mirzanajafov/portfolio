@@ -1,6 +1,6 @@
 import { aReport } from '@portfolio/content/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { endSession, fetchReport, sessionExpiry, startSession } from './api';
+import { endSession, fetchReport, isRegistered, sessionExpiry, startSession } from './api';
 
 const api = 'http://api:3201';
 const link = 'l'.repeat(43);
@@ -123,5 +123,23 @@ describe('fetchReport', () => {
       'the API answered 500 to a report',
     );
     await expect(fetchReport(api, session, 7, answering(200, { period: {} }))).rejects.toThrow();
+  });
+});
+
+describe('isRegistered', () => {
+  it('asks for the code with the session as a bearer, and reads 204 as yes and 404 as no', async () => {
+    const fetchImpl = answering(204);
+    expect(await isRegistered(api, session, 'memh', fetchImpl)).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api:3201/admin/applications/memh',
+      expect.objectContaining({ headers: { authorization: `Bearer ${session}` } }),
+    );
+    expect(await isRegistered(api, session, 'memh', answering(404))).toBe(false);
+  });
+
+  it('fails on any other answer', async () => {
+    await expect(isRegistered(api, session, 'memh', answering(500))).rejects.toThrow(
+      'the API answered 500 to an application check',
+    );
   });
 });

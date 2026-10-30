@@ -1,4 +1,4 @@
-import { aReport } from '@portfolio/content/testing';
+import { aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchReport, sessionExpiry } from '@/admin/api';
@@ -93,6 +93,32 @@ describe('admin page', () => {
     expect(screen.getByRole('link', { name: 'Cut long lists' })).toHaveAttribute(
       'href',
       '/admin?days=7',
+    );
+  });
+
+  it('links each application to its CV', async () => {
+    api.fetchReport.mockResolvedValue(
+      aReport({
+        applications: {
+          list: [anEntry(), anEntry({ code: 'kxqtz', company: 'Wolt' })],
+          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+          unknownCodes: [],
+        },
+      }),
+    );
+
+    render(await open());
+
+    expect(
+      screen.getByText('Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet'),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Download CV for memh' })).toHaveAttribute(
+      'href',
+      '/admin/applications/memh/cv',
+    );
+    expect(screen.getByRole('link', { name: 'Download CV for kxqtz' })).toHaveAttribute(
+      'href',
+      '/admin/applications/kxqtz/cv',
     );
   });
 

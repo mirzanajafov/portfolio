@@ -26,6 +26,8 @@ function partLines(part: ReportPart): string[] {
       return aligned(part.rows);
     case 'line':
       return [`${margin(part)}${part.text}`];
+    case 'application':
+      return [part.text];
     case 'more':
       return [`${margin(part)}${part.text}, --all shows them`];
   }
