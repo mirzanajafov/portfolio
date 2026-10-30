@@ -6,10 +6,9 @@ import { AnalyticsReportService } from '../src/analytics/report/analytics-report
 import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
+import { sendEvent } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
-const chrome =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 const iphone =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const crawler = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -20,13 +19,8 @@ describe('the visitor report against a real database', () => {
   let prisma: PrismaService;
   let reports: AnalyticsReportService;
 
-  const send = (event: object, { ip = '203.0.113.7', userAgent = chrome } = {}) =>
-    request(app.getHttpServer())
-      .post('/events')
-      .set('X-Forwarded-For', ip)
-      .set('User-Agent', userAgent)
-      .send(event)
-      .expect(204);
+  const send = (event: object, sender?: { ip?: string; userAgent?: string }) =>
+    sendEvent(app, event, sender).expect(204);
 
   const at = (time: string) => {
     clock.current = new Date(`2026-10-02T${time}Z`);

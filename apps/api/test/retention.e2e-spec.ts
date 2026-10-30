@@ -1,26 +1,17 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { sendEvent } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
-
-const chrome =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 
 describe('retention against a real database', () => {
   let app: NestExpressApplication;
   let clock: FixedClock;
   let prisma: PrismaService;
 
-  const send = (event: object, ip = '203.0.113.7') =>
-    request(app.getHttpServer())
-      .post('/events')
-      .set('X-Forwarded-For', ip)
-      .set('User-Agent', chrome)
-      .send(event)
-      .expect(204);
+  const send = (event: object, ip?: string) => sendEvent(app, event, { ip }).expect(204);
 
   const at = (time: string) => {
     clock.current = new Date(time);
