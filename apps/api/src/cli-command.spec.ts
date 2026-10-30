@@ -60,7 +60,16 @@ describe('parseCommand', () => {
 
   it('names the flag that is wrong', () => {
     expect(() =>
-      parseCommand(['application', 'add', ...required.slice(0, 4), '--applied', '30.10.2026']),
+      parseCommand([
+        'application',
+        'add',
+        '--company',
+        'Acme',
+        '--role',
+        'Dev',
+        '--applied',
+        '30.10.2026',
+      ]),
     ).toThrow(/applied/);
   });
 
