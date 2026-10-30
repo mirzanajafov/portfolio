@@ -29,17 +29,24 @@ EOF
 cat > "$work/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 month=$(date -u +%Y-%m)
-case "$*" in
-  *"https://download.db-ip.com/free/dbip-city-lite-$month.mmdb.gz") kind=city ;;
-  *"https://download.db-ip.com/free/dbip-asn-lite-$month.mmdb.gz") kind=asn ;;
-  *) echo "unexpected: curl $*" >&2; exit 2 ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o) file=$2; shift 2 ;;
+    https://*) url=$1; shift ;;
+    *) shift ;;
+  esac
+done
+case "$url" in
+  "https://download.db-ip.com/free/dbip-city-lite-$month.mmdb.gz") kind=city ;;
+  "https://download.db-ip.com/free/dbip-asn-lite-$month.mmdb.gz") kind=asn ;;
+  *) echo "unexpected: curl $url" >&2; exit 2 ;;
 esac
 echo "downloading the $kind database" >&2
 case "${GEO_DOWN:-}" in all | "$kind") exit 22 ;; esac
 if [ -n "${GEO_BAD:-}" ]; then
-  printf '<html>Not found</html>' | gzip
+  printf '<html>Not found</html>' | gzip > "$file"
 else
-  printf 'new\xab\xcd\xefMaxMind.com' | gzip
+  printf 'new\xab\xcd\xefMaxMind.com' | gzip > "$file"
 fi
 EOF
 printf '#!/bin/sh\n' > "$work/bin/sleep"
