@@ -82,7 +82,7 @@ describe('applications against a real database', () => {
     await applications.add(anApplication({ code: 'kxqtz' }));
     vi.mocked(newCode).mockReturnValue('kxqtz');
     await expect(applications.add(anApplication({ company: 'Other' }))).rejects.toThrow(
-      /Unique constraint/,
+      'code kxqtz already belongs to another application',
     );
     expect(newCode).toHaveBeenCalledTimes(5);
   });

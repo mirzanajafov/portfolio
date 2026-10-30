@@ -16,7 +16,7 @@ export type NewApplication = {
 
 const attempts = 5;
 
-function takenCode(error: unknown): boolean {
+function isCodeTaken(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
@@ -31,22 +31,17 @@ export class ApplicationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async add({ code, ...application }: NewApplication): Promise<Application> {
-    if (code) {
-      try {
-        return await this.prisma.application.create({ data: { ...application, code } });
-      } catch (error) {
-        if (takenCode(error)) {
-          throw new CodeTakenError(code);
-        }
-        throw error;
-      }
-    }
+    const tries = code ? 1 : attempts;
     for (let attempt = 1; ; attempt += 1) {
+      const candidate = code ?? newCode();
       try {
-        return await this.prisma.application.create({ data: { ...application, code: newCode() } });
+        return await this.prisma.application.create({ data: { ...application, code: candidate } });
       } catch (error) {
-        if (!takenCode(error) || attempt === attempts) {
+        if (!isCodeTaken(error)) {
           throw error;
+        }
+        if (attempt === tries) {
+          throw new CodeTakenError(candidate);
         }
       }
     }
