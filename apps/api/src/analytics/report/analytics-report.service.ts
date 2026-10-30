@@ -25,9 +25,23 @@ export class AnalyticsReportService {
     const [visits, questions, dropped] = await Promise.all([
       this.prisma.visit.findMany({
         where: { startedAt: { gte: kept } },
-        include: {
+        select: {
+          startedAt: true,
+          device: true,
+          browser: true,
+          country: true,
           views: {
-            include: {
+            select: {
+              createdAt: true,
+              path: true,
+              notFound: true,
+              referrerHost: true,
+              activeSeconds: true,
+              maxScroll: true,
+              blocks: true,
+              lcpMs: true,
+              inpMs: true,
+              cls: true,
               clicks: { select: { href: true } },
               errors: { select: { message: true, source: true } },
             },
