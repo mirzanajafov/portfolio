@@ -1,4 +1,4 @@
-import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
+import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
 import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
 import type { Source } from '../analytics/sources.js';
@@ -25,6 +25,10 @@ const clsText = (score: number) => score.toFixed(3);
 
 function counted(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+function dayOf(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 function bakuTime(date: Date): string {
@@ -112,9 +116,7 @@ function overview({ period, overview: { current, previous } }: Report): string[]
     ]),
     ...(previous
       ? []
-      : [
-          `The ${days} before reach past the ${String(analyticsDays)} days kept, so there is nothing to compare with.`,
-        ]),
+      : [`Some of the ${days} before were never collected, so there is nothing to compare with.`]),
   ];
 }
 
@@ -129,7 +131,7 @@ function weeks({ weeks }: Report): string[] {
         optional(week.medianVisitSeconds),
       ]),
     ]),
-    '* only part of the week is kept or has passed',
+    '* some days of the week were never collected or have not come yet',
   ];
 }
 
@@ -302,20 +304,17 @@ function filter({ filter }: Report): string[] {
   if (filter.length === 0) {
     return ['Filtered out: none'];
   }
-  return [
-    ...table([
-      ['Filtered out, UTC day', 'bots', 'limited'],
-      ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
-    ]),
-    "The counters are per day, so the period's first day is counted whole.",
-  ];
+  return table([
+    ['Filtered out, UTC day', 'bots', 'limited'],
+    ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
+  ]);
 }
 
 export function reportText(report: Report, { all }: { all: boolean }): string {
   const { period } = report;
   const blocks = [
     [
-      `Visits in the last ${counted(period.days, 'day')}, ${bakuTime(period.from)} to ${bakuTime(period.to)} Baku time`,
+      `Visits in the last ${counted(period.days, 'day')}: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
     ],
     overview(report),
     weeks(report),

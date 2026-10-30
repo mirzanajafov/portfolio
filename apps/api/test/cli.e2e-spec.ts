@@ -78,7 +78,7 @@ describe('the CLI commands', () => {
     process.stdout.isTTY = false;
     vi.stubEnv('CV_RENDER_TOKEN', token);
     vi.stubEnv('WEB_URL', siteAddress);
-    await prisma.$executeRaw`TRUNCATE "Application"`;
+    await prisma.$executeRaw`TRUNCATE "Application" CASCADE`;
   });
 
   afterEach(() => {
@@ -150,7 +150,7 @@ describe('the CLI commands', () => {
     process.stdout.isTTY = true;
     const { status, stdout } = await cli('report', '--days', '1');
     expect(status).toBe(0);
-    expect(stdout).toMatch(/^Visits in the last 1 day, /);
+    expect(stdout).toMatch(/^Visits in the last 1 day: /);
     expect(stdout).toContain('Sources: none');
   });
 

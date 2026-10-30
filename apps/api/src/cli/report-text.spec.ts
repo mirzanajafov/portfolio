@@ -13,7 +13,7 @@ const someVisits = (visits: number): Totals => ({
 function aReport(overrides: Partial<Report> = {}): Report {
   return {
     period: {
-      from: new Date('2026-10-23T12:00:00Z'),
+      from: new Date('2026-10-24T00:00:00Z'),
       to: new Date('2026-10-30T12:00:00Z'),
       days: 7,
     },
@@ -35,9 +35,9 @@ function aReport(overrides: Partial<Report> = {}): Report {
 }
 
 describe('reportText', () => {
-  it('heads the report with the period in Baku time', () => {
+  it('heads the report with the UTC days of the period and the time in Baku', () => {
     expect(reportText(aReport(), { all: false })).toMatch(
-      /^Visits in the last 7 days, 2026-10-23 16:00 to 2026-10-30 16:00 Baku time\n/,
+      /^Visits in the last 7 days: 2026-10-24 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time\n/,
     );
   });
 
@@ -48,11 +48,11 @@ describe('reportText', () => {
     expect(text).toMatch(/^on a phone +8% +13%$/m);
   });
 
-  it('says when the period before is no longer kept', () => {
+  it('says when the period before was never collected', () => {
     const text = reportText(
       aReport({
         period: {
-          from: new Date('2026-10-14T12:00:00Z'),
+          from: new Date('2026-10-15T00:00:00Z'),
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
         },
@@ -62,7 +62,7 @@ describe('reportText', () => {
     );
     expect(text).toMatch(/^Overview +last 16 days$/m);
     expect(text).toContain(
-      'The 16 days before reach past the 30 days kept, so there is nothing to compare with.',
+      'Some of the 16 days before were never collected, so there is nothing to compare with.',
     );
   });
 

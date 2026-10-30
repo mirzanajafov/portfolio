@@ -7,7 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { firstRawDay } from '../retention.js';
 import { dropReasons } from '../visit-log.service.js';
 import { findVisits } from '../visit-rows.js';
-import { buildReport } from './build-report.js';
+import { buildReport, firstTrendDay } from './build-report.js';
 import type { Report } from './report.js';
 
 const knownDropReason = z.enum(dropReasons);
@@ -22,19 +22,21 @@ export class AnalyticsReportService {
 
   async build(days: number): Promise<Report> {
     const now = this.clock.now();
-    const kept = firstRawDay(now);
-    const [visits, questions, dropped] = await Promise.all([
-      findVisits(this.prisma, { startedAt: { gte: kept } }),
+    const rawFrom = firstRawDay(now);
+    const [visits, rolled, questions, dropped] = await Promise.all([
+      findVisits(this.prisma, { startedAt: { gte: rawFrom } }),
+      this.prisma.dailyVisits.findMany({ where: { day: { gte: firstTrendDay(now) } } }),
       this.prisma.askLog.findMany({
-        where: { createdAt: { gte: kept } },
+        where: { createdAt: { gte: rawFrom } },
         select: { createdAt: true, refused: true },
       }),
-      this.prisma.droppedEvents.findMany({ where: { day: { gte: kept } } }),
+      this.prisma.droppedEvents.findMany({ where: { day: { gte: rawFrom } } }),
     ]);
     return buildReport(
       {
-        kept,
+        rawFrom,
         visits,
+        rolled,
         questions,
         dropped: dropped.map(({ reason, ...row }) => ({
           ...row,

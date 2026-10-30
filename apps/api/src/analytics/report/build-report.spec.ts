@@ -1,5 +1,7 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
+import type { DayTotals } from '../day-totals.js';
+import { utcDay } from '../retention.js';
 import { aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
@@ -17,22 +19,55 @@ function reportOf(
   { days = 7, ...rows }: Partial<Omit<ReportRows, 'visits'>> & { days?: number } = {},
 ) {
   return buildReport(
-    { kept: daysAgo(30), visits, questions: [], dropped: [], ...rows },
+    { rawFrom: utcDay(daysAgo(30)), visits, rolled: [], questions: [], dropped: [], ...rows },
     content,
     now,
     days,
   );
 }
 
+function rolledDays(from: string, count: number): (DayTotals & { day: Date })[] {
+  return Array.from({ length: count }, (_, index) => ({
+    day: new Date(new Date(from).getTime() + index * 24 * 60 * 60 * 1000),
+    visits: 1,
+    pageViews: 2,
+    phoneVisits: 0,
+    quickExits: 0,
+    visitSeconds: [10],
+  }));
+}
+
 describe('buildReport', () => {
-  it('compares the period with the one before only while the rows of that one are kept', () => {
-    const visits = [
-      aVisit([aView()], { startedAt: daysAgo(1) }),
-      aVisit([aView()], { startedAt: daysAgo(10) }),
-    ];
-    expect(reportOf(visits, { days: 7 }).overview.current.visits).toBe(1);
-    expect(reportOf(visits, { days: 15 }).overview.previous?.visits).toBe(0);
-    expect(reportOf(visits, { days: 16 }).overview.previous).toBeNull();
+  it('counts the period in whole UTC days, today so far included', () => {
+    const report = reportOf(
+      [
+        aVisit([aView()], { startedAt: new Date('2026-10-24T00:30:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-23T23:30:00Z') }),
+      ],
+      { days: 7 },
+    );
+    expect(report.period.from).toEqual(new Date('2026-10-24T00:00:00Z'));
+    expect(report.overview.current.visits).toBe(1);
+    expect(report.overview.previous?.visits).toBe(1);
+  });
+
+  it('compares the period with the days before it, reading rolled days where the raw ones are gone', () => {
+    const report = reportOf(
+      [aVisit([aView({ activeSeconds: 30 })], { startedAt: new Date('2026-09-30T10:00:00Z') })],
+      { days: 30, rolled: rolledDays('2026-09-01', 29) },
+    );
+    expect(report.overview.previous).toEqual({
+      visits: 30,
+      pageViews: 59,
+      medianVisitSeconds: 10,
+      phoneVisits: 0,
+      quickExits: 0,
+    });
+  });
+
+  it('has nothing to compare with when a day before the period was never collected', () => {
+    const report = reportOf([], { days: 30, rolled: rolledDays('2026-09-02', 28) });
+    expect(report.overview.previous).toBeNull();
   });
 
   it("adds up a visit's seconds over its pages and counts one short page as a quick exit", () => {
@@ -60,7 +95,7 @@ describe('buildReport', () => {
     expect(report.overview.current.quickExits).toBe(1);
   });
 
-  it('marks the weeks at either end of the kept days as partial', () => {
+  it('starts the weeks at the first collected day and marks the incomplete ones as partial', () => {
     const report = reportOf([aVisit([aView()], { startedAt: daysAgo(3) })]);
     expect(report.weeks.map(({ start, partial, visits }) => [start, partial, visits])).toEqual([
       ['2026-09-28', true, 0],
@@ -69,6 +104,15 @@ describe('buildReport', () => {
       ['2026-10-19', false, 0],
       ['2026-10-26', true, 1],
     ]);
+  });
+
+  it('goes back 12 weeks at most, adding rolled days to raw ones', () => {
+    const report = reportOf([aVisit([aView()], { startedAt: daysAgo(3) })], {
+      rolled: rolledDays('2026-07-01', 91),
+    });
+    expect(report.weeks).toHaveLength(12);
+    expect(report.weeks[0]).toMatchObject({ start: '2026-08-10', partial: false, visits: 7 });
+    expect(report.weeks.at(-1)).toMatchObject({ start: '2026-10-26', partial: true, visits: 1 });
   });
 
   it('takes the source of a visit from its landing page only', () => {
@@ -248,19 +292,19 @@ describe('buildReport', () => {
     ]);
   });
 
-  it('adds up the dropped events per day from the first day of the period', () => {
+  it('adds up the dropped events of each UTC day in the period', () => {
     const report = reportOf([], {
       days: 2,
       dropped: [
         { day: new Date('2026-10-28'), reason: 'bot', count: 5 },
         { day: new Date('2026-10-29'), reason: 'bot', count: 3 },
         { day: new Date('2026-10-29'), reason: 'limited', count: 1 },
-        { day: new Date('2026-10-27'), reason: 'bot', count: 9 },
+        { day: new Date('2026-10-30'), reason: 'bot', count: 2 },
       ],
     });
     expect(report.filter).toEqual([
-      { day: '2026-10-28', bot: 5, limited: 0 },
       { day: '2026-10-29', bot: 3, limited: 1 },
+      { day: '2026-10-30', bot: 2, limited: 0 },
     ]);
   });
 });

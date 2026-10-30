@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AnalyticsReportService } from '../src/analytics/report/analytics-report.service.js';
+import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -41,7 +42,7 @@ describe('the visitor report against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog"`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication"`;
   });
 
   it('reports a scripted visit the way it happened, from events sent to the API', async () => {
@@ -147,5 +148,48 @@ describe('the visitor report against a real database', () => {
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
     });
     expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);
+  });
+
+  it('gives a day the same totals before and after it is rolled up', async () => {
+    const reading = randomUUID();
+    at('12:00:00');
+    await send({ type: 'view', id: reading, path: '/' });
+    await send({
+      type: 'read',
+      view: reading,
+      seq: 1,
+      activeSeconds: 40,
+      maxScroll: 60,
+      blocks: {},
+    });
+    await send(
+      { type: 'view', id: randomUUID(), path: '/cv' },
+      { ip: '198.51.100.4', userAgent: iphone },
+    );
+    const weekOf = async () =>
+      (await reports.build(7)).weeks.find(({ start }) => start === '2026-09-28');
+
+    clock.current = new Date('2026-10-03T12:00:00Z');
+    const raw = await weekOf();
+    clock.current = new Date('2026-11-02T00:00:00Z');
+    await app.get(RetentionService).cleanup();
+    expect(await prisma.visit.count()).toBe(0);
+    const rolled = await weekOf();
+
+    const totals = (week: typeof raw) => ({
+      visits: week?.visits,
+      pageViews: week?.pageViews,
+      medianVisitSeconds: week?.medianVisitSeconds,
+      phoneVisits: week?.phoneVisits,
+      quickExits: week?.quickExits,
+    });
+    expect(totals(raw)).toEqual({
+      visits: 2,
+      pageViews: 2,
+      medianVisitSeconds: 0,
+      phoneVisits: 1,
+      quickExits: 1,
+    });
+    expect(totals(rolled)).toEqual(totals(raw));
   });
 });

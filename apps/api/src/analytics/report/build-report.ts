@@ -1,49 +1,67 @@
 import type { Content } from '@portfolio/content';
 import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
-import type { DropReason } from '../visit-log.service.js';
-import { qualityOf } from './quality.js';
+import { dayTotals, type DayTotals } from '../day-totals.js';
+import { nextDay, utcDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
-import { inOrder, isQuickExit, secondsOf, type Visit } from '../visits.js';
+import type { DropReason } from '../visit-log.service.js';
+import { inOrder, type Visit } from '../visits.js';
+import { qualityOf } from './quality.js';
 import { readSeconds, type Report, type Totals, type Week } from './report.js';
 import type { ReportRows } from './rows.js';
 
 const dayMs = 24 * 60 * 60 * 1000;
 const weekMs = 7 * dayMs;
 const journeyLength = 3;
+const trendWeeks = 12;
 
 function dayOf(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function mondayOf(date: Date): number {
-  const midnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return midnight - ((date.getUTCDay() + 6) % 7) * dayMs;
+function daysAfter(day: Date, count: number): Date {
+  return new Date(day.getTime() + count * dayMs);
 }
 
-function startedBetween(visits: readonly Visit[], from: number, to: number): Visit[] {
-  return visits.filter(({ startedAt }) => startedAt.getTime() >= from && startedAt.getTime() < to);
+function mondayOf(day: Date): Date {
+  return daysAfter(day, -((day.getUTCDay() + 6) % 7));
 }
 
-function totalsOf(visits: readonly Visit[]): Totals {
+export function firstTrendDay(now: Date): Date {
+  return new Date(mondayOf(utcDay(now)).getTime() - (trendWeeks - 1) * weekMs);
+}
+
+function startedBetween(visits: readonly Visit[], from: Date, to: Date): Visit[] {
+  return visits.filter(({ startedAt }) => startedAt >= from && startedAt < to);
+}
+
+function sumOf(days: readonly DayTotals[]): Totals {
+  const total = (count: (day: DayTotals) => number) =>
+    days.reduce((sum, day) => sum + count(day), 0);
   return {
-    visits: visits.length,
-    pageViews: visits.reduce((total, { views }) => total + views.length, 0),
-    medianVisitSeconds: median(visits.map(secondsOf)),
-    phoneVisits: visits.filter(({ device }) => device === 'phone').length,
-    quickExits: visits.filter(isQuickExit).length,
+    visits: total(({ visits }) => visits),
+    pageViews: total(({ pageViews }) => pageViews),
+    medianVisitSeconds: median(days.flatMap(({ visitSeconds }) => visitSeconds)),
+    phoneVisits: total(({ phoneVisits }) => phoneVisits),
+    quickExits: total(({ quickExits }) => quickExits),
   };
 }
 
-function weeksOf(visits: readonly Visit[], kept: number, now: number): Week[] {
+function collected(day: DayTotals | null): day is DayTotals {
+  return day !== null;
+}
+
+function weeksOf(totalsOn: (day: Date) => DayTotals | null, today: Date): Week[] {
   const weeks: Week[] = [];
-  for (let start = mondayOf(new Date(kept)); start < now; start += weekMs) {
-    weeks.push({
-      start: dayOf(new Date(start)),
-      partial: start < kept || start + weekMs > now,
-      ...totalsOf(startedBetween(visits, start, start + weekMs)),
-    });
+  for (let start = firstTrendDay(today); start <= today; start = daysAfter(start, 7)) {
+    const days = Array.from({ length: 7 }, (_, index) => daysAfter(start, index)).filter(
+      (day) => day <= today,
+    );
+    const known = days.map(totalsOn).filter(collected);
+    if (known.length > 0 || weeks.length > 0) {
+      weeks.push({ start: dayOf(start), partial: known.length < 7, ...sumOf(known) });
+    }
   }
   return weeks;
 }
@@ -146,10 +164,8 @@ function linksOf(visits: readonly Visit[], content: Content): Report['links'] {
   };
 }
 
-function askOf(questions: ReportRows['questions'], from: number, now: number): Report['ask'] {
-  const asked = questions.filter(
-    ({ createdAt }) => createdAt.getTime() >= from && createdAt.getTime() < now,
-  );
+function askOf(questions: ReportRows['questions'], from: Date, now: Date): Report['ask'] {
+  const asked = questions.filter(({ createdAt }) => createdAt >= from && createdAt < now);
   const refused = (rows: typeof asked) => rows.filter((row) => row.refused).length;
   return {
     questions: asked.length,
@@ -170,12 +186,11 @@ function audienceOf(visits: readonly Visit[]): Report['audience'] {
   };
 }
 
-function filterOf(dropped: ReportRows['dropped'], from: number): Report['filter'] {
-  const firstDay = dayOf(new Date(from));
+function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] {
   const droppedFor = (rows: typeof dropped, reason: DropReason) =>
     rows.filter((row) => row.reason === reason).reduce((total, { count }) => total + count, 0);
   return rankedGroups(
-    dropped.filter(({ day }) => dayOf(day) >= firstDay),
+    dropped.filter(({ day }) => day >= from),
     ({ day }) => dayOf(day),
   )
     .map(([day, rows]) => ({
@@ -187,26 +202,31 @@ function filterOf(dropped: ReportRows['dropped'], from: number): Report['filter'
 }
 
 export function buildReport(rows: ReportRows, content: Content, now: Date, days: number): Report {
-  const to = now.getTime();
-  const from = to - days * dayMs;
-  const previousFrom = from - days * dayMs;
-  const kept = rows.kept.getTime();
+  const today = utcDay(now);
+  const from = daysAfter(today, 1 - days);
   const everyVisit = rows.visits.flatMap(inOrder);
-  const visits = startedBetween(everyVisit, from, to);
+  const visits = startedBetween(everyVisit, from, now);
+  const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
+  const totalsOn = (day: Date): DayTotals | null =>
+    day >= rows.rawFrom
+      ? dayTotals(startedBetween(everyVisit, day, nextDay(day)))
+      : (rolled.get(day.getTime()) ?? null);
+  const before = Array.from({ length: days }, (_, index) =>
+    totalsOn(daysAfter(from, index - days)),
+  );
   return {
-    period: { from: new Date(from), to: now, days },
+    period: { from, to: now, days },
     overview: {
-      current: totalsOf(visits),
-      previous:
-        previousFrom >= kept ? totalsOf(startedBetween(everyVisit, previousFrom, from)) : null,
+      current: sumOf([dayTotals(visits)]),
+      previous: before.every(collected) ? sumOf(before) : null,
     },
-    weeks: weeksOf(everyVisit, kept, to),
+    weeks: weeksOf(totalsOn, today),
     ...sourcesOf(visits),
     ...pathsOf(visits),
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, content),
-    ask: askOf(rows.questions, from, to),
+    ask: askOf(rows.questions, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
