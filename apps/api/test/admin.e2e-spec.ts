@@ -70,12 +70,16 @@ describe('admin sign-in against a real database', () => {
     expect(used.body).toEqual(unknown.body);
   });
 
-  it('starts one session when the same link is spent twice at once', async () => {
+  it('starts one session when eight callers spend the same link at once', async () => {
     const link = await sessions.link();
 
-    const statuses = (await Promise.all([signIn(link), signIn(link)])).map(({ status }) => status);
+    const answers = await Promise.all(
+      Array.from({ length: 8 }, (_, caller) => signIn(link, `198.51.100.${String(caller)}`)),
+    );
 
-    expect(statuses.sort()).toEqual([201, 404]);
+    const statuses = answers.map(({ status }) => status);
+    expect(statuses.filter((status) => status === 201)).toHaveLength(1);
+    expect(statuses.filter((status) => status === 404)).toHaveLength(7);
     expect(await prisma.adminSession.count()).toBe(1);
   });
 
