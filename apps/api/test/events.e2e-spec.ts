@@ -204,7 +204,7 @@ describe('POST /events against a real database', () => {
     const old = aView();
     await send(app, old).expect(204);
     await send(app, { type: 'click', view: old.id, href: '/cv.pdf' }).expect(204);
-    await send(app, { type: 'error', view: old.id, message: 'x', source: 'external' }).expect(204);
+    await send(app, { type: 'error', view: old.id, message: 'x', source: '/a.js' }).expect(204);
     clock.current = new Date('2026-10-03T12:00:00Z');
     await send(app, aView({ path: '/cv' }), { ip: '198.51.100.4' }).expect(204);
 

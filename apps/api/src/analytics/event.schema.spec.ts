@@ -98,16 +98,16 @@ describe('eventSchema', () => {
   it('takes an error with its place, but not a long message or a line past 32 bits', () => {
     const error = { type: 'error', view, message: 'x is undefined', source: '/_next/static/a.js' };
     expect(schema.safeParse({ ...error, line: 3, column: 14 }).success).toBe(true);
-    expect(schema.safeParse({ ...error, source: 'external' }).success).toBe(true);
     expect(schema.safeParse({ ...error, message: 'x'.repeat(201) }).success).toBe(false);
     expect(schema.safeParse({ ...error, line: 3_000_000_000 }).success).toBe(false);
   });
 
-  it('takes the source of an error as a path on this site, or only the word external', () => {
+  it('takes the source of an error only as a path on this site', () => {
     const error = { type: 'error', view, message: 'x is undefined' };
     for (const source of [
       'https://najafov.dev/_next/static/a.js?r=memh',
       'chrome-extension://abcdefghijklmnop/content.js',
+      'external',
       '//cdn.elsewhere.example/a.js',
     ]) {
       expect(schema.safeParse({ ...error, source }).success).toBe(false);

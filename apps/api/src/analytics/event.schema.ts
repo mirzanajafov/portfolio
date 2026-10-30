@@ -74,7 +74,7 @@ export function eventSchema(links: ReadonlySet<string>) {
       type: z.literal('error'),
       view: pageView,
       message: z.string().max(errorMessageMaxLength),
-      source: z.union([z.literal('external'), path]),
+      source: path,
       line: z.int32().min(0).optional(),
       column: z.int32().min(0).optional(),
     }),
