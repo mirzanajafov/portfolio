@@ -223,7 +223,7 @@ describe('VisitTracker', () => {
     expect((await sent()).at(-1)).toMatchObject({ type: 'read', blocks: { experience: 3 } });
   });
 
-  it('takes a scroll as input once the page has settled, but not the scroll the browser makes on arrival', async () => {
+  it('takes scrolling as depth only, and a wheel, tap, key or touch as someone being there', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
     vi.stubGlobal('IntersectionObserver', FakeObserver);
     render(
@@ -240,7 +240,7 @@ describe('VisitTracker', () => {
       vi.advanceTimersByTime(3_000);
     });
     expect((await sent()).filter(({ type }) => type === 'read')).toEqual([]);
-    fireEvent.scroll(window);
+    fireEvent.wheel(window);
     act(() => {
       vi.advanceTimersByTime(3_000);
     });

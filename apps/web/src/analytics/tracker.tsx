@@ -13,9 +13,8 @@ import { Component, useCallback, useEffect, useRef, type ReactNode } from 'react
 import { Reading } from './reading';
 
 const maxErrors = 5;
-const settleMs = 1_000;
 
-type PageView = { id: string; started: number; reading: Reading; seq: number; errors: number };
+type PageView = { id: string; reading: Reading; seq: number; errors: number };
 
 function send(event: VisitEvent): void {
   const body = new Blob([JSON.stringify(event)], { type: 'application/json' });
@@ -44,7 +43,6 @@ function pathOf(path: string): string {
 function begin(withReferrer: boolean, lastInput: number | undefined): PageView {
   const view = {
     id: crypto.randomUUID(),
-    started: performance.now(),
     reading: new Reading(() => performance.now(), lastInput),
     seq: 0,
     errors: 0,
@@ -159,13 +157,7 @@ function Tracker() {
       lastInput.current = performance.now();
       current.current?.reading.input();
     };
-    const onScroll = () => {
-      const view = current.current;
-      if (view && performance.now() - view.started > settleMs) {
-        onInput();
-      }
-      view?.reading.scrolled(scrollDepth());
-    };
+    const onScroll = () => current.current?.reading.scrolled(scrollDepth());
     const onVisibility = () => {
       const view = current.current;
       const visible = document.visibilityState === 'visible';
