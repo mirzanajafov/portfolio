@@ -26,7 +26,7 @@ const sourceNames: Record<Source, string> = {
 
 const lcpText = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
 const inpText = (ms: number) => `${String(ms)} ms`;
-const clsText = (score: number) => score.toFixed(2);
+const clsText = (score: number) => score.toFixed(3);
 
 function counted(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? '' : 's'}`;
@@ -67,6 +67,10 @@ function table(cells: readonly (readonly string[])[]): string[] {
   );
 }
 
+function shownOf<T>(rows: readonly T[], all: boolean): readonly T[] {
+  return all ? rows : rows.slice(0, listLength);
+}
+
 function section(
   title: string,
   columns: readonly string[],
@@ -76,7 +80,7 @@ function section(
   if (rows.length === 0) {
     return [`${title}: none`];
   }
-  const shown = all ? rows : rows.slice(0, listLength);
+  const shown = shownOf(rows, all);
   const hidden = rows.length - shown.length;
   return [
     ...table([[title, ...columns], ...shown]),
@@ -266,7 +270,7 @@ function quality({ quality }: Report, all: boolean): string[][] {
         ]),
         all,
       ),
-      ...(quality.vitals.some(({ lcp, inp, cls }) =>
+      ...(shownOf(quality.vitals, all).some(({ lcp, inp, cls }) =>
         [lcp, inp, cls].some((value) => value?.missesMyBar),
       )
         ? [

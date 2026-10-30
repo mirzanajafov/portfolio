@@ -252,7 +252,7 @@ describe('buildReport', () => {
     ]);
   });
 
-  it("rates a p75 right at Google's limit as good, but as missing my bar, which asks for under", () => {
+  it('rates a p75 right at my own bar as missing it, even where Google rates it good', () => {
     const report = reportOf([aVisit([aView({ lcpMs: 2000, inpMs: 200, cls: 0.05 })])]);
     expect(report.quality.vitals[0]).toMatchObject({
       lcp: { p75: 2000, rating: 'good', missesMyBar: true },

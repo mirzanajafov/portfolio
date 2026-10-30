@@ -166,10 +166,23 @@ describe('reportText', () => {
       }),
       { all: false },
     );
-    expect(text).toMatch(/^\/ +phone +2\.10 s good\* \(4\) +- +0\.02 good \(4\)$/m);
+    expect(text).toMatch(/^\/ +phone +2\.10 s good\* \(4\) +- +0\.020 good \(4\)$/m);
     expect(text).toContain(
-      '* misses my own bar: LCP under 2.00 s, INP under 200 ms, CLS under 0.05',
+      '* misses my own bar: LCP under 2.00 s, INP under 200 ms, CLS under 0.050',
     );
+  });
+
+  it('leaves out the note about my own bar when no vital on screen misses it', () => {
+    const vitals: Report['quality']['vitals'] = Array.from({ length: 11 }, (_, index) => ({
+      path: `/page-${String(index + 1)}`,
+      device: 'desktop',
+      lcp: { p75: 900, samples: 11 - index, rating: 'good', missesMyBar: index === 10 },
+      inp: null,
+      cls: null,
+    }));
+    const report = aReport({ quality: { vitals, errors: [], notFound: [] } });
+    expect(reportText(report, { all: false })).not.toContain('misses my own bar');
+    expect(reportText(report, { all: true })).toContain('misses my own bar');
   });
 
   it('leaves out the note about my own bar when no vital misses it', () => {
