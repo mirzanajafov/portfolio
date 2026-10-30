@@ -1,0 +1,37 @@
+export type ViewRow = {
+  createdAt: Date;
+  path: string;
+  notFound: boolean;
+  referrerHost: string | null;
+  activeSeconds: number;
+  maxScroll: number;
+  blocks: Record<string, number>;
+  lcpMs: number | null;
+  inpMs: number | null;
+  cls: number | null;
+  clicks: { href: string }[];
+  errors: { message: string; source: string }[];
+};
+
+export type VisitRow = {
+  startedAt: Date;
+  device: string;
+  browser: string;
+  country: string | null;
+  views: ViewRow[];
+};
+
+export type ReportRows = {
+  visits: VisitRow[];
+  questions: { createdAt: Date; refused: boolean }[];
+  dropped: { day: Date; reason: string; count: number }[];
+};
+
+export type Visit = VisitRow & { landing: ViewRow; exit: ViewRow };
+
+export function inOrder({ views, ...visit }: VisitRow): Visit[] {
+  const sorted = views.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  const [landing] = sorted;
+  const exit = sorted.at(-1);
+  return landing && exit ? [{ ...visit, views: sorted, landing, exit }] : [];
+}

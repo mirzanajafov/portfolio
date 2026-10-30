@@ -1,0 +1,74 @@
+export type Source =
+  'google' | 'search' | 'linkedin' | 'github' | 'jobs' | 'demos' | 'direct' | 'other';
+
+export type Totals = {
+  visits: number;
+  pageViews: number;
+  medianVisitSeconds: number | null;
+  phoneVisits: number;
+  quickExits: number;
+};
+
+export type Week = Totals & { start: string; partial: boolean };
+
+export type Rating = 'good' | 'needs improvement' | 'poor';
+
+export type Vital = { p75: number; samples: number; rating: Rating; overMyBar: boolean };
+
+export type Report = {
+  period: { from: Date; to: Date; days: number };
+  overview: { current: Totals; previous: Totals | null };
+  weeks: Week[];
+  sources: { source: Source; visits: number }[];
+  otherSites: { host: string; visits: number }[];
+  entries: { path: string; visits: number }[];
+  journeys: { paths: string[]; visits: number }[];
+  pages: {
+    path: string;
+    views: number;
+    visits: number;
+    medianSeconds: number | null;
+    medianScroll: number | null;
+    exits: number;
+  }[];
+  reading: {
+    path: string;
+    views: number;
+    medianSeconds: number | null;
+    medianScroll: number | null;
+    blocks: { block: string; readers: number; medianSeconds: number | null }[];
+  }[];
+  links: {
+    cvViews: number;
+    cvPdf: { from: string; clicks: number }[];
+    outbound: { label: string; clicks: number }[];
+  };
+  ask: {
+    questions: number;
+    refused: number;
+    days: { day: string; questions: number; refused: number }[];
+  };
+  audience: {
+    devices: { name: string; visits: number }[];
+    browsers: { name: string; visits: number }[];
+    countries: { name: string; visits: number }[];
+  };
+  quality: {
+    vitals: {
+      path: string;
+      device: string;
+      lcp: Vital | null;
+      inp: Vital | null;
+      cls: Vital | null;
+    }[];
+    errors: {
+      message: string;
+      source: string;
+      count: number;
+      paths: string[];
+      browsers: string[];
+    }[];
+    notFound: { path: string; views: number; referrers: string[] }[];
+  };
+  filter: { day: string; bot: number; limited: number }[];
+};
