@@ -1,5 +1,6 @@
 import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
+import { dayOf } from '../analytics/days.js';
 import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
 import type { Source } from '../analytics/sources.js';
 import { quickExitSeconds } from '../analytics/visits.js';
@@ -25,10 +26,6 @@ const clsText = (score: number) => score.toFixed(3);
 
 function counted(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? '' : 's'}`;
-}
-
-function dayOf(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function bakuTime(date: Date): string {

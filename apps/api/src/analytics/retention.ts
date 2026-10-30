@@ -1,17 +1,8 @@
 import { analyticsDays, dailyTotalsMonths } from '@portfolio/content/analytics';
-
-const dayMs = 24 * 60 * 60 * 1000;
-
-export function utcDay(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-export function nextDay(day: Date): Date {
-  return new Date(day.getTime() + dayMs);
-}
+import { daysAfter, utcDay } from './days.js';
 
 export function firstRawDay(now: Date): Date {
-  return utcDay(new Date(now.getTime() - analyticsDays * dayMs));
+  return daysAfter(utcDay(now), -analyticsDays);
 }
 
 export function firstDailyDay(now: Date): Date {

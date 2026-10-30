@@ -2,7 +2,8 @@ import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@ne
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { firstDailyDay, firstRawDay, nextDay, utcDay } from './retention.js';
+import { daysAfter, utcDay } from './days.js';
+import { firstDailyDay, firstRawDay } from './retention.js';
 import { rollUp } from './roll-up.js';
 import { findVisits } from './visit-rows.js';
 
@@ -29,7 +30,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
   async cleanup(): Promise<void> {
     const now = this.clock.now();
     const rawFrom = firstRawDay(now);
-    for (let day = await this.firstUnrolledDay(rawFrom); day < rawFrom; day = nextDay(day)) {
+    for (let day = await this.firstUnrolledDay(rawFrom); day < rawFrom; day = daysAfter(day, 1)) {
       await this.rollUpDay(day);
     }
     await this.deleteTotalsBefore(firstDailyDay(now));
@@ -41,7 +42,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       select: { day: true },
     });
     if (newest) {
-      return nextDay(newest.day);
+      return daysAfter(newest.day, 1);
     }
     const oldest = await this.prisma.visit.findFirst({
       orderBy: { startedAt: 'asc' },
@@ -51,7 +52,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async rollUpDay(day: Date): Promise<void> {
-    const during = { startedAt: { gte: day, lt: nextDay(day) } };
+    const during = { startedAt: { gte: day, lt: daysAfter(day, 1) } };
     await this.prisma.$transaction(async (tx) => {
       const { totals, pages, sources, countries, clicks, applications } = rollUp(
         await findVisits(tx, during),

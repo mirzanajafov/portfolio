@@ -2,7 +2,7 @@ import type { Content } from '@portfolio/content';
 import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
-import { nextDay, utcDay } from '../retention.js';
+import { dayOf, daysAfter, mondayOf, utcDay } from '../days.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
@@ -11,25 +11,11 @@ import { qualityOf } from './quality.js';
 import { readSeconds, type Report, type Totals, type Week } from './report.js';
 import type { ReportRows } from './rows.js';
 
-const dayMs = 24 * 60 * 60 * 1000;
-const weekMs = 7 * dayMs;
 const journeyLength = 3;
 const trendWeeks = 12;
 
-function dayOf(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function daysAfter(day: Date, count: number): Date {
-  return new Date(day.getTime() + count * dayMs);
-}
-
-function mondayOf(day: Date): Date {
-  return daysAfter(day, -((day.getUTCDay() + 6) % 7));
-}
-
 export function firstTrendDay(now: Date): Date {
-  return new Date(mondayOf(utcDay(now)).getTime() - (trendWeeks - 1) * weekMs);
+  return daysAfter(mondayOf(now), -7 * (trendWeeks - 1));
 }
 
 function startedBetween(visits: readonly Visit[], from: Date, to: Date): Visit[] {
@@ -209,7 +195,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
     day >= rows.rawFrom
-      ? dayTotals(startedBetween(everyVisit, day, nextDay(day)))
+      ? dayTotals(startedBetween(everyVisit, day, daysAfter(day, 1)))
       : (rolled.get(day.getTime()) ?? null);
   const before = Array.from({ length: days }, (_, index) =>
     totalsOn(daysAfter(from, index - days)),
