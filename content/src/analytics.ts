@@ -1,3 +1,5 @@
+import type { CaseStudy, Content } from './schema.ts';
+
 export const analyticsDays = 30;
 export const refCode = /^[a-z0-9]{3,16}$/;
 export const errorMessageMaxLength = 200;
@@ -29,3 +31,23 @@ export type VisitEvent =
       line?: number;
       column?: number;
     };
+
+function caseStudyBlocks({ demo, demoCaption, decisions }: CaseStudy): string[] {
+  return [
+    'problem',
+    ...(demo && demoCaption ? ['demo'] : []),
+    ...decisions.map((_, index) => `decision-${String(index + 1)}`),
+    'proof',
+    'next',
+  ];
+}
+
+export function readingBlocks({ projects }: Content): Map<string, string[]> {
+  const blocks = new Map([['/', [...projects.map(({ slug }) => slug), 'ask', 'experience']]]);
+  for (const { slug, caseStudy } of projects) {
+    if (caseStudy) {
+      blocks.set(`/projects/${slug}`, caseStudyBlocks(caseStudy));
+    }
+  }
+  return blocks;
+}
