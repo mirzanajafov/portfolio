@@ -70,6 +70,10 @@ function item(text: string): ReportPart {
   return { kind: 'line', text: printable(text), indent: true };
 }
 
+function applicationLine(text: string, code: string): ReportPart {
+  return { kind: 'application', text: printable(text), code };
+}
+
 function table(rows: readonly (readonly string[])[]): ReportPart {
   return { kind: 'table', rows: rows.map((row) => row.map(printable)) };
 }
@@ -412,12 +416,10 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
     ...listed(guesses, all, (guess) => [item(guessText(guess))]),
     ...more(`low guesses not shown: ${String(lowHidden)}`, lowHidden, true),
   ];
-  const named = (text: string): ReportPart => ({
-    kind: 'application',
-    text: printable(text),
-    code: application.code,
-  });
-  return parts.length === 0 ? [named(`${heading}: no visits yet`)] : [named(heading), ...parts];
+  const { code } = application;
+  return parts.length === 0
+    ? [applicationLine(`${heading}: no visits yet`, code)]
+    : [applicationLine(heading, code), ...parts];
 }
 
 function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
