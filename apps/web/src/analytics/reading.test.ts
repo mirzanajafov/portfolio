@@ -18,6 +18,18 @@ describe('Reading', () => {
     expect(reading.snapshot()).toEqual({ activeSeconds: 0, maxScroll: 0, blocks: {} });
   });
 
+  it('carries on from an input made just before the page started', () => {
+    const clock = { ms: 10_000 };
+    const reading = new Reading(() => clock.ms, 9_000);
+    reading.enter('problem');
+    clock.ms += 40_000;
+    expect(reading.snapshot()).toEqual({
+      activeSeconds: 29,
+      maxScroll: 0,
+      blocks: { problem: 29 },
+    });
+  });
+
   it('counts time after an input and stops 30 s after the last one', () => {
     const { reading, wait } = aReading();
     reading.input();

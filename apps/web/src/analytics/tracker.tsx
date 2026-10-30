@@ -2,15 +2,17 @@
 
 import {
   errorMessageMaxLength,
+  webVitals,
   type VisitEvent,
   type WebVital,
 } from '@portfolio/content/analytics';
 import { usePathname } from 'next/navigation';
 import { useReportWebVitals } from 'next/web-vitals';
-import { useCallback, useEffect, useRef } from 'react';
+import { Component, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { Reading } from './reading';
 
 const maxErrors = 5;
+const maxPath = 201;
 
 type PageView = { id: string; reading: Reading; seq: number; errors: number };
 
@@ -31,10 +33,17 @@ function referrerHost(): string | undefined {
   return hostname === location.hostname ? undefined : hostname;
 }
 
-function begin(landing: boolean): PageView {
+function pathOf(path: string): string {
+  return path
+    .replace(/^\/+/, '/')
+    .replace(/[[\]^|]/g, encodeURIComponent)
+    .slice(0, maxPath);
+}
+
+function begin(withReferrer: boolean, lastInput: number | undefined): PageView {
   const view = {
     id: crypto.randomUUID(),
-    reading: new Reading(() => performance.now()),
+    reading: new Reading(() => performance.now(), lastInput),
     seq: 0,
     errors: 0,
   };
@@ -42,8 +51,8 @@ function begin(landing: boolean): PageView {
   send({
     type: 'view',
     id: view.id,
-    path: location.pathname,
-    referrer: landing ? referrerHost() : undefined,
+    path: pathOf(location.pathname),
+    referrer: withReferrer ? referrerHost() : undefined,
     ref: new URLSearchParams(location.search).get('r') ?? undefined,
     notFound: document.querySelector('[data-not-found]') !== null,
   });
@@ -59,22 +68,33 @@ function outbound(href: string): boolean {
   return href === '/cv.pdf' || new URL(href, location.href).origin !== location.origin;
 }
 
-function sourceOf(file: string): string {
+function ownScript(file: string): string | undefined {
   if (!file) {
-    return location.pathname;
+    return undefined;
   }
   const url = new URL(file, location.href);
-  return url.origin === location.origin ? url.pathname : 'external';
+  return url.origin === location.origin ? url.pathname : undefined;
+}
+
+function ownFrame(stack: string | undefined): string | undefined {
+  for (const [, file = ''] of stack?.matchAll(/(https?:\/\/[^\s()@]+?):\d+:\d+/g) ?? []) {
+    const path = ownScript(file);
+    if (path) {
+      return path;
+    }
+  }
+  return undefined;
 }
 
 function isVital(name: string): name is WebVital {
-  return name === 'LCP' || name === 'INP' || name === 'CLS';
+  return webVitals.some((vital) => vital === name);
 }
 
-export function VisitTracker() {
+function Tracker() {
   const pathname = usePathname();
   const current = useRef<PageView | null>(null);
   const landing = useRef<string | null>(null);
+  const lastInput = useRef<number | undefined>(undefined);
 
   const reportVital = useCallback(({ name, value }: { name: string; value: number }) => {
     if (landing.current && isVital(name)) {
@@ -84,32 +104,47 @@ export function VisitTracker() {
   useReportWebVitals(reportVital);
 
   useEffect(() => {
-    current.current = begin(landing.current === null);
-    landing.current ??= current.current.id;
     const observer = new IntersectionObserver(
       (entries) => {
-        const view = current.current;
         for (const entry of entries) {
           const block = entry.target.getAttribute('data-read');
-          if (!view || !block) {
-            continue;
-          }
-          if (entry.isIntersecting) {
-            view.reading.enter(block);
-          } else {
-            view.reading.leave(block);
-            if (view.reading.newlyRead()) {
-              flush(view);
-            }
+          if (block && entry.isIntersecting) {
+            current.current?.reading.enter(block);
+          } else if (block) {
+            current.current?.reading.leave(block);
           }
         }
       },
       { rootMargin: '-25% 0px -25% 0px' },
     );
-    for (const element of document.querySelectorAll('[data-read]')) {
-      observer.observe(element);
-    }
+    const start = (landed: boolean, withReferrer: boolean) => {
+      const view = begin(withReferrer, lastInput.current);
+      current.current = view;
+      if (landed) {
+        landing.current = view.id;
+      }
+      observer.disconnect();
+      for (const element of document.querySelectorAll('[data-read]')) {
+        observer.observe(element);
+      }
+    };
+    const onPageShow = ({ persisted }: PageTransitionEvent) => {
+      if (persisted) {
+        start(true, false);
+      }
+    };
+    const timer = setInterval(() => {
+      const view = current.current;
+      if (view?.reading.newlyRead()) {
+        flush(view);
+      }
+    }, 1000);
+
+    start(landing.current === null, landing.current === null);
+    window.addEventListener('pageshow', onPageShow);
     return () => {
+      clearInterval(timer);
+      window.removeEventListener('pageshow', onPageShow);
       observer.disconnect();
       if (current.current) {
         flush(current.current);
@@ -118,11 +153,11 @@ export function VisitTracker() {
   }, [pathname]);
 
   useEffect(() => {
-    const onInput = () => current.current?.reading.input();
-    const onScroll = () => {
+    const onInput = () => {
+      lastInput.current = performance.now();
       current.current?.reading.input();
-      current.current?.reading.scrolled(scrollDepth());
     };
+    const onScroll = () => current.current?.reading.scrolled(scrollDepth());
     const onVisibility = () => {
       const view = current.current;
       const visible = document.visibilityState === 'visible';
@@ -136,11 +171,6 @@ export function VisitTracker() {
         flush(current.current);
       }
     };
-    const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        current.current = begin(false);
-      }
-    };
     const onClick = (event: MouseEvent) => {
       const view = current.current;
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
@@ -149,7 +179,7 @@ export function VisitTracker() {
         send({ type: 'click', view: view.id, href });
       }
     };
-    const report = (message: string, file: string, line?: number, column?: number) => {
+    const report = (message: string, source: string, line?: number, column?: number) => {
       const view = current.current;
       if (!view || view.errors >= maxErrors) {
         return;
@@ -159,26 +189,31 @@ export function VisitTracker() {
         type: 'error',
         view: view.id,
         message: message.slice(0, errorMessageMaxLength),
-        source: sourceOf(file),
+        source,
         line,
         column,
       });
     };
     const onError = (event: ErrorEvent) => {
-      report(event.message, event.filename, event.lineno, event.colno);
+      const source = ownScript(event.filename);
+      if (source) {
+        report(event.message, source, event.lineno, event.colno);
+      }
     };
     const onRejection = ({ reason }: PromiseRejectionEvent) => {
-      report(reason instanceof Error ? reason.message : String(reason), '');
+      const source = reason instanceof Error ? ownFrame(reason.stack) : undefined;
+      if (reason instanceof Error && source) {
+        report(reason.message, source);
+      }
     };
 
-    const inputs = ['pointerdown', 'keydown', 'touchstart'] as const;
+    const inputs = ['wheel', 'pointerdown', 'keydown', 'touchstart'] as const;
     for (const name of inputs) {
       window.addEventListener(name, onInput, { passive: true });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onPageHide);
-    window.addEventListener('pageshow', onPageShow);
     document.addEventListener('click', onClick, true);
     document.addEventListener('auxclick', onClick, true);
     window.addEventListener('error', onError);
@@ -190,7 +225,6 @@ export function VisitTracker() {
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
-      window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('auxclick', onClick, true);
       window.removeEventListener('error', onError);
@@ -199,4 +233,24 @@ export function VisitTracker() {
   }, []);
 
   return null;
+}
+
+class Contained extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+export function VisitTracker() {
+  return (
+    <Contained>
+      <Tracker />
+    </Contained>
+  );
 }

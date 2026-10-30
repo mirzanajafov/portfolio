@@ -1,6 +1,7 @@
+import { maxSeconds } from '@portfolio/content/analytics';
+
 const idleMs = 30_000;
 const readMs = 2_000;
-const maxSeconds = 86_400;
 
 export type ReadingSnapshot = {
   activeSeconds: number;
@@ -20,8 +21,12 @@ export class Reading {
   private visible = true;
   private maxScroll = 0;
 
-  constructor(private readonly now: () => number) {
+  constructor(
+    private readonly now: () => number,
+    lastInput?: number,
+  ) {
     this.lastTick = now();
+    this.lastInput = lastInput;
   }
 
   input(): void {
