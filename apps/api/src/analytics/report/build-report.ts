@@ -3,15 +3,13 @@ import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
 import type { DropReason } from '../visit-log.service.js';
 import { qualityOf } from './quality.js';
-import type { Report, Totals, Week } from './report.js';
+import { quickExitSeconds, readSeconds, type Report, type Totals, type Week } from './report.js';
 import { inOrder, type ReportRows, type Visit } from './rows.js';
 import { sourceOf } from './sources.js';
-import { groupBy, median, tally } from './statistics.js';
+import { median, rankedGroups, tally } from './statistics.js';
 
 const dayMs = 24 * 60 * 60 * 1000;
 const weekMs = 7 * dayMs;
-const readSeconds = 2;
-const quickExitSeconds = 10;
 const journeyLength = 3;
 
 function dayOf(date: Date): string {
@@ -38,7 +36,7 @@ function totalsOf(visits: readonly Visit[]): Totals {
     medianVisitSeconds: median(visits.map(secondsOf)),
     phoneVisits: visits.filter(({ device }) => device === 'phone').length,
     quickExits: visits.filter(
-      (visit) => visit.views.length === 1 && secondsOf(visit) < quickExitSeconds,
+      (visit) => visit.pages.length === 1 && secondsOf(visit) < quickExitSeconds,
     ).length,
   };
 }
@@ -55,21 +53,41 @@ function weeksOf(visits: readonly Visit[], kept: number, now: number): Week[] {
   return weeks;
 }
 
-function journeyOf({ views }: Visit): string {
-  return views
-    .map(({ path }) => path)
-    .filter((path, index, paths) => path !== paths[index - 1])
-    .slice(0, journeyLength)
-    .join(' ');
+function sourcesOf(visits: readonly Visit[]): Pick<Report, 'sources' | 'otherSites'> {
+  const landings = visits.map(({ landing, browser }) => ({
+    host: landing.referrerHost,
+    source: sourceOf(landing.referrerHost, browser),
+  }));
+  const otherHosts = landings.flatMap(({ host, source }) =>
+    source === 'other' && host !== null ? [host] : [],
+  );
+  return {
+    sources: tally(landings, ({ source }) => source).map(([source, count]) => ({
+      source,
+      visits: count,
+    })),
+    otherSites: tally(otherHosts, (host) => host).map(([host, count]) => ({ host, visits: count })),
+  };
+}
+
+function pathsOf(visits: readonly Visit[]): Pick<Report, 'entries' | 'journeys'> {
+  const journeys = visits.map(({ pages }) => pages.slice(0, journeyLength));
+  return {
+    entries: tally(visits, ({ landing }) => landing.path).map(([path, count]) => ({
+      path,
+      visits: count,
+    })),
+    journeys: rankedGroups(journeys, (paths) => JSON.stringify(paths)).map(([, group]) => ({
+      paths: group[0],
+      visits: group.length,
+    })),
+  };
 }
 
 function pagesOf(visits: readonly Visit[]): Report['pages'] {
-  const found = visits.flatMap(({ views }) => views.filter(({ notFound }) => !notFound));
   const visitsWith = new Map(
     tally(
-      visits.flatMap(({ views }) => [
-        ...new Set(views.filter(({ notFound }) => !notFound).map(({ path }) => path)),
-      ]),
+      visits.flatMap(({ found }) => [...new Set(found.map(({ path }) => path))]),
       (path) => path,
     ),
   );
@@ -79,7 +97,10 @@ function pagesOf(visits: readonly Visit[]): Report['pages'] {
       ({ exit }) => exit.path,
     ),
   );
-  return groupBy(found, ({ path }) => path).map(([path, views]) => ({
+  return rankedGroups(
+    visits.flatMap(({ found }) => found),
+    ({ path }) => path,
+  ).map(([path, views]) => ({
     path,
     views: views.length,
     visits: visitsWith.get(path) ?? 0,
@@ -90,7 +111,7 @@ function pagesOf(visits: readonly Visit[]): Report['pages'] {
 }
 
 function readingOf(visits: readonly Visit[], content: Content): Report['reading'] {
-  const found = visits.flatMap(({ views }) => views.filter(({ notFound }) => !notFound));
+  const found = visits.flatMap(({ found }) => found);
   return [...readingBlocks(content)].flatMap(([path, blocks]) => {
     const views = found.filter((view) => view.path === path);
     if (views.length === 0) {
@@ -138,9 +159,19 @@ function askOf(questions: ReportRows['questions'], from: number, now: number): R
   return {
     questions: asked.length,
     refused: refused(asked),
-    days: groupBy(asked, ({ createdAt }) => dayOf(createdAt))
+    days: rankedGroups(asked, ({ createdAt }) => dayOf(createdAt))
       .map(([day, rows]) => ({ day, questions: rows.length, refused: refused(rows) }))
       .toSorted((a, b) => a.day.localeCompare(b.day)),
+  };
+}
+
+function audienceOf(visits: readonly Visit[]): Report['audience'] {
+  const counted = (pairs: [string, number][]) =>
+    pairs.map(([name, count]) => ({ name, visits: count }));
+  return {
+    devices: counted(tally(visits, ({ device }) => device)),
+    browsers: counted(tally(visits, ({ browser }) => browser)),
+    countries: counted(tally(visits, ({ country }) => country ?? 'unknown')),
   };
 }
 
@@ -148,7 +179,7 @@ function filterOf(dropped: ReportRows['dropped'], from: number): Report['filter'
   const firstDay = dayOf(new Date(from));
   const droppedFor = (rows: typeof dropped, reason: DropReason) =>
     rows.filter((row) => row.reason === reason).reduce((total, { count }) => total + count, 0);
-  return groupBy(
+  return rankedGroups(
     dropped.filter(({ day }) => dayOf(day) >= firstDay),
     ({ day }) => dayOf(day),
   )
@@ -160,10 +191,6 @@ function filterOf(dropped: ReportRows['dropped'], from: number): Report['filter'
     .toSorted((a, b) => a.day.localeCompare(b.day));
 }
 
-function counted(pairs: [string, number][]): { name: string; visits: number }[] {
-  return pairs.map(([name, visits]) => ({ name, visits }));
-}
-
 export function buildReport(rows: ReportRows, content: Content, now: Date, days: number): Report {
   const to = now.getTime();
   const from = to - days * dayMs;
@@ -171,11 +198,6 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const kept = rows.kept.getTime();
   const everyVisit = rows.visits.flatMap(inOrder);
   const visits = startedBetween(everyVisit, from, to);
-  const otherSites = visits.flatMap(({ landing, browser }) =>
-    landing.referrerHost !== null && sourceOf(landing.referrerHost, browser) === 'other'
-      ? [landing.referrerHost]
-      : [],
-  );
   return {
     period: { from: new Date(from), to: now, days },
     overview: {
@@ -184,27 +206,13 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
         previousFrom >= kept ? totalsOf(startedBetween(everyVisit, previousFrom, from)) : null,
     },
     weeks: weeksOf(everyVisit, kept, to),
-    sources: tally(visits, ({ landing, browser }) => sourceOf(landing.referrerHost, browser)).map(
-      ([source, count]) => ({ source, visits: count }),
-    ),
-    otherSites: tally(otherSites, (host) => host).map(([host, count]) => ({ host, visits: count })),
-    entries: tally(visits, ({ landing }) => landing.path).map(([path, count]) => ({
-      path,
-      visits: count,
-    })),
-    journeys: tally(visits, journeyOf).map(([journey, count]) => ({
-      paths: journey.split(' '),
-      visits: count,
-    })),
+    ...sourcesOf(visits),
+    ...pathsOf(visits),
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, content),
     ask: askOf(rows.questions, from, to),
-    audience: {
-      devices: counted(tally(visits, ({ device }) => device)),
-      browsers: counted(tally(visits, ({ browser }) => browser)),
-      countries: counted(tally(visits, ({ country }) => country ?? 'unknown')),
-    },
+    audience: audienceOf(visits),
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
   };

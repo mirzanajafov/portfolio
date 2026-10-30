@@ -84,6 +84,16 @@ describe('buildReport', () => {
     });
   });
 
+  it('counts a visit that only reloaded its one page as a quick exit', () => {
+    const report = reportOf([
+      aVisit([
+        aView({ createdAt: hoursAgo(2), activeSeconds: 3 }),
+        aView({ createdAt: hoursAgo(1), activeSeconds: 3 }),
+      ]),
+    ]);
+    expect(report.overview.current.quickExits).toBe(1);
+  });
+
   it('marks the weeks at either end of the kept days as partial', () => {
     const report = reportOf([aVisit([aView()], { startedAt: daysAgo(3) })]);
     expect(report.weeks.map(({ start, partial, visits }) => [start, partial, visits])).toEqual([

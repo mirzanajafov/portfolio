@@ -1,6 +1,6 @@
 import type { Rating, Report, Vital } from './report.js';
 import type { Visit } from './rows.js';
-import { groupBy, percentile } from './statistics.js';
+import { percentile, rankedGroups } from './statistics.js';
 
 type Bars = { good: number; poor: number; mine: number };
 
@@ -31,10 +31,10 @@ function vitalsOf(visits: readonly Visit[]): Report['quality']['vitals'] {
       .filter(({ lcpMs, inpMs, cls }) => lcpMs !== null || inpMs !== null || cls !== null)
       .map((view) => ({ device, view })),
   );
-  return groupBy(measured, ({ view }) => view.path).flatMap(([path, onPath]) =>
-    groupBy(onPath, ({ device }) => device).map(([device, here]) => ({
-      path,
-      device,
+  return rankedGroups(measured, ({ device, view }) => JSON.stringify([view.path, device])).map(
+    ([, here]) => ({
+      path: here[0].view.path,
+      device: here[0].device,
       lcp: vitalOf(
         here.flatMap(({ view }) => view.lcpMs ?? []),
         vitalBars.lcp,
@@ -47,7 +47,7 @@ function vitalsOf(visits: readonly Visit[]): Report['quality']['vitals'] {
         here.flatMap(({ view }) => view.cls ?? []),
         vitalBars.cls,
       ),
-    })),
+    }),
   );
 }
 
@@ -55,22 +55,20 @@ function errorsOf(visits: readonly Visit[]): Report['quality']['errors'] {
   const errors = visits.flatMap(({ browser, views }) =>
     views.flatMap(({ path, errors }) => errors.map((error) => ({ ...error, path, browser }))),
   );
-  return groupBy(errors, ({ source }) => source)
-    .flatMap(([source, fromSource]) =>
-      groupBy(fromSource, ({ message }) => message).map(([message, same]) => ({
-        message,
-        source,
-        count: same.length,
-        paths: [...new Set(same.map(({ path }) => path))].toSorted(),
-        browsers: [...new Set(same.map(({ browser }) => browser))].toSorted(),
-      })),
-    )
-    .toSorted((a, b) => b.count - a.count);
+  return rankedGroups(errors, ({ source, message }) => JSON.stringify([source, message])).map(
+    ([, same]) => ({
+      message: same[0].message,
+      source: same[0].source,
+      count: same.length,
+      paths: [...new Set(same.map(({ path }) => path))].toSorted(),
+      browsers: [...new Set(same.map(({ browser }) => browser))].toSorted(),
+    }),
+  );
 }
 
 function notFoundOf(visits: readonly Visit[]): Report['quality']['notFound'] {
   const missing = visits.flatMap(({ views }) => views.filter(({ notFound }) => notFound));
-  return groupBy(missing, ({ path }) => path).map(([path, views]) => ({
+  return rankedGroups(missing, ({ path }) => path).map(([path, views]) => ({
     path,
     views: views.length,
     referrers: [...new Set(views.flatMap(({ referrerHost }) => referrerHost ?? []))].toSorted(),

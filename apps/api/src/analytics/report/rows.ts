@@ -31,11 +31,23 @@ export type ReportRows = {
   dropped: { day: Date; reason: DropReason; count: number }[];
 };
 
-export type Visit = VisitRow & { landing: ViewRow; exit: ViewRow };
+export type Visit = VisitRow & {
+  landing: ViewRow;
+  exit: ViewRow;
+  pages: string[];
+  found: ViewRow[];
+};
 
 export function inOrder({ views, ...visit }: VisitRow): Visit[] {
   const sorted = views.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const [landing] = sorted;
   const exit = sorted.at(-1);
-  return landing && exit ? [{ ...visit, views: sorted, landing, exit }] : [];
+  if (!landing || !exit) {
+    return [];
+  }
+  const pages = sorted
+    .map(({ path }) => path)
+    .filter((path, index, paths) => path !== paths[index - 1]);
+  const found = sorted.filter(({ notFound }) => !notFound);
+  return [{ ...visit, views: sorted, landing, exit, pages, found }];
 }

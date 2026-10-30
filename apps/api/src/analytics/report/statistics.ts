@@ -7,11 +7,11 @@ export function median(values: readonly number[]): number | null {
   return percentile(values, 0.5);
 }
 
-export function groupBy<T, K extends string>(
+export function rankedGroups<T, K extends string>(
   items: readonly T[],
   keyOf: (item: T) => K,
-): [K, T[]][] {
-  const groups = new Map<K, T[]>();
+): [K, [T, ...T[]]][] {
+  const groups = new Map<K, [T, ...T[]]>();
   for (const item of items) {
     const key = keyOf(item);
     const group = groups.get(key);
@@ -30,5 +30,5 @@ export function tally<T, K extends string>(
   items: readonly T[],
   keyOf: (item: T) => K,
 ): [K, number][] {
-  return groupBy(items, keyOf).map(([key, group]) => [key, group.length]);
+  return rankedGroups(items, keyOf).map(([key, group]) => [key, group.length]);
 }

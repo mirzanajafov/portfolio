@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupBy, median, percentile, tally } from './statistics.js';
+import { median, percentile, rankedGroups, tally } from './statistics.js';
 
 describe('percentile', () => {
   it('takes the nearest rank, so every value it gives is one that happened', () => {
@@ -13,7 +13,7 @@ describe('percentile', () => {
   });
 });
 
-describe('groupBy and tally', () => {
+describe('rankedGroups and tally', () => {
   it('put the largest group first, and equal groups in key order', () => {
     const paths = ['/cv', '/', '/projects/a', '/', '/cv', '/'];
     expect(tally(paths, (path) => path)).toEqual([
@@ -21,7 +21,7 @@ describe('groupBy and tally', () => {
       ['/cv', 2],
       ['/projects/a', 1],
     ]);
-    expect(groupBy([1, 2, 3, 4], (n) => (n % 2 === 0 ? 'even' : 'odd'))).toEqual([
+    expect(rankedGroups([1, 2, 3, 4], (n) => (n % 2 === 0 ? 'even' : 'odd'))).toEqual([
       ['even', [2, 4]],
       ['odd', [1, 3]],
     ]);

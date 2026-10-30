@@ -1,3 +1,6 @@
+export const readSeconds = 2;
+export const quickExitSeconds = 10;
+
 export type Source =
   'google' | 'search' | 'linkedin' | 'github' | 'jobs' | 'demos' | 'direct' | 'other';
 
