@@ -1,6 +1,7 @@
 import { analyticsDays, refCode } from '@portfolio/content/analytics';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
+import { hostName } from '../analytics/event.schema.js';
 import type { NewApplication } from '../applications/applications.service.js';
 
 export type Command =
@@ -48,7 +49,13 @@ const newApplication = z
       .regex(/^[A-Z]{2}$/)
       .optional(),
     city: z.string().trim().min(1).optional(),
-    ats: z.string().trim().min(1).optional(),
+    ats: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .transform((value) => value.replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/[/?#].*$/, ''))
+      .pipe(z.string().regex(hostName))
+      .optional(),
     network: z.array(z.string().trim().min(1)).default([]),
   })
   .transform(({ applied, ats, network, ...fields }): NewApplication => ({

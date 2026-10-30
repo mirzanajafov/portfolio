@@ -12,7 +12,7 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 import { outboundLinks } from './links.js';
 
-const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
+export const hostName = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 const path = z
   .string()
   .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength - 1)}}$`));
@@ -25,7 +25,7 @@ export function eventSchema(links: ReadonlySet<string>) {
       type: z.literal('view'),
       id: z.uuid(),
       path,
-      referrer: z.string().toLowerCase().regex(host).optional().catch(undefined),
+      referrer: z.string().toLowerCase().regex(hostName).optional().catch(undefined),
       ref: z.string().regex(refCode).optional().catch(undefined),
       notFound: z.boolean().default(false),
     }),
