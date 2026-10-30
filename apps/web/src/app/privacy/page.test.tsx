@@ -17,7 +17,7 @@ describe('the privacy page', () => {
     );
     expect(container.textContent).toContain(`I keep questions for ${askLogDays} days`);
     expect(container.textContent).toContain(
-      'With Global Privacy Control or Do Not Track on, a question is kept but tied to no visit.',
+      'With Global Privacy Control or Do Not Track on, a question is still answered and kept, but tied to no visit.',
     );
   });
 
