@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { projectsWithCaseStudy } from '@portfolio/content';
-import { siteUrl } from '@/lib/site';
+import { projectsWithCaseStudy, siteUrl } from '@portfolio/content';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

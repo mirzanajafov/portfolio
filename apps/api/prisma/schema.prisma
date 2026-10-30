@@ -103,3 +103,16 @@ model DroppedEvents {
 
   @@id([day, reason])
 }
+
+model Application {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  code      String   @unique
+  company   String
+  role      String
+  appliedOn DateTime @db.Date
+  createdAt DateTime @default(now())
+  country   String?
+  city      String?
+  atsHost   String?
+  networks  String[]
+}

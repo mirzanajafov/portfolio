@@ -6,6 +6,7 @@ import type { z } from 'zod';
 import { caseStudiesIn } from './case-studies.ts';
 import type * as ContentModule from './index.ts';
 import { loadContent } from './load.ts';
+import { siteUrl } from './site.ts';
 import type {
   Content,
   caseStudySchema,
@@ -167,5 +168,5 @@ export async function contentOf({
 }
 
 export function contentModule(content: Content): typeof ContentModule {
-  return { content, caseStudiesIn, ...caseStudiesIn(content.projects) };
+  return { content, caseStudiesIn, siteUrl, ...caseStudiesIn(content.projects) };
 }

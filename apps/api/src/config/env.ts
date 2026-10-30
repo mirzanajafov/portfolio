@@ -10,6 +10,8 @@ const envSchema = z
     CLIENT_HASH_SECRET: z.string().min(16),
     TRUST_PROXY: z.string().default('loopback'),
     GEO_DIR: z.string().optional(),
+    WEB_URL: z.url().default('http://portfolio-web:3200'),
+    CV_RENDER_TOKEN: z.string().min(32).optional(),
     ASK_PER_CLIENT_10_MIN: positive(20),
     ASK_PER_CLIENT_DAY: positive(100),
     ASK_PER_DAY: positive(2000),

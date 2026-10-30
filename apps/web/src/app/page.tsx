@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import { content, type Profile, type Project } from '@portfolio/content';
+import { content, siteUrl, type Profile, type Project } from '@portfolio/content';
 import { Ask } from '@/ask/ask';
 import { ExperienceTimeline } from '@/components/experience';
 import { SystemsTour, type TourStop } from '@/components/systems-tour';
 import { personJsonLd, serializeJsonLd } from '@/lib/json-ld';
-import { siteUrl } from '@/lib/site';
 
 function toStop(project: Project): TourStop {
   const { headline } = project;

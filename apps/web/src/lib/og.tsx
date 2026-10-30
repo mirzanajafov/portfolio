@@ -1,8 +1,8 @@
 import { ImageResponse } from 'next/og';
+import { siteUrl } from '@portfolio/content';
 import { loadFont } from './fonts';
 import { linkText } from './format';
 import { palette } from './palette';
-import { siteUrl } from './site';
 
 export const ogSize = { width: 1200, height: 630 };
 
