@@ -11,6 +11,21 @@ let pdf: Buffer;
 let text = '';
 let pageCount = 0;
 
+async function textOf(file: Buffer): Promise<{ text: string; pages: number }> {
+  const document = await getDocument({ data: new Uint8Array(file), useSystemFonts: false }).promise;
+  const pages: string[] = [];
+  for (let number = 1; number <= document.numPages; number += 1) {
+    const page = await document.getPage(number);
+    const { items } = await page.getTextContent();
+    pages.push(items.map((item) => ('str' in item ? item.str : '')).join(' '));
+  }
+  return { text: pages.join(' ').replace(/\s+/g, ' '), pages: document.numPages };
+}
+
+function urisOf(file: Buffer): string[] {
+  return [...file.toString('latin1').matchAll(/\/URI \(([^)]*)\)/g)].map((match) => match[1] ?? '');
+}
+
 function unicodeMaps(file: Buffer): string[] {
   const raw = file.toString('latin1');
   const maps: string[] = [];
@@ -32,15 +47,7 @@ function unicodeMaps(file: Buffer): string[] {
 
 beforeAll(async () => {
   pdf = await buildCvPdf(content);
-  const document = await getDocument({ data: new Uint8Array(pdf), useSystemFonts: false }).promise;
-  pageCount = document.numPages;
-  const pages: string[] = [];
-  for (let number = 1; number <= document.numPages; number += 1) {
-    const page = await document.getPage(number);
-    const { items } = await page.getTextContent();
-    pages.push(items.map((item) => ('str' in item ? item.str : '')).join(' '));
-  }
-  text = pages.join(' ').replace(/\s+/g, ' ');
+  ({ text, pages: pageCount } = await textOf(pdf));
 }, 30_000);
 
 describe('the CV as a PDF', () => {
@@ -111,9 +118,7 @@ describe('the CV as a PDF', () => {
   });
 
   it('links the contacts and every case-study project once each, and nothing around them', () => {
-    const uris = [...pdf.toString('latin1').matchAll(/\/URI \(([^)]*)\)/g)].map(
-      (match) => match[1],
-    );
+    const uris = urisOf(pdf);
     const { links } = content.profile;
     const projectLinks = projectsWithCaseStudy
       .flatMap((project) => [
@@ -140,5 +145,17 @@ describe('the CV as a PDF', () => {
     expect(text).toContain(content.profile.links.email);
     expect(text).toContain('najafov.dev');
     expect(text).not.toMatch(phoneNumber);
+  });
+});
+
+describe('a CV for one application', () => {
+  it('reads exactly like the public one, with the code on every link to the site and nowhere else', async () => {
+    const own = await buildCvPdf(content, { ref: 'memh' });
+    expect((await textOf(own)).text).toBe(text);
+    expect(urisOf(own)).toEqual(
+      urisOf(pdf).map((uri) =>
+        uri.startsWith(siteUrl) ? `${new URL(uri).origin}${new URL(uri).pathname}?r=memh` : uri,
+      ),
+    );
   });
 });

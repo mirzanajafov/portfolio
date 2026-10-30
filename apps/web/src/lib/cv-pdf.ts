@@ -59,8 +59,21 @@ function bulletBlock(item: string): TextBlock {
   };
 }
 
-export function buildCvPdf(content: Content): Promise<Buffer> {
+export function cvFileName({ profile }: Content): string {
+  return `${profile.name.replace(/\s+/g, '-')}-CV.pdf`;
+}
+
+export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Promise<Buffer> {
   const { profile, cv, projects } = content;
+  const onSite = (path = '') => {
+    const href = `${siteUrl}${path}`;
+    if (!ref) {
+      return href;
+    }
+    const url = new URL(href);
+    url.searchParams.set('r', ref);
+    return url.href;
+  };
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: margin, bottom: margin, left: margin, right: margin },
@@ -153,7 +166,8 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
   linkRow(
     [
       { text: profile.links.email, href: `mailto:${profile.links.email}` },
-      ...[siteUrl, profile.links.github, profile.links.linkedin].map((url) => ({
+      { text: linkText(siteUrl), href: onSite() },
+      ...[profile.links.github, profile.links.linkedin].map((url) => ({
         text: linkText(url),
         href: url,
       })),
@@ -186,7 +200,7 @@ export function buildCvPdf(content: Content): Promise<Buffer> {
       .font('semibold')
       .fontSize(11)
       .fillColor(ink)
-      .text(project.name, options({ link: `${siteUrl}/projects/${project.slug}`, continued: true }))
+      .text(project.name, options({ link: onSite(`/projects/${project.slug}`), continued: true }))
       .font('regular')
       .fillColor(muted)
       .text(`  ${project.hook}`, options());
