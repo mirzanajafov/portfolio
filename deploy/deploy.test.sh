@@ -6,6 +6,7 @@ script="$(realpath "$(dirname "$0")")/deploy.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 failed=0
+month=$(date -u +%Y-%m)
 
 mkdir "$work/bin"
 cat > "$work/bin/docker" <<'EOF'
@@ -13,7 +14,10 @@ cat > "$work/bin/docker" <<'EOF'
 on_old() { [ "$(git rev-parse HEAD)" = "$OLD" ]; }
 case "$*" in
   *"--wait"*) [ -z "${POSTGRES_DOWN:-}" ] ;;
+  *"--force-recreate api"*) echo "api recreated" ;;
   *"--build"*)
+    echo "released with the IP databases of $(cat geo/month 2> /dev/null || echo nobody)," \
+      "city file $(head -c 3 geo/dbip-city-lite.mmdb 2> /dev/null || echo missing)"
     git rev-parse HEAD >> "$RELEASES"
     case "${RELEASE_FAILS:-}" in all) false ;; new) on_old ;; esac ;;
   inspect*) if [ "${*: -1}" = "${UNHEALTHY:-}" ] && ! on_old; then echo starting; else echo healthy; fi ;;
@@ -24,8 +28,19 @@ esac
 EOF
 cat > "$work/bin/curl" <<'EOF'
 #!/usr/bin/env bash
-[ -z "${GEO_DOWN:-}" ] || exit 22
-printf 'tree\xab\xcd\xefMaxMind.com' | gzip
+month=$(date -u +%Y-%m)
+case "$*" in
+  *"https://download.db-ip.com/free/dbip-city-lite-$month.mmdb.gz") kind=city ;;
+  *"https://download.db-ip.com/free/dbip-asn-lite-$month.mmdb.gz") kind=asn ;;
+  *) echo "unexpected: curl $*" >&2; exit 2 ;;
+esac
+echo "downloading the $kind database" >&2
+case "${GEO_DOWN:-}" in all | "$kind") exit 22 ;; esac
+if [ -n "${GEO_BAD:-}" ]; then
+  printf '<html>Not found</html>' | gzip
+else
+  printf 'new\xab\xcd\xefMaxMind.com' | gzip
+fi
 EOF
 printf '#!/bin/sh\n' > "$work/bin/sleep"
 chmod +x "$work/bin/docker" "$work/bin/curl" "$work/bin/sleep"
@@ -34,6 +49,12 @@ commit() {
   echo "$1" > release
   git add -A
   git -c user.name=test -c user.email=test@example.com commit -qm "$1"
+}
+
+seed_geo() {
+  mkdir geo
+  echo "$1" > geo/month
+  printf old | tee geo/dbip-city-lite.mmdb > geo/dbip-asn-lite.mmdb
 }
 
 deploy() {
@@ -53,6 +74,11 @@ deploy() {
   new=$(git rev-parse HEAD)
   git push -q origin HEAD:main
   git reset -q --hard "$old"
+  case " $* " in
+    *" GEO=current "*) seed_geo "$month" ;;
+    *" GEO=old "*) seed_geo 2000-01 ;;
+    *" GEO=month-only "*) mkdir geo && echo "$month" > geo/month ;;
+  esac
   moves_before=$(git reflog | wc -l)
   touch "$dir/releases"
   status=0
@@ -65,32 +91,59 @@ deploy() {
 }
 
 expect() {
-  if [ "$status $head $moves ${last_release:-none}" = "$1 $2 $3 $4" ] && grep -qF "$5" "$out"; then
-    echo "ok    $6"
+  local name=$5 check passed=true
+  [ "$status $head $moves ${last_release:-none}" = "$1 $2 $3 $4" ] || passed=false
+  for check in "${@:6}"; do
+    if [ "${check:0:1}" = "!" ]; then
+      ! grep -qF -- "${check:1}" "$out" || passed=false
+    else
+      grep -qF -- "$check" "$out" || passed=false
+    fi
+  done
+  if [ "$passed" = true ]; then
+    echo "ok    $name"
   else
-    echo "FAIL  $6: exit $status at $head after $moves moves, last release ${last_release:-none}"
+    echo "FAIL  $name: exit $status at $head after $moves moves, last release ${last_release:-none}"
     sed 's/^/      /' "$out"
     failed=1
   fi
 }
 
 deploy
-expect 0 "$new" 1 "$new" "Live:" "deploys a healthy release"
+expect 0 "$new" 1 "$new" "deploys a healthy release" "Live:"
 deploy
-expect 0 "$new" 1 "$new" "IP databases updated to" "fetches this month's IP databases before the release"
-deploy GEO_DOWN=1
-expect 0 "$new" 1 "$new" "Keeping the IP databases from before" "deploys anyway when the IP databases can't be downloaded"
+expect 0 "$new" 1 "$new" "fetches this month's IP databases before the release and restarts the API" \
+  "released with the IP databases of $month, city file new" "api recreated"
+deploy GEO=current
+expect 0 "$new" 1 "$new" "leaves this month's IP databases and the API alone" \
+  "Live:" "!downloading" "!api recreated"
+deploy GEO=month-only
+expect 0 "$new" 1 "$new" "fetches the IP databases again when this month's files are missing" \
+  "released with the IP databases of $month, city file new" "api recreated"
+deploy GEO=old GEO_DOWN=asn
+expect 0 "$new" 1 "$new" "keeps last month's IP databases whole when one download fails" \
+  "could not be updated" "released with the IP databases of 2000-01, city file old" "Live:" \
+  "!api recreated"
+deploy GEO=old GEO_BAD=1
+expect 0 "$new" 1 "$new" "keeps last month's IP databases when a download is not one" \
+  "is not an MMDB file" "released with the IP databases of 2000-01, city file old" \
+  "!api recreated"
 deploy RELEASE_FAILS=new
-expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the new one fails to build or start"
+expect 1 "$old" 2 "$old" "brings the previous release back when the new one fails to build or start" \
+  "Rolled back."
 deploy UNHEALTHY=portfolio-api
-expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the API never gets healthy"
+expect 1 "$old" 2 "$old" "brings the previous release back when the API never gets healthy" \
+  "Rolled back."
 deploy UNHEALTHY=portfolio-web
-expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the site never gets healthy"
+expect 1 "$old" 2 "$old" "brings the previous release back when the site never gets healthy" \
+  "Rolled back."
 deploy API_UNREACHABLE=1
-expect 1 "$old" 2 "$old" "Rolled back." "brings the previous release back when the site can't reach the API"
+expect 1 "$old" 2 "$old" "brings the previous release back when the site can't reach the API" \
+  "Rolled back."
 deploy RELEASE_FAILS=all
-expect 1 "$old" 2 "$old" "The rollback failed too" "says so when the previous release can't come back either"
+expect 1 "$old" 2 "$old" "says so when the previous release can't come back either" \
+  "The rollback failed too"
 deploy POSTGRES_DOWN=1
-expect 1 "$old" 0 none "Waiting for the database" "stops before the merge when Postgres is down"
+expect 1 "$old" 0 none "stops before the merge when Postgres is down" "Waiting for the database"
 
 exit "$failed"

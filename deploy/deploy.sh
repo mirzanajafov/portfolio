@@ -31,6 +31,16 @@ release() {
   "${compose[@]}" up -d --build --remove-orphans
 }
 
+places_current() {
+  [ "$(cat geo/month 2> /dev/null || true)" = "$(date -u +%Y-%m)" ]     && [ -s geo/dbip-city-lite.mmdb ] && [ -s geo/dbip-asn-lite.mmdb ]
+}
+
+reload_places() {
+  if [ "$places_updated" = true ]; then
+    "${compose[@]}" up -d --no-deps --force-recreate api
+  fi
+}
+
 previous=$(git rev-parse HEAD)
 git fetch --quiet origin "$branch"
 target=$(git rev-parse "origin/$branch")
@@ -45,8 +55,15 @@ say "Waiting for the database"
 
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
-deploy/geo.sh || say "Keeping the IP databases from before, because the download failed"
-if release && healthy; then
+places_updated=false
+if ! places_current; then
+  if deploy/geo.sh; then
+    places_updated=true
+  else
+    say "The IP databases could not be updated, so the API keeps the ones it has"
+  fi
+fi
+if release && reload_places && healthy; then
   docker image prune -f --filter "label=com.docker.compose.project=portfolio" > /dev/null
   say "Live: $(git log --oneline -1)"
   exit 0
