@@ -1,0 +1,140 @@
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { AnalyticsReportService } from '../src/analytics/report/analytics-report.service.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
+import { fixtureContent } from './content.fixture.js';
+import { FixedClock, startApp } from './start-app.js';
+
+const chrome =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+const iphone =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+const crawler = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+
+describe('the visitor report against a real database', () => {
+  let app: NestExpressApplication;
+  let clock: FixedClock;
+  let prisma: PrismaService;
+  let reports: AnalyticsReportService;
+
+  const send = (event: object, { ip = '203.0.113.7', userAgent = chrome } = {}) =>
+    request(app.getHttpServer())
+      .post('/events')
+      .set('X-Forwarded-For', ip)
+      .set('User-Agent', userAgent)
+      .send(event)
+      .expect(204);
+
+  const at = (time: string) => {
+    clock.current = new Date(`2026-10-02T${time}Z`);
+  };
+
+  beforeAll(async () => {
+    ({ app, clock, prisma } = await startApp());
+    reports = new AnalyticsReportService(prisma, clock, fixtureContent);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog"`;
+  });
+
+  it('reports a scripted visit the way it happened, from events sent to the API', async () => {
+    const home = randomUUID();
+    const caseStudy = randomUUID();
+    at('12:00:00');
+    await send({ type: 'view', id: home, path: '/', referrer: 'www.google.com' });
+    await send({ type: 'vital', view: home, name: 'LCP', value: 1800 });
+    await send({
+      type: 'read',
+      view: home,
+      seq: 1,
+      activeSeconds: 40,
+      maxScroll: 80,
+      blocks: { tuner: 5, ask: 1 },
+    });
+    at('12:01:00');
+    await send({ type: 'view', id: caseStudy, path: '/projects/tuner' });
+    await send({
+      type: 'read',
+      view: caseStudy,
+      seq: 1,
+      activeSeconds: 60,
+      maxScroll: 100,
+      blocks: { problem: 3, 'decision-1': 2 },
+    });
+    await send({ type: 'click', view: caseStudy, href: 'https://github.com/someone/tuner' });
+    await send({
+      type: 'error',
+      view: caseStudy,
+      message: 'x is undefined',
+      source: '/_next/static/chunks/a.js',
+    });
+    at('12:05:00');
+    await send(
+      {
+        type: 'view',
+        id: randomUUID(),
+        path: '/old',
+        notFound: true,
+        referrer: 'news.ycombinator.com',
+      },
+      { ip: '198.51.100.4', userAgent: iphone },
+    );
+    await send({ type: 'view', id: randomUUID(), path: '/' }, { userAgent: crawler });
+    at('12:10:00');
+
+    const report = await reports.build(7);
+
+    expect(report.overview).toEqual({
+      current: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
+      previous: {
+        visits: 0,
+        pageViews: 0,
+        medianVisitSeconds: null,
+        phoneVisits: 0,
+        quickExits: 0,
+      },
+    });
+    expect(report.sources).toEqual([
+      { source: 'google', visits: 1 },
+      { source: 'other', visits: 1 },
+    ]);
+    expect(report.journeys).toContainEqual({ paths: ['/', '/projects/tuner'], visits: 1 });
+    expect(report.reading.find(({ path }) => path === '/projects/tuner')?.blocks).toEqual([
+      { block: 'problem', readers: 1, medianSeconds: 3 },
+      { block: 'decision-1', readers: 1, medianSeconds: 2 },
+      { block: 'decision-2', readers: 0, medianSeconds: null },
+      { block: 'proof', readers: 0, medianSeconds: null },
+      { block: 'next', readers: 0, medianSeconds: null },
+    ]);
+    expect(report.links.outbound).toEqual([{ label: 'Tuner repo', clicks: 1 }]);
+    expect(report.quality.vitals).toEqual([
+      {
+        path: '/',
+        device: 'desktop',
+        lcp: { p75: 1800, samples: 1, rating: 'good', overMyBar: false },
+        inp: null,
+        cls: null,
+      },
+    ]);
+    expect(report.quality.errors).toEqual([
+      {
+        message: 'x is undefined',
+        source: '/_next/static/chunks/a.js',
+        count: 1,
+        paths: ['/projects/tuner'],
+        browsers: ['chrome'],
+      },
+    ]);
+    expect(report.quality.notFound).toEqual([
+      { path: '/old', views: 1, referrers: ['news.ycombinator.com'] },
+    ]);
+    expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0 }]);
+  });
+});
