@@ -1,6 +1,6 @@
 import type { Source } from './report.js';
 
-const google = /^(?:.+\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/;
+const google = /^(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/;
 
 const domains: [Source, string[]][] = [
   ['google', ['com.google.android.googlequicksearchbox']],
@@ -18,7 +18,7 @@ const domains: [Source, string[]][] = [
       'baidu.com',
     ],
   ],
-  ['linkedin', ['linkedin.com', 'lnkd.in']],
+  ['linkedin', ['linkedin.com', 'lnkd.in', 'com.linkedin.android']],
   ['github', ['github.com']],
   [
     'jobs',

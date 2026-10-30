@@ -14,6 +14,7 @@ describe('sourceOf', () => {
     ['www.linkedin.com', 'chrome', 'linkedin'],
     ['lnkd.in', 'safari', 'linkedin'],
     [null, 'linkedin', 'linkedin'],
+    ['com.linkedin.android', 'chrome', 'linkedin'],
     ['github.com', 'chrome', 'github'],
     ['xsolla.wd3.myworkdayjobs.com', 'chrome', 'jobs'],
     ['boards.greenhouse.io', 'chrome', 'jobs'],
@@ -23,6 +24,8 @@ describe('sourceOf', () => {
     ['news.ycombinator.com', 'chrome', 'other'],
     ['notgithub.com', 'chrome', 'other'],
     ['google.example.com', 'chrome', 'other'],
+    ['news.google.com', 'chrome', 'other'],
+    ['sites.google.com', 'chrome', 'other'],
   ])('counts a landing from %s in %s as %s', (host, browser, source) => {
     expect(sourceOf(host, browser)).toBe(source);
   });
