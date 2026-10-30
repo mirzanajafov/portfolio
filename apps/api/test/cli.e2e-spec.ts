@@ -42,7 +42,7 @@ const drawCv: SiteAnswer = (request, response) => {
   response.writeHead(200, { 'content-type': 'application/pdf' }).end(`%PDF ${request.url ?? ''}`);
 };
 
-describe('the application commands', () => {
+describe('the CLI commands', () => {
   let context: INestApplicationContext;
   let applications: ApplicationsService;
   let prisma: PrismaService;
@@ -144,6 +144,14 @@ describe('the application commands', () => {
       stdout: '%PDF /internal/cv/memh',
       stderr: '',
     });
+  });
+
+  it('prints the report for the days asked, even to a terminal', async () => {
+    process.stdout.isTTY = true;
+    const { status, stdout } = await cli('report', '--days', '1');
+    expect(status).toBe(0);
+    expect(stdout).toMatch(/^Visits in the last 1 day, /);
+    expect(stdout).toContain('Sources: none');
   });
 
   it('lists the applications with their codes', async () => {

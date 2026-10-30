@@ -1,8 +1,7 @@
 import type { VisitEvent } from '@portfolio/content/analytics';
-import { aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
-import { eventSchema, linksIn } from './event.schema.js';
+import { eventSchema } from './event.schema.js';
 
 const schema = eventSchema(new Set(['/cv.pdf']));
 const view = '0193f1a2-7c4e-7b2a-9d1e-5f6a7b8c9d0e';
@@ -118,29 +117,5 @@ describe('eventSchema', () => {
 describe('the contract with the site', () => {
   it('accepts every event the tracker on the site can send', () => {
     expectTypeOf<VisitEvent>().toEqualTypeOf<z.input<typeof schema>>();
-  });
-});
-
-describe('linksIn', () => {
-  it('lists every outbound link the site renders, the CV and the IP database credit', async () => {
-    const content = await contentOf({
-      projects: [
-        aProject({ slug: 'tuner' }),
-        aProject({ slug: 'courier', order: 2, visibility: 'private', knowledge: [] }),
-      ],
-    });
-    expect([...linksIn(content)].sort()).toEqual(
-      [
-        'mailto:ada@example.com',
-        'https://github.com/ada',
-        'https://www.linkedin.com/in/ada',
-        '/cv.pdf',
-        'https://db-ip.com',
-        'https://tuner.example.com',
-        'https://github.com/someone/tuner',
-        'https://github.com/someone/tuner/blob/main/README.md',
-        'https://courier.example.com',
-      ].sort(),
-    );
   });
 });

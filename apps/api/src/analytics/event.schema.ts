@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
 import {
   errorMessageMaxLength,
-  geolocationCredit,
   maxPathLength,
   maxSeconds,
   refCode,
@@ -11,6 +10,7 @@ import {
 import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
+import { outboundLinks } from './links.js';
 
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 const path = z
@@ -18,21 +18,6 @@ const path = z
   .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength - 1)}}$`));
 const pageView = z.uuid();
 const seconds = z.int().min(0).max(maxSeconds);
-
-export function linksIn({ profile, projects }: Content): Set<string> {
-  return new Set([
-    `mailto:${profile.links.email}`,
-    profile.links.github,
-    profile.links.linkedin,
-    '/cv.pdf',
-    geolocationCredit,
-    ...projects.flatMap(({ links, facts }) => [
-      links.live,
-      ...(links.repo ? [links.repo] : []),
-      ...facts.flatMap(({ source }) => (source.href ? [source.href] : [])),
-    ]),
-  ]);
-}
 
 export function eventSchema(links: ReadonlySet<string>) {
   return z.discriminatedUnion('type', [
@@ -83,6 +68,6 @@ export type AnalyticsEvent = z.infer<ReturnType<typeof eventSchema>>;
 @Injectable()
 export class EventPipe extends ZodPipe<AnalyticsEvent> {
   constructor(@Inject(CONTENT) content: Content) {
-    super(eventSchema(linksIn(content)));
+    super(eventSchema(new Set(outboundLinks(content).map(({ href }) => href))));
   }
 }

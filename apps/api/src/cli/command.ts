@@ -1,18 +1,30 @@
-import { refCode } from '@portfolio/content/analytics';
+import { analyticsDays, refCode } from '@portfolio/content/analytics';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
 import type { NewApplication } from '../applications/applications.service.js';
 
 export type Command =
+  | { name: 'report'; days: number; all: boolean }
   | { name: 'application add'; application: NewApplication }
   | { name: 'application list' }
   | { name: 'application cv'; code: string };
 
 export const usage = `usage:
+  cli.js report [--days <1-${String(analyticsDays)}>] [--all]
   cli.js application add --company <name> --role <title> --applied <yyyy-mm-dd>
       [--code <code>] [--country <XX>] [--city <name>] [--ats <host>] [--network <name>]...
   cli.js application list
   cli.js application cv <code>`;
+
+const reportOptions = {
+  days: { type: 'string' },
+  all: { type: 'boolean', default: false },
+} as const;
+
+const reportRequest = z.strictObject({
+  days: z.coerce.number().int().min(1).max(analyticsDays).default(7),
+  all: z.boolean(),
+});
 
 const addOptions = {
   company: { type: 'string' },
@@ -46,14 +58,23 @@ const newApplication = z
     networks: network,
   }));
 
+function valid<T>(schema: z.ZodType<T>, values: unknown): T {
+  const parsed = schema.safeParse(values);
+  if (!parsed.success) {
+    throw new Error(z.prettifyError(parsed.error));
+  }
+  return parsed.data;
+}
+
 export function parseCommand(args: readonly string[]): Command {
   const [area, name, ...rest] = args;
+  if (area === 'report') {
+    const { values } = parseArgs({ args: args.slice(1), options: reportOptions });
+    return { name: 'report', ...valid(reportRequest, values) };
+  }
   if (area === 'application' && name === 'add') {
-    const parsed = newApplication.safeParse(parseArgs({ args: rest, options: addOptions }).values);
-    if (!parsed.success) {
-      throw new Error(z.prettifyError(parsed.error));
-    }
-    return { name: 'application add', application: parsed.data };
+    const { values } = parseArgs({ args: rest, options: addOptions });
+    return { name: 'application add', application: valid(newApplication, values) };
   }
   if (area === 'application' && name === 'list') {
     if (rest.length > 0) {
