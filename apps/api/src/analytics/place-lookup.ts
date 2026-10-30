@@ -3,13 +3,17 @@ import { Reader, type AsnResponse, type CityResponse } from 'mmdb-lib';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export type Place = { country: string | null; city: string | null; network: string | null };
+export type Place = Readonly<{
+  country: string | null;
+  city: string | null;
+  network: string | null;
+}>;
 
 export type PlaceLookup = { placeOf(ip: string): Place };
 
 export const PLACE_LOOKUP = Symbol('PLACE_LOOKUP');
 
-export const nowhere: Place = Object.freeze({ country: null, city: null, network: null });
+export const nowhere: Place = { country: null, city: null, network: null };
 
 export function placeFrom(city: CityResponse | null, asn: AsnResponse | null): Place {
   return {
