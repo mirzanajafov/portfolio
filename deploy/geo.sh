@@ -13,8 +13,8 @@ fi
 trap 'rm -f "$dir"/*.new' EXIT
 for kind in city asn; do
   file="$dir/dbip-$kind-lite.mmdb"
-  curl -fsS "https://download.db-ip.com/free/dbip-$kind-lite-$month.mmdb.gz" | gunzip > "$file.new"
-  if ! tail -c 131072 "$file.new" | grep -qa 'MaxMind.com'; then
+  curl -fsS --connect-timeout 10 --max-time 300 --retry 2 \n    "https://download.db-ip.com/free/dbip-$kind-lite-$month.mmdb.gz" | gunzip > "$file.new"
+  if ! tail -c 131072 "$file.new" | LC_ALL=C grep -qaF $'«ÍïMaxMind.com'; then
     echo "$file.new from DB-IP is not an MMDB file" >&2
     exit 1
   fi
