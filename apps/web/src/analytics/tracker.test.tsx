@@ -367,6 +367,12 @@ describe('VisitTracker', () => {
     ]);
   });
 
+  it.each(['/admin', '/admin/login'])('sends nothing on %s', (path) => {
+    navigation.pathname = path;
+    render(<VisitTracker />);
+    expect(sendBeacon).not.toHaveBeenCalled();
+  });
+
   it('keeps the page up when the tracker itself fails', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
