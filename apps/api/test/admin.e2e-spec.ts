@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { adminSignInSchema } from '@portfolio/content/admin';
+import { reportSchema } from '@portfolio/content/report';
 import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -187,6 +188,47 @@ describe('admin sign-in against a real database', () => {
 
     const keys = (await prisma.rateLimit.findMany()).map(({ key }) => key);
     expect(keys).toEqual([expect.stringMatching(/^admin:10m:[0-9a-f]{32}$/)]);
+  });
+
+  it('answers the report for the days asked, in the shape the site reads back with its dates', async () => {
+    const token = await sessionFrom(await sessions.link());
+
+    const answer = await request(app.getHttpServer())
+      .get('/admin/report?days=1')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const report = reportSchema.parse(answer.body);
+    expect(report.period).toMatchObject({ days: 1, to: start });
+    expect(report.period.from).toBeInstanceOf(Date);
+  });
+
+  it('reports the last 7 days when none are asked for', async () => {
+    const token = await sessionFrom(await sessions.link());
+
+    const answer = await request(app.getHttpServer())
+      .get('/admin/report')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(reportSchema.parse(answer.body).period.days).toBe(7);
+  });
+
+  it.each(['0', '31', '2.5', 'week'])('refuses %s days', async (days) => {
+    const token = await sessionFrom(await sessions.link());
+
+    await request(app.getHttpServer())
+      .get(`/admin/report?days=${days}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
+  it('is a 404 without a session, before it reads the days', async () => {
+    await request(app.getHttpServer()).get('/admin/report?days=week').expect(404);
+    await request(app.getHttpServer())
+      .get('/admin/report?days=7')
+      .set('Authorization', `Bearer ${unknownToken()}`)
+      .expect(404);
   });
 
   it('deletes expired links and sessions in the cleanup, and keeps the rest', async () => {

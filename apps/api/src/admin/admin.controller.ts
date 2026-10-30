@@ -8,13 +8,19 @@ import {
   HttpStatus,
   NotFoundException,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { adminToken } from '@portfolio/content/admin';
+import type { Report } from '@portfolio/content/report';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import {
+  AnalyticsReportService,
+  reportDays,
+} from '../analytics/report/analytics-report.service.js';
 import { clientAddress } from '../common/client-address.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
@@ -24,9 +30,16 @@ const signInSchema = z.strictObject({ token: z.string().regex(adminToken) });
 
 type SignInRequest = z.infer<typeof signInSchema>;
 
+const reportQuery = z.strictObject({ days: reportDays });
+
+type ReportQuery = z.infer<typeof reportQuery>;
+
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly sessions: AdminSessionsService) {}
+  constructor(
+    private readonly sessions: AdminSessionsService,
+    private readonly reports: AnalyticsReportService,
+  ) {}
 
   @Post('sessions')
   async signIn(
@@ -59,5 +72,11 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async signOut(@Req() { adminSession }: SignedInRequest): Promise<void> {
     await this.sessions.end(adminSession);
+  }
+
+  @Get('report')
+  @UseGuards(SignedInGuard)
+  report(@Query(new ZodPipe(reportQuery)) { days }: ReportQuery): Promise<Report> {
+    return this.reports.build(days);
   }
 }
