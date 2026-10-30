@@ -37,15 +37,17 @@ function Section({
   id,
   title,
   className,
+  read = false,
   children,
 }: {
   id: string;
   title: string;
   className: string;
+  read?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className={className} data-read={id}>
+    <section aria-labelledby={id} className={className} data-read={read ? id : undefined}>
       <h2 id={id} className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
         {title}
       </h2>
@@ -118,7 +120,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </div>
       </header>
 
-      <Section id="problem" title="Why I built it" className="flex flex-col gap-3">
+      <Section id="problem" title="Why I built it" className="flex flex-col gap-3" read>
         <p className="max-w-[65ch] text-xl leading-relaxed">{caseStudy.problem}</p>
       </Section>
 
@@ -153,11 +155,11 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         ))}
       </Section>
 
-      <Section id="proof" title="How I know it works" className="flex flex-col gap-3">
+      <Section id="proof" title="How I know it works" className="flex flex-col gap-3" read>
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.proof}</p>
       </Section>
 
-      <Section id="next" title="What I would do next" className="flex flex-col gap-3">
+      <Section id="next" title="What I would do next" className="flex flex-col gap-3" read>
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
       </Section>
 
