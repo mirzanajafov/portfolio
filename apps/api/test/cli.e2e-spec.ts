@@ -198,6 +198,16 @@ describe('the application commands', () => {
     expect(await registeredCodes()).toEqual(['k7mpx']);
   });
 
+  it('says what failed when the site fails for a registered code', async () => {
+    await registerMemh();
+    answer = (_, response) => response.writeHead(502).end();
+    expect(await cli('application', 'cv', 'memh')).toEqual({
+      status: 1,
+      stdout: '',
+      stderr: 'the site answered 502 for the CV of memh\n',
+    });
+  });
+
   it('reads the arguments before it touches the database or its settings', async () => {
     vi.stubEnv('CLIENT_HASH_SECRET', 'short');
     const { status, stderr } = await cli('application', 'remove', 'memh');

@@ -59,9 +59,12 @@ export async function runCli(args: readonly string[]): Promise<number> {
       return 1;
     }
     if (error instanceof CvFetchError) {
-      process.stderr.write(
-        `${error.message}\n${error.code} is registered, so application cv ${error.code} writes its CV once the site answers\n`,
-      );
+      process.stderr.write(`${error.message}\n`);
+      if (command.name === 'application add') {
+        process.stderr.write(
+          `${error.code} is registered, so application cv ${error.code} writes its CV once the site answers\n`,
+        );
+      }
       return 1;
     }
     throw error;
