@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgresql://portfolio:portfolio@postgres:5432/portfolio
       CLIENT_HASH_SECRET: ${CLIENT_HASH_SECRET:-local-docker-secret-not-for-production}
       TRUST_PROXY: loopback,linklocal,uniquelocal
+      CV_RENDER_TOKEN: ${CV_RENDER_TOKEN:-local-docker-cv-token-not-for-production}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -62,6 +63,7 @@ services:
     profiles: ['app']
     environment:
       API_URL: http://portfolio-api:3201
+      CV_RENDER_TOKEN: ${CV_RENDER_TOKEN:-local-docker-cv-token-not-for-production}
     ports:
       - '3202:3200'
     depends_on:
