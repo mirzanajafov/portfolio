@@ -30,7 +30,6 @@ model AskLog {
   durationMs Int
 
   @@index([createdAt])
-  @@index([visitor])
 }
 
 model Visit {
