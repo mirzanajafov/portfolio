@@ -33,11 +33,11 @@ export class AskController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    const abort = new AbortController();
+    res.on('close', () => abort.abort());
     const caller = callerOf(req);
     const askedAt = this.clock.now();
     const keys = await this.salts.dayKeys(askedAt);
-    const abort = new AbortController();
-    res.on('close', () => abort.abort());
     const verdict = await this.limits.admit(keys.limit(caller.ip));
     if (!verdict.allowed) {
       res.set('Retry-After', String(verdict.retryAfterSeconds));
