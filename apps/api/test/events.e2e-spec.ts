@@ -128,7 +128,7 @@ describe('POST /events against a real database', () => {
     expect(rebuilt).not.toContain(yesterday);
   });
 
-  it('needs the secret from the environment as well as the salt to rebuild a visitor', async () => {
+  it('needs the secret from the environment, not only the salt in the database, to rebuild a visitor', async () => {
     clock.current = new Date('2026-10-22T10:00:00Z');
     await send(app, aView()).expect(204);
 
