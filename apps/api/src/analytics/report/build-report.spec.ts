@@ -74,12 +74,24 @@ describe('buildReport', () => {
       },
     );
     expect(report.overview.previous?.visits).toBe(30);
-    expect(report.unrolledSince).toBeNull();
+    expect(report.rollupBehind).toBeNull();
   });
 
-  it('says the rollup is behind once it has missed a whole day', () => {
+  it('says which days the rollup should have reached once it has missed a whole one', () => {
     const report = reportOf([], { rawFrom: new Date('2026-09-28T00:00:00Z') });
-    expect(report.unrolledSince).toBe('2026-09-28');
+    expect(report.rollupBehind).toEqual({ from: '2026-09-28', to: '2026-09-29' });
+  });
+
+  it('counts questions only as far back as the log keeps them', () => {
+    const report = reportOf([], {
+      days: 30,
+      questions: [
+        { createdAt: new Date('2026-09-30T08:00:00Z'), refused: false },
+        { createdAt: new Date('2026-09-30T13:00:00Z'), refused: false },
+      ],
+    });
+    expect(report.ask).toMatchObject({ since: new Date('2026-09-30T12:00:00Z'), questions: 1 });
+    expect(reportOf([], { days: 7 }).ask.since).toBeNull();
   });
 
   it('has nothing to compare with when a day before the period was never collected', () => {
@@ -232,6 +244,7 @@ describe('buildReport', () => {
       ],
     });
     expect(report.ask).toEqual({
+      since: null,
       questions: 3,
       refused: 1,
       days: [

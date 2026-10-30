@@ -17,8 +17,8 @@ export type Rating = 'good' | 'needs improvement' | 'poor';
 export type Vital = { p75: number; samples: number; rating: Rating; missesMyBar: boolean };
 
 export type Report = {
-  period: { from: Date; to: Date; days: number };
-  unrolledSince: string | null;
+  period: { from: Date; to: Date; days: number; visits: number };
+  rollupBehind: { from: string; to: string } | null;
   overview: { today: Totals; current: Totals; previous: Totals | null };
   weeks: Week[];
   sources: { source: Source; visits: number }[];
@@ -46,6 +46,7 @@ export type Report = {
     outbound: { label: string; clicks: number }[];
   };
   ask: {
+    since: Date | null;
     questions: number;
     refused: number;
     days: { day: string; questions: number; refused: number }[];

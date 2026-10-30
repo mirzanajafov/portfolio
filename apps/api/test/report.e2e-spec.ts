@@ -6,7 +6,7 @@ import { AnalyticsReportService } from '../src/analytics/report/analytics-report
 import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
-import { sendEvent } from './send-event.js';
+import { sendEvent, type Sender } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
 const iphone =
@@ -19,8 +19,7 @@ describe('the visitor report against a real database', () => {
   let prisma: PrismaService;
   let reports: AnalyticsReportService;
 
-  const send = (event: object, sender?: { ip?: string; userAgent?: string }) =>
-    sendEvent(app, event, sender).expect(204);
+  const send = (event: object, sender?: Sender) => sendEvent(app, event, sender).expect(204);
 
   const at = (time: string) => {
     clock.current = new Date(`2026-10-02T${time}Z`);
@@ -139,6 +138,7 @@ describe('the visitor report against a real database', () => {
       { path: '/old', views: 1, referrers: ['news.ycombinator.com'] },
     ]);
     expect(report.ask).toEqual({
+      since: null,
       questions: 1,
       refused: 0,
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
@@ -197,6 +197,6 @@ describe('the visitor report against a real database', () => {
     const report = await reports.build(7);
 
     expect(report.weeks.find(({ start }) => start === '2026-09-28')?.visits).toBe(1);
-    expect(report.unrolledSince).toBeNull();
+    expect(report.rollupBehind).toBeNull();
   });
 });

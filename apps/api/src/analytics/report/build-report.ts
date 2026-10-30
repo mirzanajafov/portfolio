@@ -1,5 +1,6 @@
 import type { Content } from '@portfolio/content';
 import { readingBlocks } from '@portfolio/content/analytics';
+import { askLogDays } from '@portfolio/content/ask';
 import { outboundLinks } from '../links.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
 import { dayOf, daysAfter, mondayOf, utcDay } from '../days.js';
@@ -162,9 +163,14 @@ function linksOf(visits: readonly Visit[], content: Content): Report['links'] {
 }
 
 function askOf(questions: ReportRows['questions'], from: Date, now: Date): Report['ask'] {
-  const asked = questions.filter(({ createdAt }) => createdAt >= from && createdAt < now);
+  const kept = daysAfter(now, -askLogDays);
+  const since = kept > from ? kept : null;
+  const asked = questions.filter(
+    ({ createdAt }) => createdAt >= (since ?? from) && createdAt < now,
+  );
   const refused = (rows: typeof asked) => rows.filter((row) => row.refused).length;
   return {
+    since,
     questions: asked.length,
     refused: refused(asked),
     days: rankedGroups(asked, ({ createdAt }) => dayOf(createdAt))
@@ -211,10 +217,13 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const before = Array.from({ length: days }, (_, index) =>
     totalsOn(daysAfter(firstDayBefore(now, days), index)),
   );
-  const rollupBehind = daysAfter(rows.rawFrom, 1) < firstRawDay(now);
+  const firstKeptRaw = firstRawDay(now);
   return {
-    period: { from, to: now, days },
-    unrolledSince: rollupBehind ? dayOf(rows.rawFrom) : null,
+    period: { from, to: now, days, visits: visits.length },
+    rollupBehind:
+      daysAfter(rows.rawFrom, 1) < firstKeptRaw
+        ? { from: dayOf(rows.rawFrom), to: dayOf(daysAfter(firstKeptRaw, -1)) }
+        : null,
     overview: {
       today: sumOf([dayTotals(startedBetween(everyVisit, today, now))]),
       current: sumOf([dayTotals(startedBetween(everyVisit, from, today))]),

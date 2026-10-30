@@ -16,8 +16,9 @@ function aReport(overrides: Partial<Report> = {}): Report {
       from: new Date('2026-10-23T00:00:00Z'),
       to: new Date('2026-10-30T12:00:00Z'),
       days: 7,
+      visits: 14,
     },
-    unrolledSince: null,
+    rollupBehind: null,
     overview: { today: someVisits(2), current: someVisits(12), previous: someVisits(8) },
     weeks: [],
     sources: [],
@@ -27,7 +28,7 @@ function aReport(overrides: Partial<Report> = {}): Report {
     pages: [],
     reading: [],
     links: { cvViews: 0, cvPdf: [], outbound: [] },
-    ask: { questions: 0, refused: 0, days: [] },
+    ask: { since: null, questions: 0, refused: 0, days: [] },
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
@@ -56,6 +57,7 @@ describe('reportText', () => {
           from: new Date('2026-10-15T00:00:00Z'),
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
+          visits: 14,
         },
         overview: { today: someVisits(2), current: someVisits(12), previous: null },
       }),
@@ -87,7 +89,7 @@ describe('reportText', () => {
       questions: 1,
       refused: 0,
     }));
-    const text = reportText(aReport({ ask: { questions: 30, refused: 0, days } }), {
+    const text = reportText(aReport({ ask: { since: null, questions: 30, refused: 0, days } }), {
       all: false,
     });
     expect(text).toMatch(/^2026-10-30 +1 +0$/m);
@@ -232,10 +234,26 @@ describe('reportText', () => {
   });
 
   it('warns when the daily rollup is behind', () => {
-    expect(reportText(aReport({ unrolledSince: '2026-09-27' }), { all: false })).toContain(
-      'The daily rollup is behind: visits from 2026-09-27 on should have been rolled up and deleted.',
+    expect(
+      reportText(aReport({ rollupBehind: { from: '2026-09-27', to: '2026-09-29' } }), {
+        all: false,
+      }),
+    ).toContain(
+      'The daily rollup is behind: the visits of 2026-09-27 to 2026-09-29 should have been rolled up and deleted.',
     );
     expect(reportText(aReport(), { all: false })).not.toContain('rollup is behind');
+  });
+
+  it('says from when the questions are counted when the log does not reach back to the period', () => {
+    const text = reportText(
+      aReport({
+        ask: { since: new Date('2026-09-30T12:00:00Z'), questions: 1, refused: 0, days: [] },
+      }),
+      { all: false },
+    );
+    expect(text).toContain(
+      'Ask: 1 question, 0 refused, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
+    );
   });
 
   it('ends with the credit the IP database asks for', () => {

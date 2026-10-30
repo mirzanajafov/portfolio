@@ -138,7 +138,7 @@ function weeks({ weeks }: Report): string[] {
 }
 
 function traffic(report: Report, all: boolean): string[][] {
-  const visits = report.sources.reduce((total, { visits: count }) => total + count, 0);
+  const visits = report.period.visits;
   return [
     section(
       'Sources',
@@ -221,7 +221,7 @@ function links({ links }: Report, all: boolean): string[][] {
 
 function ask({ ask }: Report): string[] {
   return [
-    `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused`,
+    `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ...(ask.days.length > 0
       ? table([
           ['UTC day', 'questions', 'refused'],
@@ -235,8 +235,8 @@ function ask({ ask }: Report): string[] {
   ];
 }
 
-function audience({ audience }: Report, all: boolean): string[][] {
-  const visits = audience.devices.reduce((total, { visits: count }) => total + count, 0);
+function audience({ audience, period }: Report, all: boolean): string[][] {
+  const visits = period.visits;
   const rows = (counts: { name: string; visits: number }[]) =>
     counts.map(({ name, visits: count }) => [name, String(count), share(count, visits)]);
   return [
@@ -318,10 +318,10 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
     [
       `Visits in the last ${counted(period.days, 'full day')} and today: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
     ],
-    ...(report.unrolledSince
+    ...(report.rollupBehind
       ? [
           [
-            `The daily rollup is behind: visits from ${report.unrolledSince} on should have been rolled up and deleted. The API's log says why.`,
+            `The daily rollup is behind: the visits of ${report.rollupBehind.from} to ${report.rollupBehind.to} should have been rolled up and deleted. The API's log says why.`,
           ],
         ]
       : []),
