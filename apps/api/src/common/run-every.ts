@@ -6,13 +6,11 @@ export function runEvery(
   task: () => Promise<void>,
   log: Logger,
 ): () => void {
-  const run = () => {
+  const timer = setInterval(() => {
     task().catch((error: unknown) => {
       log.warn(`${what} failed: ${error instanceof Error ? error.message : String(error)}`);
     });
-  };
-  run();
-  const timer = setInterval(run, ms);
+  }, ms);
   timer.unref();
   return () => {
     clearInterval(timer);
