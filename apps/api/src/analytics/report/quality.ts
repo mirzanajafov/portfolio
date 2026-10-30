@@ -1,14 +1,12 @@
-import type { Rating, Report, Vital } from './report.js';
+import {
+  vitalBars,
+  type Bars,
+  type Rating,
+  type Report,
+  type Vital,
+} from '@portfolio/content/report';
 import { percentile, rankedGroups } from '../statistics.js';
 import type { Visit } from '../visits.js';
-
-type Bars = { good: number; poor: number; mine: number };
-
-export const vitalBars = {
-  lcp: { good: 2500, poor: 4000, mine: 2000 },
-  inp: { good: 200, poor: 500, mine: 200 },
-  cls: { good: 0.1, poor: 0.25, mine: 0.05 },
-} satisfies Record<string, Bars>;
 
 function ratingOf(p75: number, { good, poor }: Bars): Rating {
   if (p75 <= good) {

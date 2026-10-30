@@ -1,14 +1,14 @@
-import { dayOf } from '../days.js';
-import { rankedGroups } from '../statistics.js';
-import { codeOf, secondsOf, type Visit } from '../visits.js';
-import { guesserFor, type Guess } from './guess.js';
 import {
   readSeconds,
   type GuessedVisit,
   type Outcome,
   type Report,
   type VisitStory,
-} from './report.js';
+} from '@portfolio/content/report';
+import { dayOf } from '../days.js';
+import { rankedGroups } from '../statistics.js';
+import { codeOf, secondsOf, type Visit } from '../visits.js';
+import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory {

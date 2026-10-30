@@ -1,7 +1,5 @@
+import type { Source } from '@portfolio/content/report';
 import type { Browser } from './user-agent.js';
-
-export type Source =
-  'google' | 'search' | 'linkedin' | 'github' | 'jobs' | 'demos' | 'direct' | 'other';
 
 const google = /^(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/;
 

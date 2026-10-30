@@ -1,6 +1,5 @@
+import { quickExitSeconds } from '@portfolio/content/report';
 import type { Browser, Device } from './user-agent.js';
-
-export const quickExitSeconds = 10;
 
 export type ViewRow = {
   createdAt: Date;

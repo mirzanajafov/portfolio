@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GuessedVisit, Report, Totals, VisitStory } from '../analytics/report/report.js';
+import type { GuessedVisit, Report, Totals, VisitStory } from '@portfolio/content/report';
 import { reportText } from './report-text.js';
 
 const someVisits = (visits: number): Totals => ({
