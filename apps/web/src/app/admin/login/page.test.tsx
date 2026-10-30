@@ -1,23 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { request } from '@/admin/next-request.fake';
 import SignInPage from './page';
 
-const request = vi.hoisted(() => ({ cookies: new Map<string, string>() }));
-
-vi.mock('next/headers', () => ({
-  cookies: async () => ({
-    get: (name: string) => {
-      const value = request.cookies.get(name);
-      return value === undefined ? undefined : { name, value };
-    },
-  }),
-}));
-
-vi.mock('next/navigation', () => ({
-  notFound: () => {
-    throw new Error('not found');
-  },
-}));
+vi.mock('next/headers', async () => (await import('@/admin/next-request.fake')).nextHeaders);
+vi.mock('next/navigation', async () => (await import('@/admin/next-request.fake')).nextNavigation);
 
 vi.mock('@/admin/actions', () => ({ signIn: async () => 'refused' }));
 

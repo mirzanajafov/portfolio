@@ -1,45 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { signIn, signOut } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
-import type { endSession, signIn as startSession } from './sessions';
+import { request } from './next-request.fake';
+import type { endSession, startSession } from './sessions';
 
 const link = 'l'.repeat(43);
 const session = 's'.repeat(43);
 const ends = new Date('2026-11-29T12:00:00Z');
 
-const request = vi.hoisted(() => ({
-  headers: new Headers(),
-  cookies: new Map<string, string>(),
-  set: vi.fn(),
-  delete: vi.fn(),
-}));
-
 const api = vi.hoisted(() => ({
-  signIn: vi.fn<typeof startSession>(),
+  startSession: vi.fn<typeof startSession>(),
   endSession: vi.fn<typeof endSession>(),
 }));
 
-vi.mock('next/headers', () => ({
-  headers: async () => request.headers,
-  cookies: async () => ({
-    get: (name: string) => {
-      const value = request.cookies.get(name);
-      return value === undefined ? undefined : { name, value };
-    },
-    set: request.set,
-    delete: request.delete,
-  }),
-}));
-
-vi.mock('next/navigation', () => ({
-  notFound: () => {
-    throw new Error('not found');
-  },
-  redirect: (to: string) => {
-    throw new Error(`redirect to ${to}`);
-  },
-}));
-
+vi.mock('next/headers', async () => (await import('./next-request.fake')).nextHeaders);
+vi.mock('next/navigation', async () => (await import('./next-request.fake')).nextNavigation);
 vi.mock('./sessions', () => api);
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
@@ -55,7 +30,7 @@ beforeEach(() => {
   vi.stubEnv('SITE_ORIGIN', undefined);
   request.set.mockClear();
   request.delete.mockClear();
-  api.signIn.mockReset();
+  api.startSession.mockReset();
   api.endSession.mockReset();
 });
 
@@ -66,10 +41,10 @@ afterEach(() => {
 describe('signIn', () => {
   it('trades the link for a strict session cookie that ends with the session, and opens /admin', async () => {
     arriving('https://najafov.dev', { [linkCookie.name]: link });
-    api.signIn.mockResolvedValue({ kind: 'signed in', token: session, expiresAt: ends });
+    api.startSession.mockResolvedValue({ kind: 'signed in', token: session, expiresAt: ends });
 
     await expect(signIn()).rejects.toThrow('redirect to /admin');
-    expect(api.signIn).toHaveBeenCalledWith('http://api:3201', link, '203.0.113.7');
+    expect(api.startSession).toHaveBeenCalledWith('http://api:3201', link, '203.0.113.7');
     expect(request.delete).toHaveBeenCalledWith(linkCookie);
     expect(request.set).toHaveBeenCalledWith({
       name: '__Host-admin',
@@ -90,7 +65,7 @@ describe('signIn', () => {
     arriving(origin, { [linkCookie.name]: link });
 
     await expect(signIn()).rejects.toThrow('not found');
-    expect(api.signIn).not.toHaveBeenCalled();
+    expect(api.startSession).not.toHaveBeenCalled();
     expect(request.delete).not.toHaveBeenCalled();
   });
 
@@ -100,13 +75,13 @@ describe('signIn', () => {
     await expect(signIn()).rejects.toThrow('not found');
 
     arriving('http://localhost:3210', { [linkCookie.name]: link });
-    api.signIn.mockResolvedValue({ kind: 'refused' });
+    api.startSession.mockResolvedValue({ kind: 'refused' });
     await expect(signIn()).resolves.toMatch(/expired/);
   });
 
   it('says the link has expired or was used, and leaves the cookies alone so the page stays to say it', async () => {
     arriving('https://najafov.dev', { [linkCookie.name]: link });
-    api.signIn.mockResolvedValue({ kind: 'refused' });
+    api.startSession.mockResolvedValue({ kind: 'refused' });
 
     expect(await signIn()).toBe(
       'This link has expired or was already used. Run admin link for a new one.',
@@ -120,22 +95,22 @@ describe('signIn', () => {
     expect(await signIn()).toMatch(/^This link has expired/);
     arriving('https://najafov.dev', { [linkCookie.name]: 'short' });
     expect(await signIn()).toMatch(/^This link has expired/);
-    expect(api.signIn).not.toHaveBeenCalled();
+    expect(api.startSession).not.toHaveBeenCalled();
   });
 
   it('keeps the link and says how long to wait when the network signed in too often', async () => {
     arriving('https://najafov.dev', { [linkCookie.name]: link });
-    api.signIn.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 401 });
+    api.startSession.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 401 });
     expect(await signIn()).toBe('Too many sign-ins from this network. Try again in 7 minutes.');
 
-    api.signIn.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 30 });
+    api.startSession.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 30 });
     expect(await signIn()).toBe('Too many sign-ins from this network. Try again in a minute.');
     expect(request.delete).not.toHaveBeenCalled();
   });
 
   it('lets a failing API fail the sign-in', async () => {
     arriving('https://najafov.dev', { [linkCookie.name]: link });
-    api.signIn.mockRejectedValue(new Error('the API answered 500 to a sign-in'));
+    api.startSession.mockRejectedValue(new Error('the API answered 500 to a sign-in'));
 
     await expect(signIn()).rejects.toThrow('the API answered 500 to a sign-in');
     expect(request.set).not.toHaveBeenCalled();
@@ -143,11 +118,11 @@ describe('signIn', () => {
 });
 
 describe('signOut', () => {
-  it('ends the session in the API, deletes the cookie with its attributes and goes home', async () => {
+  it('ends the session in the API, deletes the cookie with its attributes and stays on /admin, where the tracker is off', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.endSession.mockResolvedValue();
 
-    await expect(signOut()).rejects.toThrow('redirect to /');
+    await expect(signOut()).rejects.toThrow('redirect to /admin');
     expect(api.endSession).toHaveBeenCalledWith('http://api:3201', session);
     expect(request.delete).toHaveBeenCalledWith(sessionCookie);
   });
@@ -160,10 +135,10 @@ describe('signOut', () => {
     expect(request.delete).not.toHaveBeenCalled();
   });
 
-  it('still clears the cookie and goes home when there is no session to end', async () => {
+  it('still clears the cookie when there is no session to end', async () => {
     arriving('https://najafov.dev', {});
 
-    await expect(signOut()).rejects.toThrow('redirect to /');
+    await expect(signOut()).rejects.toThrow('redirect to /admin');
     expect(api.endSession).not.toHaveBeenCalled();
     expect(request.delete).toHaveBeenCalledWith(sessionCookie);
   });

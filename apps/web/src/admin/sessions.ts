@@ -11,7 +11,7 @@ function unexpected(what: string, { status }: Response): Error {
   return new Error(`the API answered ${String(status)} to ${what}`);
 }
 
-export async function signIn(
+export async function startSession(
   apiUrl: string,
   link: string,
   forwardedFor: string | null,
@@ -39,7 +39,7 @@ export async function signIn(
   return { kind: 'signed in', token, expiresAt: new Date(expiresAt) };
 }
 
-export async function sessionEnd(
+export async function sessionExpiry(
   apiUrl: string,
   token: string,
   fetchImpl: typeof fetch = fetch,

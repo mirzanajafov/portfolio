@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { signOut } from '@/admin/actions';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { sessionEnd } from '@/admin/sessions';
+import { sessionExpiry } from '@/admin/sessions';
 import { apiUrl } from '@/lib/forward-to-api';
 
 const inBaku = new Intl.DateTimeFormat('en-GB', {
@@ -12,7 +12,7 @@ const inBaku = new Intl.DateTimeFormat('en-GB', {
 
 export default async function AdminPage() {
   const token = await tokenIn(sessionCookie);
-  const expiresAt = token === undefined ? null : await sessionEnd(apiUrl(), token);
+  const expiresAt = token === undefined ? null : await sessionExpiry(apiUrl(), token);
   if (!expiresAt) {
     notFound();
   }
