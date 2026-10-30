@@ -27,8 +27,8 @@ export function eventSchema(links: ReadonlySet<string>) {
     z.strictObject({
       type: z.literal('view'),
       id: z.uuid(),
-      path: z.string().regex(/^\/[A-Za-z0-9._~/-]{0,120}$/),
-      referrer: z.string().toLowerCase().regex(host).optional(),
+      path: z.string().regex(/^\/[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/),
+      referrer: z.string().toLowerCase().regex(host).optional().catch(undefined),
       ref: z
         .string()
         .regex(/^[a-z0-9]{3,16}$/)
@@ -64,8 +64,8 @@ export function eventSchema(links: ReadonlySet<string>) {
       view: pageView,
       message: z.string().max(200),
       source: z.string().max(300),
-      line: z.int().min(0).optional(),
-      column: z.int().min(0).optional(),
+      line: z.int32().min(0).optional(),
+      column: z.int32().min(0).optional(),
     }),
   ]);
 }

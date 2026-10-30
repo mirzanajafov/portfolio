@@ -44,15 +44,23 @@ describe('eventSchema', () => {
   });
 
   it('keeps unknown paths, because 404s are worth seeing, but only paths', () => {
-    expect(schema.safeParse(aView({ path: '/projects/no-such-thing' })).success).toBe(true);
+    for (const path of ['/projects/no-such-thing', '/foo%20bar', '/@someone', '/a:b+c']) {
+      expect(schema.safeParse(aView({ path })).success).toBe(true);
+    }
     expect(schema.safeParse(aView({ path: 'https://elsewhere.example/' })).success).toBe(false);
     expect(schema.safeParse(aView({ path: '/?r=memh' })).success).toBe(false);
+    expect(schema.safeParse(aView({ path: `/${'a'.repeat(201)}` })).success).toBe(false);
   });
 
-  it('takes a referrer host, never a full address', () => {
-    expect(schema.safeParse(aView({ referrer: 'https://www.google.com/search?q=x' })).success).toBe(
-      false,
-    );
+  it('keeps a page view whose referrer is not a host, without the referrer', () => {
+    for (const referrer of ['https://www.google.com/search?q=x', '[2001:db8::1]', 'example.com.']) {
+      expect(schema.parse(aView({ referrer }))).toEqual({
+        type: 'view',
+        id: view,
+        path: '/',
+        notFound: false,
+      });
+    }
   });
 
   it('refuses fields it does not know', () => {
@@ -80,10 +88,11 @@ describe('eventSchema', () => {
     expect(schema.safeParse({ type: 'vital', view, name: 'FID', value: 12 }).success).toBe(false);
   });
 
-  it('takes an error with its place, but not a message over 200 characters', () => {
+  it('takes an error with its place, but not a long message or a line past 32 bits', () => {
     const error = { type: 'error', view, message: 'x is undefined', source: '/_next/static/a.js' };
     expect(schema.safeParse({ ...error, line: 3, column: 14 }).success).toBe(true);
     expect(schema.safeParse({ ...error, message: 'x'.repeat(201) }).success).toBe(false);
+    expect(schema.safeParse({ ...error, line: 3_000_000_000 }).success).toBe(false);
   });
 });
 
