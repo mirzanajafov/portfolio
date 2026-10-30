@@ -1,12 +1,21 @@
+import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { siteUrl } from '@portfolio/content';
+import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
 import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { CliModule } from './cli.module.js';
 import { parseCommand, usage, type Command } from './command.js';
+import { reportText } from './report-text.js';
 
-async function run(command: Command, applications: ApplicationsService, env: Env): Promise<number> {
+type ApplicationCommand = Exclude<Command, { name: 'report' }>;
+
+async function runApplication(
+  command: ApplicationCommand,
+  applications: ApplicationsService,
+  env: Env,
+): Promise<number> {
   if (command.name === 'application list') {
     for (const { appliedOn, company, role, code } of await applications.list()) {
       process.stdout.write(
@@ -36,6 +45,15 @@ async function run(command: Command, applications: ApplicationsService, env: Env
   return 0;
 }
 
+async function run(command: Command, app: INestApplicationContext): Promise<number> {
+  if (command.name === 'report') {
+    const report = await app.get(AnalyticsReportService).build(command.days);
+    process.stdout.write(reportText(report, { all: command.all }));
+    return 0;
+  }
+  return runApplication(command, app.get(ApplicationsService), app.get<Env>(ENV));
+}
+
 export async function runCli(args: readonly string[]): Promise<number> {
   let command: Command;
   try {
@@ -44,7 +62,8 @@ export async function runCli(args: readonly string[]): Promise<number> {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n\n${usage}\n`);
     return 2;
   }
-  if (command.name !== 'application list' && process.stdout.isTTY) {
+  const writesPdf = command.name === 'application add' || command.name === 'application cv';
+  if (writesPdf && process.stdout.isTTY) {
     process.stderr.write(
       'stdout is a terminal, so send it to a file (and leave out -t when this runs through docker exec)\n',
     );
@@ -52,7 +71,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
   }
   const app = await NestFactory.createApplicationContext(CliModule, { logger: ['error', 'fatal'] });
   try {
-    return await run(command, app.get(ApplicationsService), app.get<Env>(ENV));
+    return await run(command, app);
   } catch (error) {
     if (error instanceof CodeTakenError) {
       process.stderr.write(`${error.message}\n`);

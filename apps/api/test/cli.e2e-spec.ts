@@ -146,6 +146,14 @@ describe('the application commands', () => {
     });
   });
 
+  it('prints the report for the days asked, even to a terminal', async () => {
+    process.stdout.isTTY = true;
+    const { status, stdout } = await cli('report', '--days', '1');
+    expect(status).toBe(0);
+    expect(stdout).toMatch(/^Visits in the last 1 day, /);
+    expect(stdout).toContain('Sources: none');
+  });
+
   it('lists the applications with their codes', async () => {
     await registerMemh();
     expect((await cli('application', 'list')).stdout).toBe(

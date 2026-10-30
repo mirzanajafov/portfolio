@@ -4,9 +4,11 @@ import { groupBy, percentile } from './statistics.js';
 
 type Bars = { good: number; poor: number; mine: number };
 
-const lcpBars: Bars = { good: 2500, poor: 4000, mine: 2000 };
-const inpBars: Bars = { good: 200, poor: 500, mine: 200 };
-const clsBars: Bars = { good: 0.1, poor: 0.25, mine: 0.05 };
+export const vitalBars = {
+  lcp: { good: 2500, poor: 4000, mine: 2000 },
+  inp: { good: 200, poor: 500, mine: 200 },
+  cls: { good: 0.1, poor: 0.25, mine: 0.05 },
+} satisfies Record<string, Bars>;
 
 function ratingOf(p75: number, { good, poor }: Bars): Rating {
   if (p75 <= good) {
@@ -35,15 +37,15 @@ function vitalsOf(visits: readonly Visit[]): Report['quality']['vitals'] {
       device,
       lcp: vitalOf(
         here.flatMap(({ view }) => view.lcpMs ?? []),
-        lcpBars,
+        vitalBars.lcp,
       ),
       inp: vitalOf(
         here.flatMap(({ view }) => view.inpMs ?? []),
-        inpBars,
+        vitalBars.inp,
       ),
       cls: vitalOf(
         here.flatMap(({ view }) => view.cls ?? []),
-        clsBars,
+        vitalBars.cls,
       ),
     })),
   );

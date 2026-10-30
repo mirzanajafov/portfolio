@@ -50,6 +50,15 @@ describe('parseCommand', () => {
     });
   });
 
+  it('reads report for the last week unless told how many days', () => {
+    expect(parseCommand(['report'])).toEqual({ name: 'report', days: 7, all: false });
+    expect(parseCommand(['report', '--days', '30', '--all'])).toEqual({
+      name: 'report',
+      days: 30,
+      all: true,
+    });
+  });
+
   it('reads list and cv', () => {
     expect(parseCommand(['application', 'list'])).toEqual({ name: 'application list' });
     expect(parseCommand(['application', 'cv', 'memh'])).toEqual({
@@ -84,6 +93,10 @@ describe('parseCommand', () => {
     ['with two codes', ['application', 'cv', 'memh', 'kxqtz']],
     ['with arguments list does not take', ['application', 'list', '--all']],
     ['for a command it does not know', ['application', 'remove', 'memh']],
+    ['for more days than are kept', ['report', '--days', '31']],
+    ['for no days', ['report', '--days', '0']],
+    ['for days that are not a number', ['report', '--days', 'week']],
+    ['with an argument report does not take', ['report', 'xsolla']],
   ])('refuses arguments %s', (_, args) => {
     expect(() => parseCommand(args)).toThrow();
   });
