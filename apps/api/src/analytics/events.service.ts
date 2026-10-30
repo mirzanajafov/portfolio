@@ -56,13 +56,17 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
-    const visitor = {
-      key: keyed(key, network, userAgent),
-      device: deviceOf(userAgent),
-      browser: browserOf(userAgent),
-      ...this.places.placeOf(ip),
-    };
-    await this.visits.record(event, visitor, now);
+    if (event.type === 'view') {
+      const visitor = {
+        key: keyed(key, network, userAgent),
+        device: deviceOf(userAgent),
+        browser: browserOf(userAgent),
+        ...this.places.placeOf(ip),
+      };
+      await this.visits.recordView(event, visitor, now);
+    } else {
+      await this.visits.record(event, now);
+    }
     return { kind: 'accepted' };
   }
 }
