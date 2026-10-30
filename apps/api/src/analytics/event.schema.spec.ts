@@ -35,7 +35,7 @@ describe('eventSchema', () => {
   });
 
   it('keeps a page view whose code is malformed, without the code', () => {
-    expect(schema.parse(aView({ ref: 'Xsolla Careers' }))).toEqual({
+    expect(schema.parse(aView({ ref: 'Acme Careers' }))).toEqual({
       type: 'view',
       id: view,
       path: '/',
@@ -71,6 +71,10 @@ describe('eventSchema', () => {
     const blocks = Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`block-${i}`, 1]));
     expect(schema.safeParse(aRead({ blocks })).success).toBe(false);
     expect(schema.safeParse(aRead({ blocks: { Problem: 1 } })).success).toBe(false);
+  });
+
+  it('numbers readings from 1', () => {
+    expect(schema.safeParse(aRead({ seq: 1 })).success).toBe(true);
     expect(schema.safeParse(aRead({ seq: 0 })).success).toBe(false);
   });
 
@@ -91,8 +95,19 @@ describe('eventSchema', () => {
   it('takes an error with its place, but not a long message or a line past 32 bits', () => {
     const error = { type: 'error', view, message: 'x is undefined', source: '/_next/static/a.js' };
     expect(schema.safeParse({ ...error, line: 3, column: 14 }).success).toBe(true);
+    expect(schema.safeParse({ ...error, source: 'external' }).success).toBe(true);
     expect(schema.safeParse({ ...error, message: 'x'.repeat(201) }).success).toBe(false);
     expect(schema.safeParse({ ...error, line: 3_000_000_000 }).success).toBe(false);
+  });
+
+  it('takes the source of an error as a path on this site, or only the word external', () => {
+    const error = { type: 'error', view, message: 'x is undefined' };
+    for (const source of [
+      'https://najafov.dev/_next/static/a.js?r=memh',
+      'chrome-extension://abcdefghijklmnop/content.js',
+    ]) {
+      expect(schema.safeParse({ ...error, source }).success).toBe(false);
+    }
   });
 });
 

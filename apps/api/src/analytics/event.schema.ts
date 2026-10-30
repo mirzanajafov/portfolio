@@ -5,6 +5,7 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
+const path = z.string().regex(/^\/[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/);
 const pageView = z.uuid();
 const seconds = z.int().min(0).max(86_400);
 
@@ -27,7 +28,7 @@ export function eventSchema(links: ReadonlySet<string>) {
     z.strictObject({
       type: z.literal('view'),
       id: z.uuid(),
-      path: z.string().regex(/^\/[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/),
+      path,
       referrer: z.string().toLowerCase().regex(host).optional().catch(undefined),
       ref: z
         .string()
@@ -63,7 +64,7 @@ export function eventSchema(links: ReadonlySet<string>) {
       type: z.literal('error'),
       view: pageView,
       message: z.string().max(200),
-      source: z.string().max(300),
+      source: z.union([z.literal('external'), path]),
       line: z.int32().min(0).optional(),
       column: z.int32().min(0).optional(),
     }),
