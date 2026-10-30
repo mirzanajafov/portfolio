@@ -292,7 +292,7 @@ describe('reportText', () => {
             levels: {
               high: { right: 1, wrong: 0, tied: 0 },
               medium: { right: 0, wrong: 1, tied: 0 },
-              low: noOutcomes.low,
+              low: noOutcomes().low,
             },
           },
           unknownCodes: [
@@ -348,7 +348,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes },
+          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
           unknownCodes: [],
         },
       }),
@@ -378,7 +378,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes },
+          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
           unknownCodes: [],
         },
       }),
@@ -400,7 +400,7 @@ describe('reportText', () => {
     const report = aReport({
       applications: {
         list: [anEntry({ guesses: [lowGuess] }), anEntry({ code: 'k7mpx', company: 'Wolt' })],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes },
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: [],
       },
     });
@@ -425,7 +425,7 @@ describe('reportText', () => {
             visits: index === 0 ? twelve.map(() => aStory()) : [],
           }),
         ),
-        score: { visits: 0, unplaced: 0, levels: noOutcomes },
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: twelve.map((index) => ({
           code: `check${String(index)}`,
           visits: 1,

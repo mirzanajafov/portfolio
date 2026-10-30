@@ -180,8 +180,10 @@ export const someVisits = (visits: number): Totals => ({
   quickExits: 0,
 });
 
-const none = { right: 0, wrong: 0, tied: 0 };
-export const noOutcomes = { high: none, medium: none, low: none };
+export function noOutcomes(): Report['applications']['score']['levels'] {
+  const none = () => ({ right: 0, wrong: 0, tied: 0 });
+  return { high: none(), medium: none(), low: none() };
+}
 
 export function aReport(overrides: Partial<Report> = {}): Report {
   return {
@@ -207,7 +209,7 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     filter: [],
     applications: {
       list: [],
-      score: { visits: 0, unplaced: 0, levels: noOutcomes },
+      score: { visits: 0, unplaced: 0, levels: noOutcomes() },
       unknownCodes: [],
     },
     ...overrides,
