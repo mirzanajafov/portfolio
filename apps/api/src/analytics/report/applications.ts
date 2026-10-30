@@ -11,13 +11,13 @@ import { codeOf, secondsOf, type Visit } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
-type Asked = ReadonlyMap<string, readonly string[]>;
+type Asked = ReadonlyMap<string, string[]>;
 
 function storyOf(visit: Visit, labels: ReadonlyMap<string, string>, asked: Asked): VisitStory {
   const clicks = visit.views.flatMap(({ clicks }) =>
     clicks.map(({ href }) => labels.get(href) ?? href),
   );
-  const questions = [...(asked.get(visit.visitor) ?? [])];
+  const questions = asked.get(visit.visitor) ?? [];
   return {
     at: visit.startedAt,
     from: visit.landing.referrerHost,

@@ -164,11 +164,16 @@ function linksOf(visits: readonly Visit[], labels: ReadonlyMap<string, string>):
 
 function askedIn(questions: ReportRows['questions']): Map<string, string[]> {
   const asked = new Map<string, string[]>();
-  for (const { visitor, question } of questions.toSorted(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-  )) {
-    if (visitor !== null) {
-      asked.set(visitor, [...(asked.get(visitor) ?? []), question]);
+  const inOrder = questions.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  for (const { visitor, question } of inOrder) {
+    if (visitor === null) {
+      continue;
+    }
+    const list = asked.get(visitor);
+    if (list) {
+      list.push(question);
+    } else {
+      asked.set(visitor, [question]);
     }
   }
   return asked;

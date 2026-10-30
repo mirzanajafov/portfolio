@@ -26,6 +26,7 @@ export type ReportSection = ReportPart[];
 
 const listLength = 10;
 const candidateLength = 3;
+const questionsInStory = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -267,7 +268,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function ask({ ask }: Report): ReportSection {
   return [
     line(
-      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused, ${String(ask.inVisits)} of them in ${counted(ask.visits, 'visit')} I can see${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
+      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.inVisits > 0 ? `, ${String(ask.inVisits)} of them in ${counted(ask.visits, 'visit')} I can see` : ''}${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ),
     ...(ask.days.length > 0
       ? [
@@ -354,7 +355,12 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
   ];
 }
 
-function storyText({ at, from, pages, clicks, questions, interacted }: VisitStory): string {
+function storyText(
+  { at, from, pages, clicks, questions, interacted }: VisitStory,
+  all: boolean,
+): string {
+  const asked = all ? questions : questions.slice(0, questionsInStory);
+  const unshown = questions.length - asked.length;
   const read = pages.map(
     ({ path, seconds, read }) =>
       `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
@@ -363,7 +369,9 @@ function storyText({ at, from, pages, clicks, questions, interacted }: VisitStor
     `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
     ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
     ...(questions.length > 0
-      ? [`asked ${questions.map((question) => `"${question}"`).join(', ')}`]
+      ? [
+          `asked ${asked.map((question) => JSON.stringify(question)).join(', ')}${unshown > 0 ? ` and ${String(unshown)} more` : ''}`,
+        ]
       : []),
     ...(interacted ? [] : ['no interaction']),
   ].join(', ');
@@ -397,12 +405,12 @@ function candidatesText(candidates: readonly { company: string; role: string }[]
   return others > 0 ? `${named.join(', ')} or ${String(others)} more` : named.join(' or ');
 }
 
-function guessText(guess: GuessedVisit): string {
+function guessText(guess: GuessedVisit, all: boolean): string {
   const why = [
     ...guess.signals.map(signalText),
     `${counted(guess.daysAfter, 'day')} after applying`,
   ].join(', ');
-  return `possibly ${candidatesText(guess.candidates)}, ${guess.confidence} (${why}): ${storyText(guess)}`;
+  return `possibly ${candidatesText(guess.candidates)}, ${guess.confidence} (${why}): ${storyText(guess, all)}`;
 }
 
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
@@ -410,13 +418,13 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   const lowHidden = application.guesses.length - guesses.length;
   const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`;
   const parts = [
-    ...listed(application.visits, all, (visit) => [item(storyText(visit))]),
+    ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [
       item(
         `UTC day ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
       ),
     ]),
-    ...listed(guesses, all, (guess) => [item(guessText(guess))]),
+    ...listed(guesses, all, (guess) => [item(guessText(guess, all))]),
     ...more(`low guesses not shown: ${String(lowHidden)}`, lowHidden, true),
   ];
   const { code } = application;

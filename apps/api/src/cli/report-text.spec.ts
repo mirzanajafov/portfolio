@@ -89,7 +89,7 @@ describe('reportText', () => {
       'CV page views: 0',
       'CV PDF clicks from: none',
       'Link clicks: none',
-      'Ask: 0 questions, 0 refused, 0 of them in 0 visits I can see',
+      'Ask: 0 questions, 0 refused',
       'Devices: none',
       'Browsers: none',
       'Countries: none',
@@ -312,6 +312,22 @@ describe('reportText', () => {
         '  check1: 2 visits, first 2026-10-30 12:00',
       ].join('\n'),
     );
+  });
+
+  it('quotes each question a visit asked on its line, shows three unless asked for all, and keeps a line break from starting a new line', () => {
+    const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
+    const report = aReport({
+      applications: {
+        list: [anEntry({ visits: [aStory({ questions })] })],
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+        unknownCodes: [],
+      },
+    });
+
+    const short = reportText(report, { all: false });
+    expect(short).toContain('asked "Line one\\nline two", "Kafka?", "Go?" and 2 more');
+    expect(short).not.toMatch(/^line two/m);
+    expect(reportText(report, { all: true })).toContain(', "Rust?", "Zig?"');
   });
 
   it('names at most three candidates of a guess, and each of them once', () => {
