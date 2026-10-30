@@ -1,5 +1,7 @@
+import type { VisitEvent } from '@portfolio/content/analytics';
 import { aProject, contentOf } from '@portfolio/content/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { z } from 'zod';
 import { eventSchema, linksIn } from './event.schema.js';
 
 const schema = eventSchema(new Set(['/cv.pdf']));
@@ -110,6 +112,12 @@ describe('eventSchema', () => {
     ]) {
       expect(schema.safeParse({ ...error, source }).success).toBe(false);
     }
+  });
+});
+
+describe('the contract with the site', () => {
+  it('accepts every event the tracker on the site can send', () => {
+    expectTypeOf<VisitEvent>().toEqualTypeOf<z.input<typeof schema>>();
   });
 });
 

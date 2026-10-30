@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
+import { errorMessageMaxLength } from '@portfolio/content/analytics';
 import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
@@ -63,7 +64,7 @@ export function eventSchema(links: ReadonlySet<string>) {
     z.strictObject({
       type: z.literal('error'),
       view: pageView,
-      message: z.string().max(200),
+      message: z.string().max(errorMessageMaxLength),
       source: z.union([z.literal('external'), path]),
       line: z.int32().min(0).optional(),
       column: z.int32().min(0).optional(),
