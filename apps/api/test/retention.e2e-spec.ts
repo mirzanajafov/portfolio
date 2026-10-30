@@ -68,6 +68,34 @@ describe('retention against a real database', () => {
     expect(await daysRolled()).toEqual([['2026-10-02', 1]]);
   });
 
+  it('leaves a day raw when its rollup fails partway', async () => {
+    at('2026-10-02T12:00:00Z');
+    await send({ type: 'view', id: randomUUID(), path: '/' });
+    await prisma.dailyPage.create({
+      data: {
+        day: new Date('2026-10-02'),
+        path: '/',
+        device: 'desktop',
+        views: 0,
+        visits: 0,
+        exits: 0,
+        notFoundViews: 0,
+        activeSeconds: [],
+        maxScroll: [],
+        blockSeconds: {},
+        lcpMs: [],
+        inpMs: [],
+        cls: [],
+      },
+    });
+
+    at('2026-11-02T00:00:00Z');
+    await expect(cleanup()).rejects.toThrow();
+
+    expect(await prisma.visit.count()).toBe(1);
+    expect(await daysRolled()).toEqual([]);
+  });
+
   it("keeps a rolled day's numbers, and no visitor in them", async () => {
     const view = randomUUID();
     at('2026-10-02T12:00:00Z');

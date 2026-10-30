@@ -192,4 +192,15 @@ describe('the visitor report against a real database', () => {
     });
     expect(totals(rolled)).toEqual(totals(raw));
   });
+
+  it('counts a day that is due but not rolled up yet from its raw rows', async () => {
+    at('12:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/' });
+    clock.current = new Date('2026-11-02T00:30:00Z');
+
+    const report = await reports.build(7);
+
+    expect(report.weeks.find(({ start }) => start === '2026-09-28')?.visits).toBe(1);
+    expect(report.unrolledSince).toBeNull();
+  });
 });

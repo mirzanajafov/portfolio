@@ -3,6 +3,7 @@ import { readingBlocks } from '@portfolio/content/analytics';
 import { outboundLinks } from '../links.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
 import { dayOf, daysAfter, mondayOf, utcDay } from '../days.js';
+import { firstRawDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
@@ -14,8 +15,18 @@ import type { ReportRows } from './rows.js';
 const journeyLength = 3;
 const trendWeeks = 12;
 
-export function firstTrendDay(now: Date): Date {
+function firstTrendDay(now: Date): Date {
   return daysAfter(mondayOf(now), -7 * (trendWeeks - 1));
+}
+
+function firstDayBefore(now: Date, days: number): Date {
+  return daysAfter(utcDay(now), 1 - 2 * days);
+}
+
+export function firstReportedDay(now: Date, days: number): Date {
+  const trend = firstTrendDay(now);
+  const before = firstDayBefore(now, days);
+  return before < trend ? before : trend;
 }
 
 function startedBetween(visits: readonly Visit[], from: Date, to: Date): Visit[] {
@@ -198,10 +209,12 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       ? dayTotals(startedBetween(everyVisit, day, daysAfter(day, 1)))
       : (rolled.get(day.getTime()) ?? null);
   const before = Array.from({ length: days }, (_, index) =>
-    totalsOn(daysAfter(from, index - days)),
+    totalsOn(daysAfter(firstDayBefore(now, days), index)),
   );
+  const rollupBehind = daysAfter(rows.rawFrom, 1) < firstRawDay(now);
   return {
     period: { from, to: now, days },
+    unrolledSince: rollupBehind ? dayOf(rows.rawFrom) : null,
     overview: {
       current: sumOf([dayTotals(visits)]),
       previous: before.every(collected) ? sumOf(before) : null,

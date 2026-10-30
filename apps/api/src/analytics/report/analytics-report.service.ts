@@ -6,8 +6,8 @@ import { CONTENT } from '../../content.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { firstRawDay } from '../retention.js';
 import { dropReasons } from '../visit-log.service.js';
-import { findVisits } from '../visit-rows.js';
-import { buildReport, firstTrendDay } from './build-report.js';
+import { findVisits, firstUnrolledDay } from '../visit-rows.js';
+import { buildReport, firstReportedDay } from './build-report.js';
 import type { Report } from './report.js';
 
 const knownDropReason = z.enum(dropReasons);
@@ -22,15 +22,16 @@ export class AnalyticsReportService {
 
   async build(days: number): Promise<Report> {
     const now = this.clock.now();
-    const rawFrom = firstRawDay(now);
+    const rawFrom = await firstUnrolledDay(this.prisma, now);
+    const periodFrom = firstRawDay(now);
     const [visits, rolled, questions, dropped] = await Promise.all([
       findVisits(this.prisma, { startedAt: { gte: rawFrom } }),
-      this.prisma.dailyVisits.findMany({ where: { day: { gte: firstTrendDay(now) } } }),
+      this.prisma.dailyVisits.findMany({ where: { day: { gte: firstReportedDay(now, days) } } }),
       this.prisma.askLog.findMany({
-        where: { createdAt: { gte: rawFrom } },
+        where: { createdAt: { gte: periodFrom } },
         select: { createdAt: true, refused: true },
       }),
-      this.prisma.droppedEvents.findMany({ where: { day: { gte: rawFrom } } }),
+      this.prisma.droppedEvents.findMany({ where: { day: { gte: periodFrom } } }),
     ]);
     return buildReport(
       {

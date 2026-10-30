@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { Prisma } from '../generated/prisma/client.js';
+import { daysAfter, utcDay } from './days.js';
+import { firstRawDay } from './retention.js';
 import { browsers, devices } from './user-agent.js';
 import type { VisitRow } from './visits.js';
 
@@ -43,4 +45,20 @@ export async function findVisits(
     browser: knownBrowser.parse(browser),
     views: views.map(({ blocks, ...view }) => ({ ...view, blocks: blockSeconds.parse(blocks) })),
   }));
+}
+
+export async function firstUnrolledDay(db: Prisma.TransactionClient, now: Date): Promise<Date> {
+  const newest = await db.dailyVisits.findFirst({
+    orderBy: { day: 'desc' },
+    select: { day: true },
+  });
+  if (newest) {
+    return daysAfter(newest.day, 1);
+  }
+  const oldest = await db.visit.findFirst({
+    orderBy: { startedAt: 'asc' },
+    select: { startedAt: true },
+  });
+  const rawFrom = firstRawDay(now);
+  return oldest && oldest.startedAt < rawFrom ? utcDay(oldest.startedAt) : rawFrom;
 }

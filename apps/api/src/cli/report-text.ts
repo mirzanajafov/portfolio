@@ -313,6 +313,13 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
     [
       `Visits in the last ${counted(period.days, 'day')}: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
     ],
+    ...(report.unrolledSince
+      ? [
+          [
+            `The daily rollup is behind: visits from ${report.unrolledSince} on should have been rolled up and deleted. The API's log says why.`,
+          ],
+        ]
+      : []),
     overview(report),
     weeks(report),
     ...traffic(report, all),

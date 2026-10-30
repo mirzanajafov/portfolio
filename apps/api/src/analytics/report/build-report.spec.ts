@@ -65,6 +65,24 @@ describe('buildReport', () => {
     });
   });
 
+  it('counts a day the rollup has not reached yet from its raw rows', () => {
+    const report = reportOf(
+      [aVisit([aView({ activeSeconds: 30 })], { startedAt: new Date('2026-09-29T10:00:00Z') })],
+      {
+        days: 30,
+        rawFrom: new Date('2026-09-29T00:00:00Z'),
+        rolled: rolledDays('2026-09-01', 28),
+      },
+    );
+    expect(report.overview.previous?.visits).toBe(29);
+    expect(report.unrolledSince).toBeNull();
+  });
+
+  it('says the rollup is behind once it has missed a whole day', () => {
+    const report = reportOf([], { rawFrom: new Date('2026-09-28T00:00:00Z') });
+    expect(report.unrolledSince).toBe('2026-09-28');
+  });
+
   it('has nothing to compare with when a day before the period was never collected', () => {
     const report = reportOf([], { days: 30, rolled: rolledDays('2026-09-02', 28) });
     expect(report.overview.previous).toBeNull();

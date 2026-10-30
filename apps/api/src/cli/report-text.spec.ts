@@ -17,6 +17,7 @@ function aReport(overrides: Partial<Report> = {}): Report {
       to: new Date('2026-10-30T12:00:00Z'),
       days: 7,
     },
+    unrolledSince: null,
     overview: { current: someVisits(12), previous: someVisits(8) },
     weeks: [],
     sources: [],
@@ -228,6 +229,13 @@ describe('reportText', () => {
     );
     expect(text).toContain('\\u{1b}]52;c;aGk=\\u{7}\\u{1b}[2J\\u{a}visits  9999');
     expect(text).not.toMatch(/\p{Cc}(?<!\n)/u);
+  });
+
+  it('warns when the daily rollup is behind', () => {
+    expect(reportText(aReport({ unrolledSince: '2026-09-27' }), { all: false })).toContain(
+      'The daily rollup is behind: visits from 2026-09-27 on should have been rolled up and deleted.',
+    );
+    expect(reportText(aReport(), { all: false })).not.toContain('rollup is behind');
   });
 
   it('ends with the credit the IP database asks for', () => {
