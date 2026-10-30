@@ -1,6 +1,7 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { siteUrl } from '@portfolio/content';
+import { dayOf } from '../analytics/days.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
 import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
@@ -18,9 +19,7 @@ async function runApplication(
 ): Promise<number> {
   if (command.name === 'application list') {
     for (const { appliedOn, company, role, code } of await applications.list()) {
-      process.stdout.write(
-        `${appliedOn.toISOString().slice(0, 10)}  ${code}  ${company}, ${role}\n`,
-      );
+      process.stdout.write(`${dayOf(appliedOn)}  ${code}  ${company}, ${role}\n`);
     }
     return 0;
   }

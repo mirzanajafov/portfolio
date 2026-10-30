@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { dayOf } from './days.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -80,7 +81,7 @@ export class VisitLogService {
   }
 
   async countDropped(reason: DropReason, at: Date): Promise<void> {
-    const day = at.toISOString().slice(0, 10);
+    const day = dayOf(at);
     await this.prisma.$executeRaw`
       INSERT INTO "DroppedEvents" (day, reason) VALUES (${day}::date, ${reason})
       ON CONFLICT (day, reason) DO UPDATE SET count = "DroppedEvents".count + 1`;

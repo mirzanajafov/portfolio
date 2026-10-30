@@ -10,6 +10,7 @@ import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { ENV, type Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { dayOf } from './days.js';
 import { dailyKey } from './visitor-key.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
@@ -35,7 +36,7 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
   }
 
   async keyFor(now: Date): Promise<Uint8Array> {
-    const day = now.toISOString().slice(0, 10);
+    const day = dayOf(now);
     if (this.current?.day === day) {
       return this.current.key;
     }
@@ -53,7 +54,7 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cleanup(): Promise<void> {
-    const day = this.clock.now().toISOString().slice(0, 10);
+    const day = dayOf(this.clock.now());
     if (this.current?.day !== day) {
       this.current = undefined;
     }
