@@ -2,7 +2,7 @@ import { content } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
 import { isRegistered } from '@/admin/api';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { cvAttachment } from '@/lib/cv-pdf';
+import { cvAttachment } from '@/lib/cv-attachment';
 import { apiUrl } from '@/lib/forward-to-api';
 
 export const dynamic = 'force-dynamic';

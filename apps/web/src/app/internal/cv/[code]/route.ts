@@ -2,7 +2,7 @@ import { content } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
 import { timingSafeEqual } from 'node:crypto';
 import { BlockList, isIP } from 'node:net';
-import { cvAttachment } from '@/lib/cv-pdf';
+import { cvAttachment } from '@/lib/cv-attachment';
 
 export const dynamic = 'force-dynamic';
 
