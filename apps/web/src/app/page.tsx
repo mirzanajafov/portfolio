@@ -134,12 +134,12 @@ export default function Home() {
             </a>
             .
           </p>
-          <nav aria-label="Elsewhere" className="flex flex-wrap gap-5">
+          <nav aria-label="Elsewhere" className="flex gap-5">
             <ProfileLinks links={links} className="underline underline-offset-4 hover:text-fg" />
-            <Link className="underline underline-offset-4 hover:text-fg" href="/privacy">
-              Privacy
-            </Link>
           </nav>
+          <Link className="underline underline-offset-4 hover:text-fg" href="/privacy">
+            Privacy
+          </Link>
         </footer>
       </div>
     </main>
