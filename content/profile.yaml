@@ -7,10 +7,10 @@ timezone: UTC+4
 availability: Open to remote roles and relocation
 summary: >-
   I have built backends for over seven years, in Node.js from the start and in NestJS and TypeScript
-  for remote teams in Tel Aviv, Dubai and Amsterdam since 2023. Most of it is APIs, performance and
-  background jobs. Lately it's a Stripe payment system, before that a PHP to NestJS migration. At
-  NeuroTime AI I have also built React features since July 2026. The projects below I built on my
-  own time.
+  for remote teams in Tel Aviv, Dubai and Amsterdam since 2023. Most of that work is APIs,
+  performance and background jobs. At MemeDroid I led the move from PHP to NestJS, and at NeuroTime
+  AI I am building a Stripe payment system and React features. I built the projects below on my own
+  time.
 links:
   email: mirza@najafov.dev
   github: https://github.com/mirzanajafov
