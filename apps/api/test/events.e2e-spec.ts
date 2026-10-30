@@ -107,12 +107,11 @@ describe('POST /events against a real database', () => {
     expect(views).toHaveLength(2);
   });
 
-  it('gives the same browser a new visitor the next day and forgets the old salt', async () => {
+  it('gives the same browser a new visitor the next day and drops the old salt at once', async () => {
     clock.current = new Date('2026-10-20T23:59:00Z');
     await send(app, aView()).expect(204);
     clock.current = new Date('2026-10-21T00:01:00Z');
     await send(app, aView()).expect(204);
-    await app.get(VisitorSaltService).cleanup();
 
     const { visits } = await everything();
     expect(visits).toHaveLength(2);
@@ -127,6 +126,16 @@ describe('POST /events against a real database', () => {
     expect(
       clientKey(address, 'test-secret-for-e2e-only', new Date('2026-10-20T23:59:00Z')),
     ).not.toBe(yesterday);
+  });
+
+  it('deletes the old salt within the hour even when nobody visits the next day', async () => {
+    clock.current = new Date('2026-10-24T22:00:00Z');
+    await send(app, aView()).expect(204);
+    clock.current = new Date('2026-10-25T00:30:00Z');
+    await app.get(VisitorSaltService).cleanup();
+
+    const days = (await prisma.visitorSalt.findMany()).map(({ day }) => day.toISOString());
+    expect(days).not.toContain('2026-10-24T00:00:00.000Z');
   });
 
   it('stores the address in no column of any table', async () => {
@@ -158,11 +167,12 @@ describe('POST /events against a real database', () => {
   it('drops bots and requests without a user agent, and only counts them', async () => {
     await send(app, aView(), { userAgent: headlessChrome }).expect(204);
     await send(app, aView(), { userAgent: null }).expect(204);
+    await send(app, aView(), { userAgent: '' }).expect(204);
 
     const { visits, views, dropped } = await everything();
     expect(visits).toEqual([]);
     expect(views).toEqual([]);
-    expect(dropped).toEqual([expect.objectContaining({ reason: 'bot', count: 2 })]);
+    expect(dropped).toEqual([expect.objectContaining({ reason: 'bot', count: 3 })]);
   });
 
   it('limits each address, counts what it refuses, and leaves other addresses alone', async () => {

@@ -38,6 +38,7 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`storing the salt for ${day} returned no row`);
     }
     this.current = { day, salt: row.salt };
+    await this.deleteBefore(day);
     return row.salt;
   }
 
@@ -46,6 +47,10 @@ export class VisitorSaltService implements OnModuleInit, OnModuleDestroy {
     if (this.current?.day !== day) {
       this.current = undefined;
     }
+    await this.deleteBefore(day);
+  }
+
+  private async deleteBefore(day: string): Promise<void> {
     await this.prisma.$executeRaw`DELETE FROM "VisitorSalt" WHERE day < ${day}::date`;
   }
 }
