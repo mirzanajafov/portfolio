@@ -151,6 +151,14 @@ describe('VisitTracker', () => {
     expect(view.path.startsWith('/wp-admin/%5Bx%5D%7Caaa')).toBe(true);
   });
 
+  it('never cuts a path in the middle of an escape', async () => {
+    window.history.replaceState({}, '', `/${'a'.repeat(199)}[x`);
+    render(<VisitTracker />);
+    const [view] = await sent();
+    assert(view?.type === 'view');
+    expect(view.path).toBe(`/${'a'.repeat(199)}`);
+  });
+
   it('sends the last reading of a page, then a view of the next one without referrer or code', async () => {
     const { rerender } = render(<VisitTracker />);
     navigation.pathname = '/cv';

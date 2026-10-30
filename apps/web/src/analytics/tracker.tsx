@@ -37,7 +37,8 @@ function pathOf(path: string): string {
   return path
     .replace(/^\/+/, '/')
     .replace(/[[\]^|]/g, encodeURIComponent)
-    .slice(0, maxPathLength + 1);
+    .slice(0, maxPathLength)
+    .replace(/%[0-9A-F]?$/i, '');
 }
 
 function begin(withReferrer: boolean, lastInput: number | undefined): PageView {

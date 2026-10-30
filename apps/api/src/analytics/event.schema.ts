@@ -14,7 +14,7 @@ import { CONTENT } from '../content.js';
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 const path = z
   .string()
-  .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength)}}$`));
+  .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength - 1)}}$`));
 const pageView = z.uuid();
 const seconds = z.int().min(0).max(maxSeconds);
 
