@@ -314,6 +314,13 @@ describe('reportText', () => {
     );
   });
 
+  it('says when no question came from a visit it can see', () => {
+    const ask = { since: null, questions: 12, refused: 0, inVisits: 0, visits: 0, days: [] };
+    expect(reportText(aReport({ ask }), { all: false })).toContain(
+      'Ask: 12 questions, 0 refused, none of them in a visit I can see',
+    );
+  });
+
   it('quotes each question a visit asked on its line, shows three unless asked for all, and keeps a line break from starting a new line', () => {
     const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
     const report = aReport({

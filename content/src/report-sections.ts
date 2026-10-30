@@ -83,8 +83,8 @@ function more(text: string, hidden: number, indent: boolean): ReportPart[] {
   return hidden > 0 ? [{ kind: 'more', text, indent }] : [];
 }
 
-function shownOf<T>(rows: readonly T[], all: boolean): readonly T[] {
-  return all ? rows : rows.slice(0, listLength);
+function shownOf<T>(rows: readonly T[], all: boolean, length = listLength): readonly T[] {
+  return all ? rows : rows.slice(0, length);
 }
 
 function listed<T>(
@@ -268,7 +268,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function ask({ ask }: Report): ReportSection {
   return [
     line(
-      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${ask.inVisits > 0 ? `, ${String(ask.inVisits)} of them in ${counted(ask.visits, 'visit')} I can see` : ''}${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
+      `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${placedText(ask)}${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ),
     ...(ask.days.length > 0
       ? [
@@ -283,6 +283,15 @@ function ask({ ask }: Report): ReportSection {
         ]
       : []),
   ];
+}
+
+function placedText({ questions, inVisits, visits }: Report['ask']): string {
+  if (questions === 0) {
+    return '';
+  }
+  return inVisits === 0
+    ? ', none of them in a visit I can see'
+    : `, ${String(inVisits)} of them in ${counted(visits, 'visit')} I can see`;
 }
 
 function audience({ audience, period }: Report, all: boolean): ReportSection[] {
@@ -359,7 +368,7 @@ function storyText(
   { at, from, pages, clicks, questions, interacted }: VisitStory,
   all: boolean,
 ): string {
-  const asked = all ? questions : questions.slice(0, questionsInStory);
+  const asked = shownOf(questions, all, questionsInStory);
   const unshown = questions.length - asked.length;
   const read = pages.map(
     ({ path, seconds, read }) =>
