@@ -1,6 +1,11 @@
 const maxBodyBytes = 2_000;
 
-type Forward = { url: string; headers: readonly string[]; fetchImpl: typeof fetch };
+type Forward = {
+  url: string;
+  headers: readonly string[];
+  fetchImpl: typeof fetch;
+  signal?: AbortSignal;
+};
 
 export function apiUrl(): string {
   const url = process.env.API_URL;
@@ -39,7 +44,7 @@ async function readCapped(request: Request): Promise<string | null> {
 
 export async function forwardToApi(
   request: Request,
-  { url, headers: passed, fetchImpl }: Forward,
+  { url, headers: passed, fetchImpl, signal }: Forward,
   respond: (upstream: Response) => Response,
 ): Promise<Response> {
   const body = await readCapped(request);
@@ -55,7 +60,7 @@ export async function forwardToApi(
   }
   let upstream: Response;
   try {
-    upstream = await fetchImpl(url, { method: 'POST', headers, body, signal: request.signal });
+    upstream = await fetchImpl(url, { method: 'POST', headers, body, signal });
   } catch {
     return new Response(null, { status: 503 });
   }

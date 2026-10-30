@@ -7,7 +7,7 @@ export function forwardAsk(
 ): Promise<Response> {
   return forwardToApi(
     request,
-    { url: `${apiUrl}/ask`, headers: ['x-forwarded-for'], fetchImpl },
+    { url: `${apiUrl}/ask`, headers: ['x-forwarded-for'], fetchImpl, signal: request.signal },
     (upstream) =>
       upstream.body
         ? new Response(upstream.body, {
