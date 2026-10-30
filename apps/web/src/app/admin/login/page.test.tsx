@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { request } from '@/admin/next-request.fake';
+import { request } from '@/admin/testing';
 import SignInPage from './page';
 
-vi.mock('next/headers', async () => (await import('@/admin/next-request.fake')).nextHeaders);
-vi.mock('next/navigation', async () => (await import('@/admin/next-request.fake')).nextNavigation);
+vi.mock('next/headers', async () => (await import('@/admin/testing')).nextHeaders);
+vi.mock('next/navigation', async () => (await import('@/admin/testing')).nextNavigation);
 
 vi.mock('@/admin/actions', () => ({ signIn: async () => 'refused' }));
 

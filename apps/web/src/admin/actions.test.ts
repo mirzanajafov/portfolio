@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { signIn, signOut } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
-import { request } from './next-request.fake';
+import { request } from './testing';
 import type { endSession, startSession } from './sessions';
 
 const link = 'l'.repeat(43);
@@ -13,8 +13,8 @@ const api = vi.hoisted(() => ({
   endSession: vi.fn<typeof endSession>(),
 }));
 
-vi.mock('next/headers', async () => (await import('./next-request.fake')).nextHeaders);
-vi.mock('next/navigation', async () => (await import('./next-request.fake')).nextNavigation);
+vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
+vi.mock('next/navigation', async () => (await import('./testing')).nextNavigation);
 vi.mock('./sessions', () => api);
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
