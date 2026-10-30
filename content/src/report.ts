@@ -17,11 +17,13 @@ export type Source = (typeof sources)[number];
 
 export const readSeconds = 2;
 export const quickExitSeconds = 10;
-export const defaultReportDays = 7;
 
 export const reportDaysSchema = z._default(
-  z.pipe(z.coerce.number(), z.int().check(z.gte(1), z.lte(analyticsDays))),
-  defaultReportDays,
+  z.pipe(
+    z.string().check(z.regex(/^\d{1,2}$/)),
+    z.pipe(z.transform(Number), z.int().check(z.gte(1), z.lte(analyticsDays))),
+  ),
+  7,
 );
 
 export type Bars = { good: number; poor: number; mine: number };

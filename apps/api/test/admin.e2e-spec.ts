@@ -1,5 +1,5 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { adminSignInSchema } from '@portfolio/content/admin';
+import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
 import { reportSchema } from '@portfolio/content/report';
 import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
@@ -62,8 +62,8 @@ describe('admin sign-in against a real database', () => {
 
     const { token, expiresAt } = adminSignInSchema.parse((await signIn(link).expect(201)).body);
     expect(expiresAt).toEqual(later(days(30)));
-    expect((await session(`Bearer ${token}`).expect(200)).body).toEqual({
-      expiresAt: later(days(30)).toISOString(),
+    expect(adminSessionSchema.parse((await session(`Bearer ${token}`).expect(200)).body)).toEqual({
+      expiresAt: later(days(30)),
     });
 
     const used = await signIn(link).expect(404);
@@ -214,7 +214,7 @@ describe('admin sign-in against a real database', () => {
     expect(reportSchema.parse(answer.body).period.days).toBe(7);
   });
 
-  it.each(['0', '31', '2.5', 'week'])('refuses %s days', async (days) => {
+  it.each(['0', '31', '2.5', 'week', '0x1e', '1e1', '%207'])('refuses %s days', async (days) => {
     const token = await sessionFrom(await sessions.link());
 
     await request(app.getHttpServer())
