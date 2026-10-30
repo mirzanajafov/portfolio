@@ -4,6 +4,7 @@ import { runEvery } from '../common/run-every.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
+import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
@@ -11,9 +12,11 @@ const keepMs = 30 * 24 * 60 * 60 * 1000;
 
 type DropReason = 'bot' | 'limited';
 
-type Visitor = { key: string; device: Device; browser: Browser };
+type Visitor = Place & { key: string; device: Device; browser: Browser };
 
 type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type: T }>;
+
+type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
 @Injectable()
 export class VisitLogService implements OnModuleInit, OnModuleDestroy {
@@ -33,11 +36,29 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
     this.stop?.();
   }
 
-  async record(event: AnalyticsEvent, visitor: Visitor, at: Date): Promise<void> {
+  async recordView(event: EventOf<'view'>, { key, ...visit }: Visitor, at: Date): Promise<void> {
+    await this.prisma.visit.createMany({
+      data: [{ visitor: key, startedAt: at, ...visit }],
+      skipDuplicates: true,
+    });
+    await this.prisma.pageView.createMany({
+      data: [
+        {
+          id: event.id,
+          createdAt: at,
+          visitor: key,
+          path: event.path,
+          notFound: event.notFound,
+          referrerHost: event.referrer,
+          ref: event.ref,
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+
+  async record(event: FollowUp, at: Date): Promise<void> {
     switch (event.type) {
-      case 'view':
-        await this.recordView(event, visitor, at);
-        return;
       case 'read':
         await this.prisma.pageView.updateMany({
           where: { id: event.view, readSeq: { lt: event.seq } },
@@ -85,27 +106,6 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
   async cleanup(): Promise<void> {
     const cutoff = new Date(this.clock.now().getTime() - keepMs);
     await this.prisma.visit.deleteMany({ where: { startedAt: { lt: cutoff } } });
-  }
-
-  private async recordView(event: EventOf<'view'>, { key, device, browser }: Visitor, at: Date) {
-    await this.prisma.visit.createMany({
-      data: [{ visitor: key, startedAt: at, device, browser }],
-      skipDuplicates: true,
-    });
-    await this.prisma.pageView.createMany({
-      data: [
-        {
-          id: event.id,
-          createdAt: at,
-          visitor: key,
-          path: event.path,
-          notFound: event.notFound,
-          referrerHost: event.referrer,
-          ref: event.ref,
-        },
-      ],
-      skipDuplicates: true,
-    });
   }
 
   private async recordVital({ view, name, value }: EventOf<'vital'>) {

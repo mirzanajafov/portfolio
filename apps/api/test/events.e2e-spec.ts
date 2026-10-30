@@ -8,7 +8,7 @@ import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
 import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
-import { FixedClock, startApp } from './start-app.js';
+import { FixedClock, knownPlaces, startApp } from './start-app.js';
 
 const chrome =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
@@ -87,6 +87,19 @@ describe('POST /events against a real database', () => {
       { visitor: visits[0]?.visitor, path: '/', ref: 'memh', referrerHost: 'www.linkedin.com' },
       { visitor: visits[0]?.visitor, path: '/projects/tuner', ref: null, referrerHost: null },
     ]);
+  });
+
+  it('stores the country, city and network of the address on the visit', async () => {
+    await send(app, aView()).expect(204);
+    await send(app, aView(), { ip: '198.51.100.4' }).expect(204);
+
+    const visits = (await everything()).visits.map(({ country, city, network }) => ({
+      country,
+      city,
+      network,
+    }));
+    expect(visits).toContainEqual(knownPlaces.get(address));
+    expect(visits).toContainEqual({ country: null, city: null, network: null });
   });
 
   it('counts a page view sent twice once', async () => {

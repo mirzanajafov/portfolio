@@ -31,6 +31,12 @@ release() {
   "${compose[@]}" up -d --build --remove-orphans
 }
 
+reload_places() {
+  if [ "$places_updated" = true ]; then
+    "${compose[@]}" up -d --no-deps --force-recreate api
+  fi
+}
+
 previous=$(git rev-parse HEAD)
 git fetch --quiet origin "$branch"
 target=$(git rev-parse "origin/$branch")
@@ -45,7 +51,15 @@ say "Waiting for the database"
 
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
-if release && healthy; then
+places_updated=false
+if ! deploy/geo.sh current; then
+  if deploy/geo.sh; then
+    places_updated=true
+  else
+    say "The IP databases could not be updated, so the API keeps the ones it has"
+  fi
+fi
+if release && reload_places && healthy; then
   docker image prune -f --filter "label=com.docker.compose.project=portfolio" > /dev/null
   say "Live: $(git log --oneline -1)"
   exit 0
@@ -53,7 +67,7 @@ fi
 
 say "The release failed, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
-if release && healthy; then
+if release && reload_places && healthy; then
   echo "Rolled back. Any migration the failed release ran stays applied."
 else
   echo "The rollback failed too. Check: ${compose[*]} logs migrate api web" >&2

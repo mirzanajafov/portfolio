@@ -4,6 +4,7 @@ import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
+import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
 import { keyed, networkOf } from './visitor-key.js';
@@ -21,6 +22,7 @@ export class EventsService {
     private readonly visits: VisitLogService,
     private readonly clock: ClockService,
     @Inject(ENV) private readonly env: Env,
+    @Inject(PLACE_LOOKUP) private readonly places: PlaceLookup,
   ) {}
 
   async accept(event: AnalyticsEvent, { ip, userAgent, optedOut }: Caller): Promise<Outcome> {
@@ -54,12 +56,17 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
-    const visitor = {
-      key: keyed(key, network, userAgent),
-      device: deviceOf(userAgent),
-      browser: browserOf(userAgent),
-    };
-    await this.visits.record(event, visitor, now);
+    if (event.type === 'view') {
+      const visitor = {
+        key: keyed(key, network, userAgent),
+        device: deviceOf(userAgent),
+        browser: browserOf(userAgent),
+        ...this.places.placeOf(ip),
+      };
+      await this.visits.recordView(event, visitor, now);
+    } else {
+      await this.visits.record(event, now);
+    }
     return { kind: 'accepted' };
   }
 }

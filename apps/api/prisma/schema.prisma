@@ -36,6 +36,9 @@ model Visit {
   startedAt DateTime
   device    String
   browser   String
+  country   String?
+  city      String?
+  network   String?
   views     PageView[]
 
   @@index([startedAt])

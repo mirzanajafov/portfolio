@@ -9,6 +9,7 @@ const envSchema = z
     DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, 'must be a postgresql:// URL'),
     CLIENT_HASH_SECRET: z.string().min(16),
     TRUST_PROXY: z.string().default('loopback'),
+    GEO_DIR: z.string().optional(),
     ASK_PER_CLIENT_10_MIN: positive(20),
     ASK_PER_CLIENT_DAY: positive(100),
     ASK_PER_DAY: positive(2000),
