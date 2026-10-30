@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Schibsted_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
+import { VisitTracker } from '@/analytics/tracker';
 import { palette } from '@/lib/palette';
 import { siteUrl } from '@/lib/site';
 import './globals.css';
@@ -45,7 +46,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${body.variable} ${code.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <VisitTracker />
+      </body>
     </html>
   );
 }

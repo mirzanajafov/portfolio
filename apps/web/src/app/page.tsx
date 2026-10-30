@@ -111,11 +111,15 @@ export default function Home() {
       />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-24 px-4 py-24 sm:px-8">
-        <div className="reveal">
+        <div className="reveal" data-read="ask">
           <Ask suggestions={suggestions} email={links.email} />
         </div>
 
-        <section aria-labelledby="experience" className="reveal flex flex-col gap-8">
+        <section
+          aria-labelledby="experience"
+          className="reveal flex flex-col gap-8"
+          data-read="experience"
+        >
           <h2 id="experience" className="text-3xl font-bold tracking-tight">
             Where I worked
           </h2>
