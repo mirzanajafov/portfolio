@@ -66,10 +66,12 @@ export default function PrivacyPage() {
         </p>
         <p className="max-w-[65ch]">
           These records are deleted once their UTC day is {analyticsDays} full days old, so each
-          lives {analyticsDays} to {analyticsDays + 1} days. What stays after that has nobody in it:
-          daily totals per page, source and country are kept for {dailyTotalsMonths} months, and
-          whether a link I sent with a job application was opened is kept as a daily count for as
-          long as I track that application.
+          lives {analyticsDays} to {analyticsDays + 1} days. What stays after that has no visitor in
+          it. For each day I keep, for {dailyTotalsMonths} months, how each page was read on each
+          kind of device (views, seconds, scroll, the parts read, how fast it loaded), where visits
+          came from, their countries and the links clicked. On a quiet day those totals may cover a
+          single visit. Whether a link I sent with a job application was opened is kept as a daily
+          count for as long as I track that application.
         </p>
         <p className="max-w-[65ch]">
           If your browser sends Global Privacy Control or Do Not Track, nothing is recorded, not
