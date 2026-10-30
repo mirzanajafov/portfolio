@@ -1,4 +1,5 @@
 export const analyticsDays = 30;
+export const refCode = /^[a-z0-9]{3,16}$/;
 export const errorMessageMaxLength = 200;
 export const maxSeconds = 86_400;
 export const maxPathLength = 201;

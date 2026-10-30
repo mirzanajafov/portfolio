@@ -5,6 +5,7 @@ import {
   geolocationCredit,
   maxPathLength,
   maxSeconds,
+  refCode,
   webVitals,
 } from '@portfolio/content/analytics';
 import { z } from 'zod';
@@ -40,11 +41,7 @@ export function eventSchema(links: ReadonlySet<string>) {
       id: z.uuid(),
       path,
       referrer: z.string().toLowerCase().regex(host).optional().catch(undefined),
-      ref: z
-        .string()
-        .regex(/^[a-z0-9]{3,16}$/)
-        .optional()
-        .catch(undefined),
+      ref: z.string().regex(refCode).optional().catch(undefined),
       notFound: z.boolean().default(false),
     }),
     z.strictObject({
