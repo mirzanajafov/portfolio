@@ -161,9 +161,12 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
       </Section>
 
-      <footer className="border-t border-line pt-8 text-muted">
+      <footer className="flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-8 text-muted">
         <Link className="underline underline-offset-4" href="/">
           Back to everything I built
+        </Link>
+        <Link className="underline underline-offset-4" href="/privacy">
+          Privacy
         </Link>
       </footer>
     </main>

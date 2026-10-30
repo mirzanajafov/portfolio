@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { askLogDays, questionMaxLength, type AskSource } from '@portfolio/content/ask';
 import { useRef, useState, type SubmitEvent } from 'react';
 import { readEvents } from './events';
@@ -87,8 +88,10 @@ export function Ask({ suggestions, email }: { suggestions: string[]; email: stri
         </p>
         <p className="max-w-2xl text-xs text-muted">
           I keep questions for {askLogDays} days to see where the answers fail, then they are
-          deleted. Your IP address is never stored, only a keyed hash that changes every day and is
-          used for rate limiting.
+          deleted.{' '}
+          <Link className="underline underline-offset-4" href="/privacy">
+            What this site records
+          </Link>
         </p>
       </div>
       <form onSubmit={submit} className="flex max-w-3xl gap-2 sm:gap-3">
