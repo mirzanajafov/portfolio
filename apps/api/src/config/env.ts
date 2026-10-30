@@ -12,6 +12,9 @@ const envSchema = z
     ASK_PER_CLIENT_10_MIN: positive(20),
     ASK_PER_CLIENT_DAY: positive(100),
     ASK_PER_DAY: positive(2000),
+    EVENTS_PER_ADDRESS_10_MIN: positive(120),
+    EVENTS_PER_ADDRESS_DAY: positive(600),
+    EVENTS_PER_DAY: positive(20_000),
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.CLIENT_HASH_SECRET.length >= 32, {
     message: 'must be at least 32 characters in production',

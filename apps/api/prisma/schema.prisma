@@ -30,3 +30,73 @@ model AskLog {
 
   @@index([createdAt])
 }
+
+model Visit {
+  visitor   String     @id
+  startedAt DateTime
+  device    String
+  browser   String
+  views     PageView[]
+
+  @@index([startedAt])
+}
+
+model PageView {
+  id            String        @id @db.Uuid
+  createdAt     DateTime      @default(now())
+  visitor       String
+  visit         Visit         @relation(fields: [visitor], references: [visitor], onDelete: Cascade)
+  path          String
+  notFound      Boolean       @default(false)
+  referrerHost  String?
+  ref           String?
+  readSeq       Int           @default(0)
+  activeSeconds Int           @default(0)
+  maxScroll     Int           @default(0)
+  blocks        Json          @default("{}")
+  lcpMs         Int?
+  inpMs         Int?
+  cls           Float?
+  clicks        LinkClick[]
+  errors        ClientError[]
+
+  @@index([visitor])
+  @@index([createdAt])
+  @@index([ref])
+}
+
+model LinkClick {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  createdAt DateTime @default(now())
+  viewId    String   @db.Uuid
+  view      PageView @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  href      String
+
+  @@index([viewId])
+}
+
+model ClientError {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  createdAt DateTime @default(now())
+  viewId    String   @db.Uuid
+  view      PageView @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  message   String
+  source    String
+  line      Int?
+  column    Int?
+
+  @@index([viewId])
+}
+
+model VisitorSalt {
+  day  DateTime @id @db.Date
+  salt Bytes
+}
+
+model DroppedEvents {
+  day    DateTime @db.Date
+  reason String
+  count  Int      @default(1)
+
+  @@id([day, reason])
+}

@@ -45,7 +45,12 @@ export class RateLimiterService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async hitAll(limits: Limit[]): Promise<Verdict> {
+  async admit(own: Limit[], shared: Limit[]): Promise<Verdict> {
+    const verdict = await this.hitAll(own);
+    return verdict.allowed ? this.hitAll(shared) : verdict;
+  }
+
+  private async hitAll(limits: Limit[]): Promise<Verdict> {
     let retryAfterSeconds = 0;
     for (const limit of limits) {
       const verdict = await this.hit(limit);

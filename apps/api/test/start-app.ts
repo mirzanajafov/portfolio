@@ -3,9 +3,9 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { ANSWER_ENGINE, type AnswerEngine } from '../src/ask/answer-engine.js';
-import { CONTENT } from '../src/ask/knowledge.js';
 import { ClockService } from '../src/common/clock.service.js';
 import { ENV, parseEnv } from '../src/config/env.js';
+import { CONTENT } from '../src/content.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 

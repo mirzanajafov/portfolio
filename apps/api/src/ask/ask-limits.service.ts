@@ -17,15 +17,12 @@ export class AskLimitsService {
   }
 
   async admit(client: string): Promise<Verdict> {
-    const own = await this.limiter.hitAll([
-      { key: `ask:10m:${client}`, limit: this.env.ASK_PER_CLIENT_10_MIN, windowSeconds: 600 },
-      { key: `ask:day:${client}`, limit: this.env.ASK_PER_CLIENT_DAY, windowSeconds: 86_400 },
-    ]);
-    if (!own.allowed) {
-      return own;
-    }
-    return this.limiter.hitAll([
-      { key: 'ask:day:everyone', limit: this.env.ASK_PER_DAY, windowSeconds: 86_400 },
-    ]);
+    return this.limiter.admit(
+      [
+        { key: `ask:10m:${client}`, limit: this.env.ASK_PER_CLIENT_10_MIN, windowSeconds: 600 },
+        { key: `ask:day:${client}`, limit: this.env.ASK_PER_CLIENT_DAY, windowSeconds: 86_400 },
+      ],
+      [{ key: 'ask:day:everyone', limit: this.env.ASK_PER_DAY, windowSeconds: 86_400 }],
+    );
   }
 }
