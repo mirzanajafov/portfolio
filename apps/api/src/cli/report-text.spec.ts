@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { GuessedVisit, Report, Totals, VisitStory } from '@portfolio/content/report';
+import type { GuessedVisit, Report, VisitStory } from '@portfolio/content/report';
+import { aReport, noOutcomes, someVisits } from '@portfolio/content/testing';
 import { reportText } from './report-text.js';
-
-const someVisits = (visits: number): Totals => ({
-  visits,
-  pageViews: visits * 3,
-  medianVisitSeconds: 40,
-  phoneVisits: 1,
-  quickExits: 0,
-});
-
-const none = { right: 0, wrong: 0, tied: 0 };
-const noOutcomes = { high: none, medium: none, low: none };
 
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   at: new Date('2026-10-30T12:00:00Z'),
@@ -34,37 +24,6 @@ const anEntry = (
   guesses: [],
   ...overrides,
 });
-
-function aReport(overrides: Partial<Report> = {}): Report {
-  return {
-    period: {
-      from: new Date('2026-10-23T00:00:00Z'),
-      to: new Date('2026-10-30T12:00:00Z'),
-      days: 7,
-      visits: 14,
-    },
-    rollupBehind: null,
-    overview: { today: someVisits(2), current: someVisits(12), previous: someVisits(8) },
-    weeks: [],
-    sources: [],
-    otherSites: [],
-    entries: [],
-    journeys: [],
-    pages: [],
-    reading: [],
-    links: { cvViews: 0, cvPdf: [], outbound: [] },
-    ask: { since: null, questions: 0, refused: 0, days: [] },
-    audience: { devices: [], browsers: [], countries: [] },
-    quality: { vitals: [], errors: [], notFound: [] },
-    filter: [],
-    applications: {
-      list: [],
-      score: { visits: 0, unplaced: 0, levels: noOutcomes },
-      unknownCodes: [],
-    },
-    ...overrides,
-  };
-}
 
 describe('reportText', () => {
   it('heads the report with the UTC days of the period and the time in Baku', () => {
@@ -333,7 +292,7 @@ describe('reportText', () => {
             levels: {
               high: { right: 1, wrong: 0, tied: 0 },
               medium: { right: 0, wrong: 1, tied: 0 },
-              low: none,
+              low: noOutcomes.low,
             },
           },
           unknownCodes: [
