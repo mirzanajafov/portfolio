@@ -4,15 +4,12 @@ import { z } from 'zod';
 import { ClockService } from '../../common/clock.service.js';
 import { CONTENT } from '../../content.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { keptSince } from '../retention.js';
-import { browsers, devices } from '../user-agent.js';
+import { firstRawDay } from '../retention.js';
 import { dropReasons } from '../visit-log.service.js';
+import { findVisits } from '../visit-rows.js';
 import { buildReport } from './build-report.js';
 import type { Report } from './report.js';
 
-const blockSeconds = z.record(z.string(), z.number());
-const knownDevice = z.enum(devices);
-const knownBrowser = z.enum(browsers);
 const knownDropReason = z.enum(dropReasons);
 
 @Injectable()
@@ -25,34 +22,9 @@ export class AnalyticsReportService {
 
   async build(days: number): Promise<Report> {
     const now = this.clock.now();
-    const kept = keptSince(now);
+    const kept = firstRawDay(now);
     const [visits, questions, dropped] = await Promise.all([
-      this.prisma.visit.findMany({
-        where: { startedAt: { gte: kept } },
-        select: {
-          startedAt: true,
-          device: true,
-          browser: true,
-          country: true,
-          views: {
-            select: {
-              createdAt: true,
-              path: true,
-              notFound: true,
-              referrerHost: true,
-              ref: true,
-              activeSeconds: true,
-              maxScroll: true,
-              blocks: true,
-              lcpMs: true,
-              inpMs: true,
-              cls: true,
-              clicks: { select: { href: true } },
-              errors: { select: { message: true, source: true } },
-            },
-          },
-        },
-      }),
+      findVisits(this.prisma, { startedAt: { gte: kept } }),
       this.prisma.askLog.findMany({
         where: { createdAt: { gte: kept } },
         select: { createdAt: true, refused: true },
@@ -62,15 +34,7 @@ export class AnalyticsReportService {
     return buildReport(
       {
         kept,
-        visits: visits.map(({ views, device, browser, ...visit }) => ({
-          ...visit,
-          device: knownDevice.parse(device),
-          browser: knownBrowser.parse(browser),
-          views: views.map(({ blocks, ...view }) => ({
-            ...view,
-            blocks: blockSeconds.parse(blocks),
-          })),
-        })),
+        visits,
         questions,
         dropped: dropped.map(({ reason, ...row }) => ({
           ...row,

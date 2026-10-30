@@ -1,14 +1,9 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { ClockService } from '../common/clock.service.js';
-import { runEvery } from '../common/run-every.js';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
-import { keptSince } from './retention.js';
 import type { Browser, Device } from './user-agent.js';
-
-const cleanupEveryMs = 60 * 60 * 1000;
 
 export const dropReasons = ['bot', 'limited'] as const;
 
@@ -21,22 +16,8 @@ type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type:
 type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
 @Injectable()
-export class VisitLogService implements OnModuleInit, OnModuleDestroy {
-  private readonly log = new Logger(VisitLogService.name);
-  private stop?: () => void;
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly clock: ClockService,
-  ) {}
-
-  onModuleInit(): void {
-    this.stop = runEvery(cleanupEveryMs, 'visit log cleanup', () => this.cleanup(), this.log);
-  }
-
-  onModuleDestroy(): void {
-    this.stop?.();
-  }
+export class VisitLogService {
+  constructor(private readonly prisma: PrismaService) {}
 
   async recordView(event: EventOf<'view'>, { key, ...visit }: Visitor, at: Date): Promise<void> {
     await this.prisma.visit.createMany({
@@ -103,12 +84,6 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.$executeRaw`
       INSERT INTO "DroppedEvents" (day, reason) VALUES (${day}::date, ${reason})
       ON CONFLICT (day, reason) DO UPDATE SET count = "DroppedEvents".count + 1`;
-  }
-
-  async cleanup(): Promise<void> {
-    await this.prisma.visit.deleteMany({
-      where: { startedAt: { lt: keptSince(this.clock.now()) } },
-    });
   }
 
   private async recordVital({ view, name, value }: EventOf<'vital'>) {

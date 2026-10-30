@@ -2,7 +2,6 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
-import { VisitLogService } from '../src/analytics/visit-log.service.js';
 import { dailyKey, keyed } from '../src/analytics/visitor-key.js';
 import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
 import { ENV, type Env } from '../src/config/env.js';
@@ -198,24 +197,6 @@ describe('POST /events against a real database', () => {
       message: 'the forwarded client address is not an IP address',
     });
     expect((await everything()).visits).toEqual([]);
-  });
-
-  it('deletes visits after 30 days, with their page views, clicks and errors', async () => {
-    const old = aView();
-    await send(app, old).expect(204);
-    await send(app, { type: 'click', view: old.id, href: '/cv.pdf' }).expect(204);
-    await send(app, { type: 'error', view: old.id, message: 'x', source: '/a.js' }).expect(204);
-    clock.current = new Date('2026-10-03T12:00:00Z');
-    await send(app, aView({ path: '/cv' }), { ip: '198.51.100.4' }).expect(204);
-
-    clock.current = new Date('2026-11-01T12:00:01Z');
-    await app.get(VisitLogService).cleanup();
-
-    const { visits, views, clicks, errors } = await everything();
-    expect(visits).toHaveLength(1);
-    expect(views.map(({ path }) => path)).toEqual(['/cv']);
-    expect(clicks).toEqual([]);
-    expect(errors).toEqual([]);
   });
 
   it('drops bots and requests without a user agent, and only counts them', async () => {
