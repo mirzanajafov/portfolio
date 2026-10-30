@@ -1,6 +1,8 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { siteUrl } from '@portfolio/content';
+import { adminLinkMinutes } from '@portfolio/content/admin';
+import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { dayOf } from '../analytics/days.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
@@ -10,7 +12,22 @@ import { CliModule } from './cli.module.js';
 import { parseCommand, usage, type Command } from './command.js';
 import { reportText } from './report-text.js';
 
-type ApplicationCommand = Exclude<Command, { name: 'report' }>;
+type AdminCommand = Extract<Command, { name: 'admin link' | 'admin revoke' }>;
+
+type ApplicationCommand = Exclude<Command, { name: 'report' } | AdminCommand>;
+
+async function runAdmin(command: AdminCommand, sessions: AdminSessionsService): Promise<number> {
+  if (command.name === 'admin link') {
+    process.stdout.write(`${siteUrl}/admin/link?token=${await sessions.link()}\n`);
+    process.stderr.write(`it signs in once, within ${String(adminLinkMinutes)} minutes\n`);
+    return 0;
+  }
+  const { sessions: ended, links } = await sessions.revokeAll();
+  process.stdout.write(
+    `sessions ended: ${String(ended)}, unused links deleted: ${String(links)}\n`,
+  );
+  return 0;
+}
 
 async function runApplication(
   command: ApplicationCommand,
@@ -49,6 +66,9 @@ async function run(command: Command, app: INestApplicationContext): Promise<numb
     const report = await app.get(AnalyticsReportService).build(command.days);
     process.stdout.write(reportText(report, { all: command.all }));
     return 0;
+  }
+  if (command.name === 'admin link' || command.name === 'admin revoke') {
+    return runAdmin(command, app.get(AdminSessionsService));
   }
   return runApplication(command, app.get(ApplicationsService), app.get<Env>(ENV));
 }

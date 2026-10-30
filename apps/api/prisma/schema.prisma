@@ -181,3 +181,13 @@ model Application {
   networks  String[]
   days      DailyApplication[]
 }
+
+model AdminLoginToken {
+  hash      Bytes    @id
+  expiresAt DateTime
+}
+
+model AdminSession {
+  hash      Bytes    @id
+  expiresAt DateTime
+}
