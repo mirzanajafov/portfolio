@@ -37,7 +37,7 @@ function Section({
   id,
   title,
   className,
-  read = false,
+  read = true,
   children,
 }: {
   id: string;
@@ -120,7 +120,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </div>
       </header>
 
-      <Section id="problem" title="Why I built it" className="flex flex-col gap-3" read>
+      <Section id="problem" title="Why I built it" className="flex flex-col gap-3">
         <p className="max-w-[65ch] text-xl leading-relaxed">{caseStudy.problem}</p>
       </Section>
 
@@ -135,7 +135,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         </figure>
       )}
 
-      <Section id="decisions" title="Decisions" className="flex flex-col gap-10">
+      <Section id="decisions" title="Decisions" className="flex flex-col gap-10" read={false}>
         {caseStudy.decisions.map((decision, index) => (
           <article
             key={decision.title}
@@ -155,11 +155,11 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
         ))}
       </Section>
 
-      <Section id="proof" title="How I know it works" className="flex flex-col gap-3" read>
+      <Section id="proof" title="How I know it works" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.proof}</p>
       </Section>
 
-      <Section id="next" title="What I would do next" className="flex flex-col gap-3" read>
+      <Section id="next" title="What I would do next" className="flex flex-col gap-3">
         <p className="max-w-[65ch] leading-relaxed">{caseStudy.next}</p>
       </Section>
 
