@@ -249,6 +249,10 @@ class Contained extends Component<{ children: ReactNode }, { failed: boolean }> 
 }
 
 export function VisitTracker() {
+  const pathname = usePathname();
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return null;
+  }
   return (
     <Contained>
       <Tracker />

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { isbot } from 'isbot';
+import { networkOf } from '../common/client-key.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -7,7 +8,7 @@ import type { AnalyticsEvent } from './event.schema.js';
 import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
-import { keyed, networkOf } from './visitor-key.js';
+import { keyed } from './visitor-key.js';
 import { VisitorSaltService } from './visitor-salt.service.js';
 
 type Caller = { ip: string; userAgent: string | undefined; optedOut: boolean };

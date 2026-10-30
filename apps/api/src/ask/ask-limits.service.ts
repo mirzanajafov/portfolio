@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { clientKey } from '../common/client-key.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService, type Verdict } from '../rate-limit/rate-limiter.service.js';
-import { clientKey } from './client-key.js';
 
 @Injectable()
 export class AskLimitsService {

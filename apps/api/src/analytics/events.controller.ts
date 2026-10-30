@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -10,7 +9,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { isIP } from 'node:net';
+import { clientAddress } from '../common/client-address.js';
 import { EventPipe, type AnalyticsEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';
 
@@ -25,14 +24,8 @@ export class EventsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    if (!req.ip) {
-      throw new BadRequestException('the client has no address');
-    }
-    if (isIP(req.ip) === 0) {
-      throw new BadRequestException('the forwarded client address is not an IP address');
-    }
     const outcome = await this.events.accept(event, {
-      ip: req.ip,
+      ip: clientAddress(req),
       userAgent: req.get('user-agent'),
       optedOut: req.get('sec-gpc') === '1' || req.get('dnt') === '1',
     });

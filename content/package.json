@@ -19,6 +19,10 @@
       "types": "./dist/analytics.d.ts",
       "default": "./dist/analytics.js"
     },
+    "./admin": {
+      "types": "./dist/admin.d.ts",
+      "default": "./dist/admin.js"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"

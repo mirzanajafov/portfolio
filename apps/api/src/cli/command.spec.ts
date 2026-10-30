@@ -79,6 +79,11 @@ describe('parseCommand', () => {
     });
   });
 
+  it('reads admin link and admin revoke', () => {
+    expect(parseCommand(['admin', 'link'])).toEqual({ name: 'admin link' });
+    expect(parseCommand(['admin', 'revoke'])).toEqual({ name: 'admin revoke' });
+  });
+
   it('names the flag that is wrong', () => {
     expect(() =>
       parseCommand([
@@ -105,6 +110,7 @@ describe('parseCommand', () => {
     ['with a code a link could not carry', ['application', 'cv', 'Memh!']],
     ['with two codes', ['application', 'cv', 'memh', 'kxqtz']],
     ['with arguments list does not take', ['application', 'list', '--all']],
+    ['with arguments admin link does not take', ['admin', 'link', '--minutes', '60']],
     ['for a command it does not know', ['application', 'remove', 'memh']],
     ['for more days than are kept', ['report', '--days', '31']],
     ['for no days', ['report', '--days', '0']],

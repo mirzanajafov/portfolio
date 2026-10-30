@@ -7,14 +7,18 @@ export type Command =
   | { name: 'report'; days: number; all: boolean }
   | { name: 'application add'; application: NewApplication }
   | { name: 'application list' }
-  | { name: 'application cv'; code: string };
+  | { name: 'application cv'; code: string }
+  | { name: 'admin link' }
+  | { name: 'admin revoke' };
 
 export const usage = `usage:
   cli.js report [--days <1-${String(analyticsDays)}>] [--all]
   cli.js application add --company <name> --role <title> --applied <yyyy-mm-dd>
       [--code <code>] [--country <XX>] [--city <name>] [--ats <host>] [--network <name>]...
   cli.js application list
-  cli.js application cv <code>`;
+  cli.js application cv <code>
+  cli.js admin link
+  cli.js admin revoke`;
 
 const reportOptions = {
   days: { type: 'string' },
@@ -94,6 +98,12 @@ export function parseCommand(args: readonly string[]): Command {
       throw new Error('application cv takes one code that a link can carry');
     }
     return { name: 'application cv', code };
+  }
+  if (area === 'admin' && (name === 'link' || name === 'revoke')) {
+    if (rest.length > 0) {
+      throw new Error(`admin ${name} takes no arguments`);
+    }
+    return { name: `admin ${name}` };
   }
   throw new Error(`there is no command "${args.join(' ')}"`);
 }

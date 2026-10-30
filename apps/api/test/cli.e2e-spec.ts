@@ -12,6 +12,7 @@ import {
   it,
   vi,
 } from 'vitest';
+import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { CliModule } from '../src/cli/cli.module.js';
 import { runCli } from '../src/cli/run.js';
@@ -45,6 +46,7 @@ const drawCv: SiteAnswer = (request, response) => {
 describe('the CLI commands', () => {
   let context: INestApplicationContext;
   let applications: ApplicationsService;
+  let sessions: AdminSessionsService;
   let prisma: PrismaService;
   let site: Server;
   let siteAddress: string;
@@ -55,6 +57,7 @@ describe('the CLI commands', () => {
     const moduleRef = await Test.createTestingModule({ imports: [CliModule] }).compile();
     context = await moduleRef.init();
     applications = context.get(ApplicationsService);
+    sessions = context.get(AdminSessionsService);
     prisma = context.get(PrismaService);
     site = createServer((request, response) => {
       asked.push(request.url ?? '');
@@ -78,7 +81,7 @@ describe('the CLI commands', () => {
     process.stdout.isTTY = false;
     vi.stubEnv('CV_RENDER_TOKEN', token);
     vi.stubEnv('WEB_URL', siteAddress);
-    await prisma.$executeRaw`TRUNCATE "Application" CASCADE`;
+    await prisma.$executeRaw`TRUNCATE "Application", "AdminLoginToken", "AdminSession", "RateLimit" CASCADE`;
   });
 
   afterEach(() => {
@@ -213,6 +216,30 @@ describe('the CLI commands', () => {
       status: 1,
       stdout: '',
       stderr: 'the site answered 502 for the CV of memh\n',
+    });
+  });
+
+  it('prints a sign-in link that starts one session', async () => {
+    const { status, stdout, stderr } = await cli('admin', 'link');
+    expect(status).toBe(0);
+    expect(stderr).toBe('it signs in once, within 10 minutes\n');
+    const link = new URL(stdout.trim());
+    expect(`${link.origin}${link.pathname}`).toBe('https://najafov.dev/admin/link');
+    const token = link.searchParams.get('token') ?? '';
+    expect((await sessions.signIn(token, '203.0.113.7')).kind).toBe('signed in');
+    expect((await sessions.signIn(token, '203.0.113.7')).kind).toBe('refused');
+  });
+
+  it('ends every session and deletes every unused link on admin revoke', async () => {
+    await sessions.signIn(await sessions.link(), '203.0.113.7');
+    await sessions.link();
+    expect(await cli('admin', 'revoke')).toEqual({
+      status: 0,
+      stdout: 'sessions ended: 1, unused links deleted: 1\n',
+      stderr: '',
+    });
+    expect(await cli('admin', 'revoke')).toMatchObject({
+      stdout: 'sessions ended: 0, unused links deleted: 0\n',
     });
   });
 
