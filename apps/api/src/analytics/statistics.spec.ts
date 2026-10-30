@@ -26,4 +26,11 @@ describe('rankedGroups and tally', () => {
       ['odd', [1, 3]],
     ]);
   });
+
+  it('orders equal groups the same way whatever language the machine runs in', () => {
+    expect(tally(['Xsolla', 'Local'], (company) => company)).toEqual([
+      ['Local', 1],
+      ['Xsolla', 1],
+    ]);
+  });
 });
