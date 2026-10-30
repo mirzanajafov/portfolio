@@ -7,7 +7,7 @@ import {
   type NewApplication,
 } from '../src/applications/applications.service.js';
 import { newCode } from '../src/applications/code.js';
-import { CliModule } from '../src/cli.module.js';
+import { CliModule } from '../src/cli/cli.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 vi.mock(import('../src/applications/code.js'), async (importOriginal) => {

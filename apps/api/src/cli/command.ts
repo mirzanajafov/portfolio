@@ -1,7 +1,7 @@
 import { refCode } from '@portfolio/content/analytics';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import type { NewApplication } from './applications/applications.service.js';
+import type { NewApplication } from '../applications/applications.service.js';
 
 export type Command =
   | { name: 'application add'; application: NewApplication }
@@ -55,7 +55,10 @@ export function parseCommand(args: readonly string[]): Command {
     }
     return { name: 'application add', application: parsed.data };
   }
-  if (area === 'application' && name === 'list' && rest.length === 0) {
+  if (area === 'application' && name === 'list') {
+    if (rest.length > 0) {
+      throw new Error('application list takes no arguments');
+    }
     return { name: 'application list' };
   }
   if (area === 'application' && name === 'cv') {

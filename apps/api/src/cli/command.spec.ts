@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCommand } from './cli-command.js';
+import { parseCommand } from './command.js';
 
 const required = ['--company', 'Acme', '--role', 'Backend Engineer', '--applied', '2026-10-30'];
 
