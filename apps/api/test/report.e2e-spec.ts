@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AnalyticsReportService } from '../src/analytics/report/analytics-report.service.js';
 import { RetentionService } from '../src/analytics/retention.service.js';
+import { reportText } from '../src/cli/report-text.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 import { sendEvent, type Sender } from './send-event.js';
@@ -35,7 +36,7 @@ describe('the visitor report against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication"`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication", "Application" CASCADE`;
   });
 
   it('reports a scripted visit the way it happened, from events sent to the API', async () => {
@@ -198,5 +199,36 @@ describe('the visitor report against a real database', () => {
 
     expect(report.weeks.find(({ start }) => start === '2026-09-28')?.visits).toBe(1);
     expect(report.rollupBehind).toBeNull();
+  });
+
+  it('puts a coded visit and a guessed one under the company the application went to', async () => {
+    await prisma.application.create({
+      data: {
+        code: 'memh',
+        company: 'Xsolla',
+        role: 'Backend Engineer',
+        appliedOn: new Date('2026-10-01'),
+        country: 'AZ',
+        city: 'Baku',
+      },
+    });
+    at('12:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/', ref: 'memh' });
+    await send({ type: 'view', id: randomUUID(), path: '/cv' }, { userAgent: iphone });
+
+    const report = await reports.build(7);
+
+    const [xsolla] = report.applications.list;
+    expect(xsolla?.visits.map(({ pages }) => pages.map(({ path }) => path))).toEqual([['/']]);
+    expect(xsolla?.guesses).toMatchObject([
+      {
+        confidence: 'medium',
+        companies: ['Xsolla'],
+        reasons: ['Baku', 'AZ', '1 day after applying'],
+      },
+    ]);
+    expect(reportText(report, { all: false })).toContain(
+      'possibly Xsolla, medium (Baku, AZ, 1 day after applying)',
+    );
   });
 });

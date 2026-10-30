@@ -32,6 +32,11 @@ function aReport(overrides: Partial<Report> = {}): Report {
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
+    applications: {
+      list: [],
+      score: { visits: 0, right: 0, wrong: 0, tied: 0, unplaced: 0 },
+      unknownCodes: [],
+    },
     ...overrides,
   };
 }
@@ -118,6 +123,7 @@ describe('reportText', () => {
       'Web Vitals, p75 (samples): none',
       'Script errors: none',
       '404s: none',
+      'Applications, every visit kept rather than only the period',
       'Filtered out: none',
       'Countries and networks: IP Geolocation by DB-IP',
     ];
@@ -253,6 +259,108 @@ describe('reportText', () => {
     );
     expect(text).toContain(
       'Ask: 1 question, 0 refused, since 2026-09-30 16:00 Baku time, as far back as the log keeps them',
+    );
+  });
+
+  it("tells an application's coded visits, rolled up days, guesses and how well the guesses do", () => {
+    const text = reportText(
+      aReport({
+        applications: {
+          list: [
+            {
+              code: 'memh',
+              company: 'Xsolla',
+              role: 'Backend Engineer',
+              appliedOn: '2026-10-29',
+              visits: [
+                {
+                  at: new Date('2026-10-30T10:00:00Z'),
+                  from: 'www.linkedin.com',
+                  pages: [
+                    { path: '/', seconds: 40, read: ['tuner'] },
+                    { path: '/cv', seconds: 8, read: [] },
+                  ],
+                  clicks: ['CV PDF'],
+                  interacted: true,
+                },
+                {
+                  at: new Date('2026-10-30T11:00:00Z'),
+                  from: null,
+                  pages: [{ path: '/', seconds: 0, read: [] }],
+                  clicks: [],
+                  interacted: false,
+                },
+              ],
+              days: [{ day: '2026-09-12', visits: 2, views: 5 }],
+              guesses: [
+                {
+                  at: new Date('2026-10-30T12:00:00Z'),
+                  from: null,
+                  pages: [{ path: '/', seconds: 30, read: [] }],
+                  clicks: [],
+                  interacted: true,
+                  confidence: 'medium',
+                  companies: ['Xsolla', 'Local'],
+                  reasons: ['Baku', '1 day after applying'],
+                },
+              ],
+            },
+          ],
+          score: { visits: 3, right: 1, wrong: 1, tied: 0, unplaced: 1 },
+          unknownCodes: [
+            { code: 'check1', visits: 2, firstSeen: new Date('2026-10-30T08:00:00Z') },
+          ],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).toContain(
+      [
+        'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
+        '  2026-10-30 14:00 Baku, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
+        '  2026-10-30 15:00 Baku: / 0 s, no interaction',
+        '  2026-09-12, rolled up: 2 visits, 5 page views',
+        '  possibly Xsolla or Local, medium (Baku, 1 day after applying): 2026-10-30 16:00 Baku: / 30 s',
+        'Guesses checked on coded visits: 3 visits, 1 right, 1 wrong, 0 tied, 1 not placed',
+        'Unknown codes: check1 (2 visits, first 2026-10-30 12:00 Baku)',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps low guesses for --all, and says when an application has no visits yet', () => {
+    const report = aReport({
+      applications: {
+        list: [
+          {
+            code: 'memh',
+            company: 'Xsolla',
+            role: 'Backend Engineer',
+            appliedOn: '2026-10-29',
+            visits: [],
+            days: [],
+            guesses: [
+              {
+                at: new Date('2026-10-30T12:00:00Z'),
+                from: null,
+                pages: [{ path: '/', seconds: 30, read: [] }],
+                clicks: [],
+                interacted: true,
+                confidence: 'low',
+                companies: ['Xsolla'],
+                reasons: ['AZ', '1 day after applying'],
+              },
+            ],
+          },
+        ],
+        score: { visits: 0, right: 0, wrong: 0, tied: 0, unplaced: 0 },
+        unknownCodes: [],
+      },
+    });
+    expect(reportText(report, { all: false })).toContain(
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet',
+    );
+    expect(reportText(report, { all: true })).toContain(
+      '  possibly Xsolla, low (AZ, 1 day after applying): 2026-10-30 16:00 Baku: / 30 s',
     );
   });
 

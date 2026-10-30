@@ -19,7 +19,16 @@ function reportOf(
   { days = 7, ...rows }: Partial<Omit<ReportRows, 'visits'>> & { days?: number } = {},
 ) {
   return buildReport(
-    { rawFrom: utcDay(daysAgo(30)), visits, rolled: [], questions: [], dropped: [], ...rows },
+    {
+      rawFrom: utcDay(daysAgo(30)),
+      visits,
+      rolled: [],
+      questions: [],
+      dropped: [],
+      applications: [],
+      rolledApplications: [],
+      ...rows,
+    },
     content,
     now,
     days,

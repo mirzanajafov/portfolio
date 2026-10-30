@@ -1,7 +1,13 @@
 import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
 import { dayOf } from '../analytics/days.js';
-import { readSeconds, type Report, type Totals, type Vital } from '../analytics/report/report.js';
+import {
+  readSeconds,
+  type Report,
+  type Totals,
+  type Vital,
+  type VisitStory,
+} from '../analytics/report/report.js';
 import type { Source } from '../analytics/sources.js';
 import { quickExitSeconds } from '../analytics/visits.js';
 
@@ -302,6 +308,63 @@ function quality({ quality }: Report, all: boolean): string[][] {
   ];
 }
 
+function storyText({ at, from, pages, clicks, interacted }: VisitStory): string {
+  const read = pages.map(
+    ({ path, seconds, read }) =>
+      `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
+  );
+  return printable(
+    [
+      `${bakuTime(at)} Baku${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
+      ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
+      ...(interacted ? [] : ['no interaction']),
+    ].join(', '),
+  );
+}
+
+function applications({ applications }: Report, all: boolean): string[] {
+  const { list, score, unknownCodes } = applications;
+  const shown = shownOf(list, all);
+  const hidden = list.length - shown.length;
+  const lines = shown.flatMap((application) => {
+    const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
+    const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`;
+    if (application.visits.length + application.days.length + guesses.length === 0) {
+      return [printable(`${heading}: no visits yet`)];
+    }
+    return [
+      printable(heading),
+      ...application.visits.map((visit) => `  ${storyText(visit)}`),
+      ...application.days.map(
+        ({ day, visits, views }) =>
+          `  ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
+      ),
+      ...guesses.map(
+        (guess) =>
+          `  possibly ${printable(guess.companies.join(' or '))}, ${guess.confidence} (${printable(guess.reasons.join(', '))}): ${storyText(guess)}`,
+      ),
+    ];
+  });
+  return [
+    'Applications, every visit kept rather than only the period',
+    ...(list.length === 0 ? ['none registered'] : lines),
+    ...(hidden > 0 ? [`and ${String(hidden)} more, --all shows them`] : []),
+    `Guesses checked on coded visits: ${counted(score.visits, 'visit')}, ${String(score.right)} right, ${String(score.wrong)} wrong, ${String(score.tied)} tied, ${String(score.unplaced)} not placed`,
+    ...(unknownCodes.length > 0
+      ? [
+          `Unknown codes: ${printable(
+            unknownCodes
+              .map(
+                ({ code, visits, firstSeen }) =>
+                  `${code} (${counted(visits, 'visit')}, first ${bakuTime(firstSeen)} Baku)`,
+              )
+              .join(', '),
+          )}`,
+        ]
+      : []),
+  ];
+}
+
 function filter({ filter }: Report): string[] {
   if (filter.length === 0) {
     return ['Filtered out: none'];
@@ -333,6 +396,7 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
     ask(report),
     ...audience(report, all),
     ...quality(report, all),
+    applications(report, all),
     filter(report),
     [`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`],
   ];
