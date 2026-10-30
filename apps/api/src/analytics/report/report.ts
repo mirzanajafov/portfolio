@@ -1,7 +1,8 @@
 import type { Source } from '../sources.js';
-import type { Confidence } from './guess.js';
 
 export const readSeconds = 2;
+
+export type Confidence = 'high' | 'medium' | 'low';
 
 export type Totals = {
   visits: number;

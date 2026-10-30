@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { anApplication, aView, aVisit, hoursAgo } from '../testing.js';
 import { inOrder, type VisitRow } from '../visits.js';
-import { applicationsOf, type RolledApplicationDay } from './applications.js';
-import type { ApplicationRow } from './guess.js';
+import { applicationsOf } from './applications.js';
+import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 const labels = new Map([['/cv.pdf', 'CV PDF']]);
 

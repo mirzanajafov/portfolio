@@ -1,7 +1,8 @@
 import { assert, describe, expect, it } from 'vitest';
 import { anApplication, aView, aVisit } from '../testing.js';
 import { inOrder, type VisitRow } from '../visits.js';
-import { guessOf, type ApplicationRow } from './guess.js';
+import { guessOf } from './guess.js';
+import type { ApplicationRow } from './rows.js';
 
 function guess(row: VisitRow, applications: ApplicationRow[]) {
   const [visit] = inOrder(row);

@@ -56,3 +56,7 @@ export function secondsOf({ views }: Visit): number {
 export function isQuickExit(visit: Visit): boolean {
   return visit.pages.length === 1 && secondsOf(visit) < quickExitSeconds;
 }
+
+export function codeOf(visit: Visit): string | null {
+  return visit.views.find(({ ref }) => ref !== null)?.ref ?? null;
+}

@@ -1,4 +1,4 @@
-import type { ApplicationRow } from './report/guess.js';
+import type { ApplicationRow } from './report/rows.js';
 import type { ViewRow, VisitRow } from './visits.js';
 
 export const now = new Date('2026-10-30T12:00:00Z');

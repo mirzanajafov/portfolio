@@ -1,19 +1,7 @@
 import { daysBetween } from '../days.js';
 import type { Visit } from '../visits.js';
-
-export type ApplicationRow = {
-  id: string;
-  code: string;
-  company: string;
-  role: string;
-  appliedOn: Date;
-  country: string | null;
-  city: string | null;
-  atsHost: string | null;
-  networks: string[];
-};
-
-export type Confidence = 'high' | 'medium' | 'low';
+import type { Confidence } from './report.js';
+import type { ApplicationRow } from './rows.js';
 
 type Candidate = { application: ApplicationRow; reasons: string[] };
 

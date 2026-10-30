@@ -1,8 +1,25 @@
 import type { DayTotals } from '../day-totals.js';
 import type { DropReason } from '../visit-log.service.js';
 import type { VisitRow } from '../visits.js';
-import type { RolledApplicationDay } from './applications.js';
-import type { ApplicationRow } from './guess.js';
+
+export type ApplicationRow = {
+  id: string;
+  code: string;
+  company: string;
+  role: string;
+  appliedOn: Date;
+  country: string | null;
+  city: string | null;
+  atsHost: string | null;
+  networks: string[];
+};
+
+export type RolledApplicationDay = {
+  day: Date;
+  applicationId: string;
+  visits: number;
+  views: number;
+};
 
 export type ReportRows = {
   rawFrom: Date;

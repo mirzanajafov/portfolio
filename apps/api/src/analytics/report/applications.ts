@@ -1,19 +1,9 @@
 import { dayOf } from '../days.js';
 import { rankedGroups } from '../statistics.js';
-import { secondsOf, type Visit } from '../visits.js';
-import { guessOf, type ApplicationRow } from './guess.js';
+import { codeOf, secondsOf, type Visit } from '../visits.js';
+import { guessOf } from './guess.js';
 import { readSeconds, type Report, type VisitStory } from './report.js';
-
-export type RolledApplicationDay = {
-  day: Date;
-  applicationId: string;
-  visits: number;
-  views: number;
-};
-
-function codeOf(visit: Visit): string | null {
-  return visit.views.find(({ ref }) => ref !== null)?.ref ?? null;
-}
+import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory {
   const clicks = visit.views.flatMap(({ clicks }) =>

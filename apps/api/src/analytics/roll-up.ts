@@ -2,7 +2,7 @@ import { dayTotals, type DayTotals } from './day-totals.js';
 import { sourceOf, type Source } from './sources.js';
 import { rankedGroups } from './statistics.js';
 import type { Device } from './user-agent.js';
-import { inOrder, type ViewRow, type Visit, type VisitRow } from './visits.js';
+import { codeOf, inOrder, type ViewRow, type Visit, type VisitRow } from './visits.js';
 
 type RolledPage = {
   path: string;
@@ -85,8 +85,8 @@ function clicksOf(visits: readonly Visit[]): RolledDay['clicks'] {
 
 function applicationsOf(visits: readonly Visit[]): RolledDay['applications'] {
   const coded = visits.flatMap((visit) => {
-    const code = visit.views.find(({ ref }) => ref !== null)?.ref;
-    return code ? [{ code, views: visit.views.length }] : [];
+    const code = codeOf(visit);
+    return code === null ? [] : [{ code, views: visit.views.length }];
   });
   return rankedGroups(coded, ({ code }) => code).map(([code, group]) => ({
     code,
