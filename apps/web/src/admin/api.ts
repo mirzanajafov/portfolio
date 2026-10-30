@@ -1,4 +1,5 @@
 import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
+import { reportSchema, type Report } from '@portfolio/content/report';
 
 type SessionStart =
   | { kind: 'signed in'; token: string; expiresAt: Date }
@@ -6,6 +7,7 @@ type SessionStart =
   | { kind: 'limited'; retryAfterSeconds: number };
 
 const timeoutMs = 5_000;
+const reportTimeoutMs = 30_000;
 
 function unexpected(what: string, { status }: Response): Error {
   return new Error(`the API answered ${String(status)} to ${what}`);
@@ -70,4 +72,23 @@ export async function endSession(
   if (response.status !== 204 && response.status !== 404) {
     throw unexpected('a sign-out', response);
   }
+}
+
+export async function fetchReport(
+  apiUrl: string,
+  token: string,
+  days: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Report | null> {
+  const response = await fetchImpl(`${apiUrl}/admin/report?days=${String(days)}`, {
+    headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(reportTimeoutMs),
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (response.status !== 200) {
+    throw unexpected('a report', response);
+  }
+  return reportSchema.parse(await response.json());
 }

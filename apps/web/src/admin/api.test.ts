@@ -1,5 +1,6 @@
+import { aReport } from '@portfolio/content/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { endSession, sessionExpiry, startSession } from './sessions';
+import { endSession, fetchReport, sessionExpiry, startSession } from './api';
 
 const api = 'http://api:3201';
 const link = 'l'.repeat(43);
@@ -89,5 +90,28 @@ describe('endSession', () => {
     await expect(endSession(api, session, answering(500))).rejects.toThrow(
       'the API answered 500 to a sign-out',
     );
+  });
+});
+
+describe('fetchReport', () => {
+  it('asks for the days with the session as a bearer and reads the dates back as dates', async () => {
+    const report = aReport();
+    const fetchImpl = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(report), { status: 200 }),
+    );
+
+    expect(await fetchReport(api, session, 30, fetchImpl)).toEqual(report);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api:3201/admin/report?days=30',
+      expect.objectContaining({ headers: { authorization: `Bearer ${session}` } }),
+    );
+  });
+
+  it('reads a 404 as no session, and fails on anything else or on a report it cannot read', async () => {
+    expect(await fetchReport(api, session, 7, answering(404))).toBeNull();
+    await expect(fetchReport(api, session, 7, answering(500))).rejects.toThrow(
+      'the API answered 500 to a report',
+    );
+    await expect(fetchReport(api, session, 7, answering(200, { period: {} }))).rejects.toThrow();
   });
 });

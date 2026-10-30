@@ -5,7 +5,7 @@ import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiUrl } from '@/lib/forward-to-api';
 import { linkCookie, sessionCookie, tokenIn } from './cookies';
-import { endSession, startSession } from './sessions';
+import { endSession, startSession } from './api';
 
 async function headersFromSite(): Promise<Headers> {
   const incoming = await headers();

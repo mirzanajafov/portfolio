@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { signIn, signOut } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
 import { request } from './testing';
-import type { endSession, startSession } from './sessions';
+import type { endSession, startSession } from './api';
 
 const link = 'l'.repeat(43);
 const session = 's'.repeat(43);
@@ -15,7 +15,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
 vi.mock('next/navigation', async () => (await import('./testing')).nextNavigation);
-vi.mock('./sessions', () => api);
+vi.mock('./api', () => api);
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
   request.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
