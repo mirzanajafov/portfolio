@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Report, Totals } from '../analytics/report/report.js';
+import type { Report, Totals, VisitStory } from '../analytics/report/report.js';
 import { reportText } from './report-text.js';
 
 const someVisits = (visits: number): Totals => ({
@@ -8,6 +8,31 @@ const someVisits = (visits: number): Totals => ({
   medianVisitSeconds: 40,
   phoneVisits: 1,
   quickExits: 0,
+});
+
+const none = { right: 0, wrong: 0, tied: 0 };
+const noOutcomes = { high: none, medium: none, low: none };
+
+const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
+  at: new Date('2026-10-30T12:00:00Z'),
+  from: null,
+  pages: [{ path: '/', seconds: 30, read: [] }],
+  clicks: [],
+  interacted: true,
+  ...overrides,
+});
+
+const anEntry = (
+  overrides: Partial<Report['applications']['list'][number]> = {},
+): Report['applications']['list'][number] => ({
+  code: 'memh',
+  company: 'Xsolla',
+  role: 'Backend Engineer',
+  appliedOn: '2026-10-29',
+  visits: [],
+  days: [],
+  guesses: [],
+  ...overrides,
 });
 
 function aReport(overrides: Partial<Report> = {}): Report {
@@ -34,7 +59,7 @@ function aReport(overrides: Partial<Report> = {}): Report {
     filter: [],
     applications: {
       list: [],
-      score: { visits: 0, right: 0, wrong: 0, tied: 0, unplaced: 0 },
+      score: { visits: 0, unplaced: 0, levels: noOutcomes },
       unknownCodes: [],
     },
     ...overrides,
@@ -123,7 +148,7 @@ describe('reportText', () => {
       'Web Vitals, p75 (samples): none',
       'Script errors: none',
       '404s: none',
-      'Applications, every visit kept rather than only the period',
+      'Applications: none registered',
       'Filtered out: none',
       'Countries and networks: IP Geolocation by DB-IP',
     ];
@@ -267,13 +292,9 @@ describe('reportText', () => {
       aReport({
         applications: {
           list: [
-            {
-              code: 'memh',
-              company: 'Xsolla',
-              role: 'Backend Engineer',
-              appliedOn: '2026-10-29',
+            anEntry({
               visits: [
-                {
+                aStory({
                   at: new Date('2026-10-30T10:00:00Z'),
                   from: 'www.linkedin.com',
                   pages: [
@@ -281,32 +302,40 @@ describe('reportText', () => {
                     { path: '/cv', seconds: 8, read: [] },
                   ],
                   clicks: ['CV PDF'],
-                  interacted: true,
-                },
-                {
+                }),
+                aStory({
                   at: new Date('2026-10-30T11:00:00Z'),
-                  from: null,
                   pages: [{ path: '/', seconds: 0, read: [] }],
-                  clicks: [],
                   interacted: false,
-                },
+                }),
               ],
               days: [{ day: '2026-09-12', visits: 2, views: 5 }],
               guesses: [
                 {
-                  at: new Date('2026-10-30T12:00:00Z'),
-                  from: null,
-                  pages: [{ path: '/', seconds: 30, read: [] }],
-                  clicks: [],
-                  interacted: true,
+                  ...aStory(),
                   confidence: 'medium',
-                  companies: ['Xsolla', 'Local'],
-                  reasons: ['Baku', '1 day after applying'],
+                  candidates: [
+                    { company: 'Xsolla', role: 'Backend Engineer' },
+                    { company: 'Local', role: 'Developer' },
+                  ],
+                  signals: [
+                    { kind: 'city', city: 'Baku' },
+                    { kind: 'country', country: 'AZ' },
+                  ],
+                  daysAfter: 1,
                 },
               ],
-            },
+            }),
           ],
-          score: { visits: 3, right: 1, wrong: 1, tied: 0, unplaced: 1 },
+          score: {
+            visits: 3,
+            unplaced: 1,
+            levels: {
+              high: { right: 1, wrong: 0, tied: 0 },
+              medium: { right: 0, wrong: 1, tied: 0 },
+              low: none,
+            },
+          },
           unknownCodes: [
             { code: 'check1', visits: 2, firstSeen: new Date('2026-10-30T08:00:00Z') },
           ],
@@ -316,52 +345,102 @@ describe('reportText', () => {
     );
     expect(text).toContain(
       [
+        'Applications, every visit kept rather than only the period, times in Baku',
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
-        '  2026-10-30 14:00 Baku, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
-        '  2026-10-30 15:00 Baku: / 0 s, no interaction',
+        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
+        '  2026-10-30 15:00: / 0 s, no interaction',
         '  2026-09-12, rolled up: 2 visits, 5 page views',
-        '  possibly Xsolla or Local, medium (Baku, 1 day after applying): 2026-10-30 16:00 Baku: / 30 s',
-        'Guesses checked on coded visits: 3 visits, 1 right, 1 wrong, 0 tied, 1 not placed',
-        'Unknown codes: check1 (2 visits, first 2026-10-30 12:00 Baku)',
+        '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
+        'Guesses checked on 3 coded visits: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
+        'Unknown codes',
+        '  check1: 2 visits, first 2026-10-30 12:00',
       ].join('\n'),
     );
   });
 
-  it('keeps low guesses for --all, and says when an application has no visits yet', () => {
+  it('names the role when a guess could be either of two applications to the same company', () => {
+    const text = reportText(
+      aReport({
+        applications: {
+          list: [
+            anEntry({
+              guesses: [
+                {
+                  ...aStory(),
+                  confidence: 'medium',
+                  candidates: [
+                    { company: 'Xsolla', role: 'Backend Engineer' },
+                    { company: 'Xsolla', role: 'Platform Engineer' },
+                  ],
+                  signals: [{ kind: 'city', city: 'Baku' }],
+                  daysAfter: 0,
+                },
+              ],
+            }),
+          ],
+          score: { visits: 0, unplaced: 0, levels: noOutcomes },
+          unknownCodes: [],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).toContain(
+      'possibly Xsolla (Backend Engineer) or Xsolla (Platform Engineer), medium (Baku, 0 days after applying)',
+    );
+  });
+
+  it('hides low guesses unless asked for all, and says so, and says when an application has no visits yet', () => {
+    const lowGuess = {
+      ...aStory(),
+      confidence: 'low' as const,
+      candidates: [{ company: 'Xsolla', role: 'Backend Engineer' }],
+      signals: [{ kind: 'country' as const, country: 'AZ' }],
+      daysAfter: 1,
+    };
     const report = aReport({
       applications: {
-        list: [
-          {
-            code: 'memh',
-            company: 'Xsolla',
-            role: 'Backend Engineer',
-            appliedOn: '2026-10-29',
-            visits: [],
-            days: [],
-            guesses: [
-              {
-                at: new Date('2026-10-30T12:00:00Z'),
-                from: null,
-                pages: [{ path: '/', seconds: 30, read: [] }],
-                clicks: [],
-                interacted: true,
-                confidence: 'low',
-                companies: ['Xsolla'],
-                reasons: ['AZ', '1 day after applying'],
-              },
-            ],
-          },
-        ],
-        score: { visits: 0, right: 0, wrong: 0, tied: 0, unplaced: 0 },
+        list: [anEntry({ guesses: [lowGuess] }), anEntry({ code: 'k7mpx', company: 'Wolt' })],
+        score: { visits: 0, unplaced: 0, levels: noOutcomes },
         unknownCodes: [],
       },
     });
-    expect(reportText(report, { all: false })).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet',
+    const short = reportText(report, { all: false });
+    expect(short).toContain('  low guesses not shown: 1, --all shows them');
+    expect(short).toContain(
+      'Wolt, Backend Engineer, applied 2026-10-29, code k7mpx: no visits yet',
     );
     expect(reportText(report, { all: true })).toContain(
-      '  possibly Xsolla, low (AZ, 1 day after applying): 2026-10-30 16:00 Baku: / 30 s',
+      '  possibly Xsolla, low (AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
     );
+  });
+
+  it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {
+    const twelve = Array.from({ length: 12 }, (_, index) => index);
+    const report = aReport({
+      applications: {
+        list: twelve.map((index) =>
+          anEntry({
+            code: `code${String(index)}`,
+            company: `Company ${String(index)}`,
+            visits: index === 0 ? twelve.map(() => aStory()) : [],
+          }),
+        ),
+        score: { visits: 0, unplaced: 0, levels: noOutcomes },
+        unknownCodes: twelve.map((index) => ({
+          code: `check${String(index)}`,
+          visits: 1,
+          firstSeen: new Date('2026-10-30T08:00:00Z'),
+        })),
+      },
+    });
+    const short = reportText(report, { all: false });
+    expect(short).not.toContain('Company 10');
+    expect(short).toContain('and 2 more, --all shows them');
+    expect(short).toContain('  and 2 more, --all shows them');
+    expect(short).not.toContain('check10');
+    const full = reportText(report, { all: true });
+    expect(full).toContain('Company 11');
+    expect(full).toContain('check11');
   });
 
   it('ends with the credit the IP database asks for', () => {

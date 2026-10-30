@@ -15,6 +15,7 @@ export async function findVisits(
 ): Promise<VisitRow[]> {
   const visits = await db.visit.findMany({
     where,
+    orderBy: { startedAt: 'asc' },
     select: {
       startedAt: true,
       device: true,

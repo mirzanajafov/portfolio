@@ -1,9 +1,12 @@
 import { geolocationCredit } from '@portfolio/content/analytics';
 import { vitalBars } from '../analytics/report/quality.js';
-import { dayOf } from '../analytics/days.js';
+import { dayOf, inBaku } from '../analytics/days.js';
 import {
   readSeconds,
+  type Confidence,
+  type Outcome,
   type Report,
+  type Signal,
   type Totals,
   type Vital,
   type VisitStory,
@@ -13,7 +16,6 @@ import { quickExitSeconds } from '../analytics/visits.js';
 
 const listLength = 10;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
-const bakuOffsetMs = 4 * 60 * 60 * 1000;
 
 const sourceNames: Record<Source, string> = {
   google: 'Google',
@@ -35,7 +37,7 @@ function counted(count: number, noun: string): string {
 }
 
 function bakuTime(date: Date): string {
-  return new Date(date.getTime() + bakuOffsetMs).toISOString().slice(0, 16).replace('T', ' ');
+  return inBaku(date).toISOString().slice(0, 16).replace('T', ' ');
 }
 
 function share(part: number, whole: number): string {
@@ -315,51 +317,102 @@ function storyText({ at, from, pages, clicks, interacted }: VisitStory): string 
   );
   return printable(
     [
-      `${bakuTime(at)} Baku${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
+      `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
       ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
       ...(interacted ? [] : ['no interaction']),
     ].join(', '),
   );
 }
 
+function signalText(signal: Signal): string {
+  switch (signal.kind) {
+    case 'network':
+      return `network ${signal.name}`;
+    case 'ats':
+      return `from ${signal.host}`;
+    case 'city':
+      return signal.city;
+    case 'country':
+      return signal.country;
+  }
+}
+
+function candidatesText(candidates: readonly { company: string; role: string }[]): string {
+  return candidates
+    .map(({ company, role }) =>
+      candidates.filter((other) => other.company === company).length > 1
+        ? `${company} (${role})`
+        : company,
+    )
+    .join(' or ');
+}
+
+function listed<T>(items: readonly T[], all: boolean, line: (item: T) => string): string[] {
+  const shown = shownOf(items, all);
+  const hidden = items.length - shown.length;
+  return [
+    ...shown.map(line),
+    ...(hidden > 0 ? [`  and ${String(hidden)} more, --all shows them`] : []),
+  ];
+}
+
+function applicationLines(
+  application: Report['applications']['list'][number],
+  all: boolean,
+): string[] {
+  const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
+  const lowHidden = application.guesses.length - guesses.length;
+  const heading = printable(
+    `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`,
+  );
+  const lines = [
+    ...listed(application.visits, all, (visit) => `  ${storyText(visit)}`),
+    ...listed(
+      application.days,
+      all,
+      ({ day, visits, views }) =>
+        `  ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
+    ),
+    ...listed(
+      guesses,
+      all,
+      (guess) =>
+        `  possibly ${printable(candidatesText(guess.candidates))}, ${guess.confidence} (${printable(
+          [
+            ...guess.signals.map(signalText),
+            `${counted(guess.daysAfter, 'day')} after applying`,
+          ].join(', '),
+        )}): ${storyText(guess)}`,
+    ),
+    ...(lowHidden > 0 ? [`  low guesses not shown: ${String(lowHidden)}, --all shows them`] : []),
+  ];
+  return lines.length === 0 ? [`${heading}: no visits yet`] : [heading, ...lines];
+}
+
+function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
+  return `${confidence} ${String(outcomes.right)} right, ${String(outcomes.wrong)} wrong, ${String(outcomes.tied)} tied`;
+}
+
 function applications({ applications }: Report, all: boolean): string[] {
   const { list, score, unknownCodes } = applications;
-  const shown = shownOf(list, all);
-  const hidden = list.length - shown.length;
-  const lines = shown.flatMap((application) => {
-    const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
-    const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`;
-    if (application.visits.length + application.days.length + guesses.length === 0) {
-      return [printable(`${heading}: no visits yet`)];
-    }
-    return [
-      printable(heading),
-      ...application.visits.map((visit) => `  ${storyText(visit)}`),
-      ...application.days.map(
-        ({ day, visits, views }) =>
-          `  ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
-      ),
-      ...guesses.map(
-        (guess) =>
-          `  possibly ${printable(guess.companies.join(' or '))}, ${guess.confidence} (${printable(guess.reasons.join(', '))}): ${storyText(guess)}`,
-      ),
-    ];
-  });
+  const { high, medium, low } = score.levels;
   return [
-    'Applications, every visit kept rather than only the period',
-    ...(list.length === 0 ? ['none registered'] : lines),
-    ...(hidden > 0 ? [`and ${String(hidden)} more, --all shows them`] : []),
-    `Guesses checked on coded visits: ${counted(score.visits, 'visit')}, ${String(score.right)} right, ${String(score.wrong)} wrong, ${String(score.tied)} tied, ${String(score.unplaced)} not placed`,
+    ...(list.length === 0
+      ? ['Applications: none registered']
+      : [
+          'Applications, every visit kept rather than only the period, times in Baku',
+          ...shownOf(list, all).flatMap((application) => applicationLines(application, all)),
+          ...(list.length > listLength && !all
+            ? [`and ${String(list.length - listLength)} more, --all shows them`]
+            : []),
+          `Guesses checked on ${counted(score.visits, 'coded visit')}: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
+        ]),
     ...(unknownCodes.length > 0
       ? [
-          `Unknown codes: ${printable(
-            unknownCodes
-              .map(
-                ({ code, visits, firstSeen }) =>
-                  `${code} (${counted(visits, 'visit')}, first ${bakuTime(firstSeen)} Baku)`,
-              )
-              .join(', '),
-          )}`,
+          'Unknown codes',
+          ...listed(unknownCodes, all, ({ code, visits, firstSeen }) =>
+            printable(`  ${code}: ${counted(visits, 'visit')}, first ${bakuTime(firstSeen)}`),
+          ),
         ]
       : []),
   ];

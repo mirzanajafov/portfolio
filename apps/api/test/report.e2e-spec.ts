@@ -223,8 +223,12 @@ describe('the visitor report against a real database', () => {
     expect(xsolla?.guesses).toMatchObject([
       {
         confidence: 'medium',
-        companies: ['Xsolla'],
-        reasons: ['Baku', 'AZ', '1 day after applying'],
+        candidates: [{ company: 'Xsolla', role: 'Backend Engineer' }],
+        signals: [
+          { kind: 'city', city: 'Baku' },
+          { kind: 'country', country: 'AZ' },
+        ],
+        daysAfter: 1,
       },
     ]);
     expect(reportText(report, { all: false })).toContain(

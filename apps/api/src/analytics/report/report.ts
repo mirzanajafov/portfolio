@@ -4,6 +4,14 @@ export const readSeconds = 2;
 
 export type Confidence = 'high' | 'medium' | 'low';
 
+export type Signal =
+  | { kind: 'network'; name: string }
+  | { kind: 'ats'; host: string }
+  | { kind: 'city'; city: string }
+  | { kind: 'country'; country: string };
+
+export type Outcome = 'right' | 'wrong' | 'tied';
+
 export type Totals = {
   visits: number;
   pageViews: number;
@@ -24,8 +32,9 @@ export type VisitStory = {
 
 type GuessedVisit = VisitStory & {
   confidence: Confidence;
-  companies: string[];
-  reasons: string[];
+  candidates: { company: string; role: string }[];
+  signals: Signal[];
+  daysAfter: number;
 };
 
 export type Rating = 'good' | 'needs improvement' | 'poor';
@@ -100,7 +109,11 @@ export type Report = {
       days: { day: string; visits: number; views: number }[];
       guesses: GuessedVisit[];
     }[];
-    score: { visits: number; right: number; wrong: number; tied: number; unplaced: number };
+    score: {
+      visits: number;
+      unplaced: number;
+      levels: Record<Confidence, Record<Outcome, number>>;
+    };
     unknownCodes: { code: string; visits: number; firstSeen: Date }[];
   };
 };

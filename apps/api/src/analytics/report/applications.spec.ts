@@ -87,10 +87,31 @@ describe('applicationsOf', () => {
     ]);
     expect(list[0]?.guesses[0]).toMatchObject({
       confidence: 'medium',
-      companies: ['Xsolla', 'Local'],
-      reasons: ['Baku', '1 day after applying'],
+      candidates: [
+        { company: 'Xsolla', role: 'Backend Engineer' },
+        { company: 'Local', role: 'Backend Engineer' },
+      ],
+      signals: [{ kind: 'city', city: 'Baku' }],
+      daysAfter: 1,
       from: 'www.google.com',
     });
+  });
+
+  it('never guesses a visit that came in with a code, even one that would match', () => {
+    const { list } = sectionOf(
+      [aVisit([aView({ ref: 'check1' })]), aVisit([aView({ ref: 'memh' })])],
+      [anApplication({ city: 'Baku' })],
+    );
+    expect(list[0]?.visits).toHaveLength(1);
+    expect(list[0]?.guesses).toEqual([]);
+  });
+
+  it('lists visits in the order they happened, whatever order the rows came in', () => {
+    const { list } = sectionOf([
+      aVisit([aView({ ref: 'memh', path: '/cv' })], { startedAt: hoursAgo(1) }),
+      aVisit([aView({ ref: 'memh' })], { startedAt: hoursAgo(5) }),
+    ]);
+    expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(5), hoursAgo(1)]);
   });
 
   it('checks the guesser on the coded visits with their code hidden', () => {
@@ -104,7 +125,22 @@ describe('applicationsOf', () => {
       ],
       [xsolla, wolt],
     );
-    expect(score).toEqual({ visits: 3, right: 1, wrong: 1, tied: 0, unplaced: 1 });
+    expect(score).toEqual({
+      visits: 3,
+      unplaced: 1,
+      levels: {
+        high: { right: 0, wrong: 0, tied: 0 },
+        medium: { right: 1, wrong: 1, tied: 0 },
+        low: { right: 0, wrong: 0, tied: 0 },
+      },
+    });
+  });
+
+  it('counts a guess that names the right application with another as tied', () => {
+    const xsolla = anApplication({ city: 'Baku' });
+    const local = anApplication({ id: 'local', code: 'k7mpx', company: 'Local', city: 'Baku' });
+    const { score } = sectionOf([aVisit([aView({ ref: 'memh' })])], [xsolla, local]);
+    expect(score.levels.medium).toEqual({ right: 0, wrong: 0, tied: 1 });
   });
 
   it('lists the codes no application has, with their visits and when they were first seen', () => {

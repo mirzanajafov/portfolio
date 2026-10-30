@@ -2,7 +2,7 @@ import { dayOf } from '../days.js';
 import { rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type Visit } from '../visits.js';
 import { guessOf } from './guess.js';
-import { readSeconds, type Report, type VisitStory } from './report.js';
+import { readSeconds, type Outcome, type Report, type VisitStory } from './report.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory {
@@ -24,35 +24,30 @@ function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory 
   };
 }
 
-function withoutCode(visit: Visit): Visit {
-  return { ...visit, views: visit.views.map((view) => ({ ...view, ref: null })) };
+function outcomeOf(named: boolean, candidates: number): Outcome {
+  if (!named) {
+    return 'wrong';
+  }
+  return candidates === 1 ? 'right' : 'tied';
 }
-
-type Outcome = 'right' | 'wrong' | 'tied' | 'unplaced';
 
 function scoreOf(
   coded: readonly { visit: Visit; application: ApplicationRow }[],
   applications: readonly ApplicationRow[],
 ): Report['applications']['score'] {
-  const outcomes = coded.map(({ visit, application }): Outcome => {
-    const candidates = guessOf(withoutCode(visit), applications)?.candidates ?? [];
-    const named = candidates.some((candidate) => candidate.application.id === application.id);
-    if (candidates.length === 0) {
-      return 'unplaced';
+  const none = (): Record<Outcome, number> => ({ right: 0, wrong: 0, tied: 0 });
+  const levels = { high: none(), medium: none(), low: none() };
+  let unplaced = 0;
+  for (const { visit, application } of coded) {
+    const guess = guessOf(visit, applications);
+    if (!guess) {
+      unplaced += 1;
+      continue;
     }
-    if (!named) {
-      return 'wrong';
-    }
-    return candidates.length === 1 ? 'right' : 'tied';
-  });
-  const count = (outcome: Outcome) => outcomes.filter((each) => each === outcome).length;
-  return {
-    visits: outcomes.length,
-    right: count('right'),
-    wrong: count('wrong'),
-    tied: count('tied'),
-    unplaced: count('unplaced'),
-  };
+    const named = guess.candidates.some((candidate) => candidate.application.id === application.id);
+    levels[guess.confidence][outcomeOf(named, guess.candidates.length)] += 1;
+  }
+  return { visits: coded.length, unplaced, levels };
 }
 
 export function applicationsOf(
@@ -62,16 +57,17 @@ export function applicationsOf(
   labels: ReadonlyMap<string, string>,
 ): Report['applications'] {
   const byCode = new Map(applications.map((application) => [application.code, application]));
-  const coded = visits.flatMap((visit) => {
+  const ordered = visits.toSorted((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  const coded = ordered.flatMap((visit) => {
     const code = codeOf(visit);
     const application = code === null ? undefined : byCode.get(code);
     return application ? [{ visit, application }] : [];
   });
-  const guessed = visits.flatMap((visit) => {
-    const guess = guessOf(visit, applications);
+  const guessed = ordered.flatMap((visit) => {
+    const guess = codeOf(visit) === null ? guessOf(visit, applications) : null;
     return guess ? [{ visit, guess }] : [];
   });
-  const unknown = visits.flatMap((visit) => {
+  const unknown = ordered.flatMap((visit) => {
     const code = codeOf(visit);
     return code !== null && !byCode.has(code) ? [{ code, visit }] : [];
   });
@@ -79,7 +75,9 @@ export function applicationsOf(
     list: applications
       .toSorted(
         (a, b) =>
-          b.appliedOn.getTime() - a.appliedOn.getTime() || a.company.localeCompare(b.company, 'en'),
+          b.appliedOn.getTime() - a.appliedOn.getTime() ||
+          a.company.localeCompare(b.company, 'en') ||
+          a.role.localeCompare(b.role, 'en'),
       )
       .map((application) => ({
         code: application.code,
@@ -102,8 +100,12 @@ export function applicationsOf(
                 {
                   ...storyOf(visit, labels),
                   confidence: guess.confidence,
-                  companies: guess.candidates.map((candidate) => candidate.application.company),
-                  reasons: mine.reasons,
+                  candidates: guess.candidates.map(({ application: { company, role } }) => ({
+                    company,
+                    role,
+                  })),
+                  signals: mine.signals,
+                  daysAfter: mine.daysAfter,
                 },
               ]
             : [];
@@ -113,7 +115,7 @@ export function applicationsOf(
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,
-      firstSeen: new Date(Math.min(...group.map(({ visit }) => visit.startedAt.getTime()))),
+      firstSeen: group[0].visit.startedAt,
     })),
   };
 }
