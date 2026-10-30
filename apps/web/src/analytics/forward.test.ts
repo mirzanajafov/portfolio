@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { forwardEvent } from './forward';
 
 describe('forwardEvent', () => {
-  it('passes the event, the caller address, the browser and its privacy signals, and finishes even if the visitor has gone', async () => {
+  it('passes the event, the caller address, the browser and its privacy signals, and finishes on its own clock even if the visitor has gone', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const request = new Request('http://site/api/events', {
       method: 'POST',
@@ -30,6 +30,8 @@ describe('forwardEvent', () => {
       }),
     );
     expect(response.status).toBe(204);
-    expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBeUndefined();
+    const signal = fetchImpl.mock.calls[0]?.[1]?.signal;
+    expect(signal).not.toBe(request.signal);
+    expect(signal?.aborted).toBe(false);
   });
 });

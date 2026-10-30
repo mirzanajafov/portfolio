@@ -9,7 +9,12 @@ export function forwardEvent(
 ): Promise<Response> {
   return forwardToApi(
     request,
-    { url: `${apiUrl}/events`, headers: passedHeaders, fetchImpl },
+    {
+      url: `${apiUrl}/events`,
+      headers: passedHeaders,
+      fetchImpl,
+      signal: AbortSignal.timeout(5_000),
+    },
     () => new Response(null, { status: 204 }),
   );
 }

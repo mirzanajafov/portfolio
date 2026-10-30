@@ -5,15 +5,13 @@ const ask = (body: string, headers: Record<string, string> = {}) =>
   new Request('http://site/api/ask', { method: 'POST', body, headers });
 
 describe('forwardAsk', () => {
-  it('passes the question and the caller address to the API and streams the answer back', async () => {
+  it('passes the question and the caller address to the API, stops when the visitor does, and streams the answer back', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('data: {}\n\n', { status: 200 }),
     );
-    const response = await forwardAsk(
-      ask('{"question":"hi"}', { 'x-forwarded-for': '203.0.113.7' }),
-      'http://api:3201',
-      fetchImpl,
-    );
+    const request = ask('{"question":"hi"}', { 'x-forwarded-for': '203.0.113.7' });
+    const response = await forwardAsk(request, 'http://api:3201', fetchImpl);
+    expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBe(request.signal);
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://api:3201/ask',
       expect.objectContaining({
