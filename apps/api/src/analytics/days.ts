@@ -8,6 +8,10 @@ export function daysAfter(day: Date, count: number): Date {
   return new Date(day.getTime() + count * dayMs);
 }
 
+export function daysBetween(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / dayMs);
+}
+
 export function mondayOf(date: Date): Date {
   return daysAfter(utcDay(date), -((date.getUTCDay() + 6) % 7));
 }

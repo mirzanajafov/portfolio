@@ -23,6 +23,8 @@ export type VisitRow = {
   device: Device;
   browser: Browser;
   country: string | null;
+  city: string | null;
+  network: string | null;
   views: ViewRow[];
 };
 
