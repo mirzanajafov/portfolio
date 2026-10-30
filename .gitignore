@@ -12,4 +12,5 @@ coverage/
 next-env.d.ts
 content/src/.generated/
 apps/api/src/generated/
-/geo/
+/geo/*
+!/geo/.gitkeep
