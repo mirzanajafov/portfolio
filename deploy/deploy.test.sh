@@ -6,9 +6,13 @@ script="$(realpath "$(dirname "$0")")/deploy.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 failed=0
-month=$(date -u +%Y-%m)
+month=2031-05
 
 mkdir "$work/bin"
+cat > "$work/bin/date" <<EOF
+#!/usr/bin/env bash
+if [ "\$*" = "-u +%Y-%m" ]; then echo $month; else exec $(command -v date) "\$@"; fi
+EOF
 cat > "$work/bin/docker" <<'EOF'
 #!/usr/bin/env bash
 on_old() { [ "$(git rev-parse HEAD)" = "$OLD" ]; }
@@ -50,7 +54,7 @@ else
 fi
 EOF
 printf '#!/bin/sh\n' > "$work/bin/sleep"
-chmod +x "$work/bin/docker" "$work/bin/curl" "$work/bin/sleep"
+chmod +x "$work/bin/docker" "$work/bin/curl" "$work/bin/date" "$work/bin/sleep"
 
 commit() {
   echo "$1" > release
