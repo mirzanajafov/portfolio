@@ -6,12 +6,11 @@ import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
 import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
-import { chrome, sendEvent } from './send-event.js';
+import { address, chrome, sendEvent } from './send-event.js';
 import { FixedClock, knownPlaces, startApp } from './start-app.js';
 
 const headlessChrome =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/130.0.0.0 Safari/537.36';
-const address = '203.0.113.7';
 
 const aView = (overrides: Record<string, unknown> = {}) => ({
   type: 'view',
