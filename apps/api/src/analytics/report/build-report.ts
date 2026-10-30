@@ -20,7 +20,7 @@ function firstTrendDay(now: Date): Date {
 }
 
 function firstDayBefore(now: Date, days: number): Date {
-  return daysAfter(utcDay(now), 1 - 2 * days);
+  return daysAfter(utcDay(now), -2 * days);
 }
 
 export function firstReportedDay(now: Date, days: number): Date {
@@ -200,7 +200,7 @@ function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] 
 
 export function buildReport(rows: ReportRows, content: Content, now: Date, days: number): Report {
   const today = utcDay(now);
-  const from = daysAfter(today, 1 - days);
+  const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
   const visits = startedBetween(everyVisit, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
@@ -216,7 +216,8 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     period: { from, to: now, days },
     unrolledSince: rollupBehind ? dayOf(rows.rawFrom) : null,
     overview: {
-      current: sumOf([dayTotals(visits)]),
+      today: sumOf([dayTotals(startedBetween(everyVisit, today, now))]),
+      current: sumOf([dayTotals(startedBetween(everyVisit, from, today))]),
       previous: before.every(collected) ? sumOf(before) : null,
     },
     weeks: weeksOf(totalsOn, today),

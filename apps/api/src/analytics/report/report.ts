@@ -19,7 +19,7 @@ export type Vital = { p75: number; samples: number; rating: Rating; missesMyBar:
 export type Report = {
   period: { from: Date; to: Date; days: number };
   unrolledSince: string | null;
-  overview: { current: Totals; previous: Totals | null };
+  overview: { today: Totals; current: Totals; previous: Totals | null };
   weeks: Week[];
   sources: { source: Source; visits: number }[];
   otherSites: { host: string; visits: number }[];

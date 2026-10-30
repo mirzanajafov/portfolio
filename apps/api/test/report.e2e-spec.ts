@@ -98,15 +98,17 @@ describe('the visitor report against a real database', () => {
 
     const report = await reports.build(7);
 
+    const none = {
+      visits: 0,
+      pageViews: 0,
+      medianVisitSeconds: null,
+      phoneVisits: 0,
+      quickExits: 0,
+    };
     expect(report.overview).toEqual({
-      current: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
-      previous: {
-        visits: 0,
-        pageViews: 0,
-        medianVisitSeconds: null,
-        phoneVisits: 0,
-        quickExits: 0,
-      },
+      today: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
+      current: none,
+      previous: none,
     });
     expect(report.sources).toEqual([
       { source: 'google', visits: 1 },

@@ -150,7 +150,7 @@ describe('the CLI commands', () => {
     process.stdout.isTTY = true;
     const { status, stdout } = await cli('report', '--days', '1');
     expect(status).toBe(0);
-    expect(stdout).toMatch(/^Visits in the last 1 day: /);
+    expect(stdout).toMatch(/^Visits in the last 1 full day and today: /);
     expect(stdout).toContain('Sources: none');
   });
 

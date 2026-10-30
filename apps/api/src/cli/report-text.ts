@@ -94,7 +94,7 @@ function totalsColumn(totals: Totals): string[] {
   ];
 }
 
-function overview({ period, overview: { current, previous } }: Report): string[] {
+function overview({ period, overview: { today, current, previous } }: Report): string[] {
   const labels = [
     'visits',
     'page views',
@@ -103,13 +103,18 @@ function overview({ period, overview: { current, previous } }: Report): string[]
     `one page under ${String(quickExitSeconds)} s`,
   ];
   const days = counted(period.days, 'day');
-  const columns = previous
-    ? [totalsColumn(current), totalsColumn(previous)]
-    : [totalsColumn(current)];
+  const columns: [string, Totals][] = [
+    ['today so far', today],
+    [`last ${days}`, current],
+  ];
+  if (previous) {
+    columns.push([`${days} before`, previous]);
+  }
+  const values = columns.map(([, totals]) => totalsColumn(totals));
   return [
     ...table([
-      ['Overview', `last ${days}`, ...(previous ? [`${days} before`] : [])],
-      ...labels.map((label, row) => [label, ...columns.map((column) => column[row] ?? '')]),
+      ['Overview', ...columns.map(([heading]) => heading)],
+      ...labels.map((label, row) => [label, ...values.map((column) => column[row] ?? '')]),
     ]),
     ...(previous
       ? []
@@ -133,7 +138,7 @@ function weeks({ weeks }: Report): string[] {
 }
 
 function traffic(report: Report, all: boolean): string[][] {
-  const visits = report.overview.current.visits;
+  const visits = report.sources.reduce((total, { visits: count }) => total + count, 0);
   return [
     section(
       'Sources',
@@ -230,8 +235,8 @@ function ask({ ask }: Report): string[] {
   ];
 }
 
-function audience({ audience, overview }: Report, all: boolean): string[][] {
-  const visits = overview.current.visits;
+function audience({ audience }: Report, all: boolean): string[][] {
+  const visits = audience.devices.reduce((total, { visits: count }) => total + count, 0);
   const rows = (counts: { name: string; visits: number }[]) =>
     counts.map(({ name, visits: count }) => [name, String(count), share(count, visits)]);
   return [
@@ -311,7 +316,7 @@ export function reportText(report: Report, { all }: { all: boolean }): string {
   const { period } = report;
   const blocks = [
     [
-      `Visits in the last ${counted(period.days, 'day')}: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
+      `Visits in the last ${counted(period.days, 'full day')} and today: ${dayOf(period.from)} to ${dayOf(period.to)} UTC, today until ${bakuTime(period.to)} Baku time`,
     ],
     ...(report.unrolledSince
       ? [

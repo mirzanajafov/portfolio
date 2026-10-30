@@ -38,27 +38,26 @@ function rolledDays(from: string, count: number): (DayTotals & { day: Date })[] 
 }
 
 describe('buildReport', () => {
-  it('counts the period in whole UTC days, today so far included', () => {
+  it('compares the last full days with as many before them, and counts today on its own', () => {
     const report = reportOf(
       [
-        aVisit([aView()], { startedAt: new Date('2026-10-24T00:30:00Z') }),
-        aVisit([aView()], { startedAt: new Date('2026-10-23T23:30:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-30T01:00:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-23T00:30:00Z') }),
+        aVisit([aView()], { startedAt: new Date('2026-10-22T23:30:00Z') }),
       ],
       { days: 7 },
     );
-    expect(report.period.from).toEqual(new Date('2026-10-24T00:00:00Z'));
+    expect(report.period.from).toEqual(new Date('2026-10-23T00:00:00Z'));
+    expect(report.overview.today.visits).toBe(1);
     expect(report.overview.current.visits).toBe(1);
     expect(report.overview.previous?.visits).toBe(1);
   });
 
-  it('compares the period with the days before it, reading rolled days where the raw ones are gone', () => {
-    const report = reportOf(
-      [aVisit([aView({ activeSeconds: 30 })], { startedAt: new Date('2026-09-30T10:00:00Z') })],
-      { days: 30, rolled: rolledDays('2026-09-01', 29) },
-    );
+  it('reads the days before the period from their rolled totals once the raw ones are gone', () => {
+    const report = reportOf([], { days: 30, rolled: rolledDays('2026-08-31', 30) });
     expect(report.overview.previous).toEqual({
       visits: 30,
-      pageViews: 59,
+      pageViews: 60,
       medianVisitSeconds: 10,
       phoneVisits: 0,
       quickExits: 0,
@@ -71,10 +70,10 @@ describe('buildReport', () => {
       {
         days: 30,
         rawFrom: new Date('2026-09-29T00:00:00Z'),
-        rolled: rolledDays('2026-09-01', 28),
+        rolled: rolledDays('2026-08-31', 29),
       },
     );
-    expect(report.overview.previous?.visits).toBe(29);
+    expect(report.overview.previous?.visits).toBe(30);
     expect(report.unrolledSince).toBeNull();
   });
 
@@ -84,7 +83,7 @@ describe('buildReport', () => {
   });
 
   it('has nothing to compare with when a day before the period was never collected', () => {
-    const report = reportOf([], { days: 30, rolled: rolledDays('2026-09-02', 28) });
+    const report = reportOf([], { days: 30, rolled: rolledDays('2026-09-01', 29) });
     expect(report.overview.previous).toBeNull();
   });
 
@@ -94,7 +93,7 @@ describe('buildReport', () => {
       aVisit([aView({ activeSeconds: 9 })], { device: 'phone' }),
       aVisit([aView({ activeSeconds: 12 })]),
     ]);
-    expect(report.overview.current).toEqual({
+    expect(report.overview.today).toEqual({
       visits: 3,
       pageViews: 4,
       medianVisitSeconds: 12,
@@ -110,7 +109,7 @@ describe('buildReport', () => {
         aView({ createdAt: hoursAgo(1), activeSeconds: 3 }),
       ]),
     ]);
-    expect(report.overview.current.quickExits).toBe(1);
+    expect(report.overview.today.quickExits).toBe(1);
   });
 
   it('starts the weeks at the first collected day and marks the incomplete ones as partial', () => {
@@ -318,9 +317,11 @@ describe('buildReport', () => {
         { day: new Date('2026-10-29'), reason: 'bot', count: 3 },
         { day: new Date('2026-10-29'), reason: 'limited', count: 1 },
         { day: new Date('2026-10-30'), reason: 'bot', count: 2 },
+        { day: new Date('2026-10-27'), reason: 'bot', count: 9 },
       ],
     });
     expect(report.filter).toEqual([
+      { day: '2026-10-28', bot: 5, limited: 0 },
       { day: '2026-10-29', bot: 3, limited: 1 },
       { day: '2026-10-30', bot: 2, limited: 0 },
     ]);

@@ -13,12 +13,12 @@ const someVisits = (visits: number): Totals => ({
 function aReport(overrides: Partial<Report> = {}): Report {
   return {
     period: {
-      from: new Date('2026-10-24T00:00:00Z'),
+      from: new Date('2026-10-23T00:00:00Z'),
       to: new Date('2026-10-30T12:00:00Z'),
       days: 7,
     },
     unrolledSince: null,
-    overview: { current: someVisits(12), previous: someVisits(8) },
+    overview: { today: someVisits(2), current: someVisits(12), previous: someVisits(8) },
     weeks: [],
     sources: [],
     otherSites: [],
@@ -38,15 +38,15 @@ function aReport(overrides: Partial<Report> = {}): Report {
 describe('reportText', () => {
   it('heads the report with the UTC days of the period and the time in Baku', () => {
     expect(reportText(aReport(), { all: false })).toMatch(
-      /^Visits in the last 7 days: 2026-10-24 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time\n/,
+      /^Visits in the last 7 full days and today: 2026-10-23 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time\n/,
     );
   });
 
-  it('puts the period and the one before side by side', () => {
+  it('puts today, the full days and the days before them side by side', () => {
     const text = reportText(aReport(), { all: false });
-    expect(text).toMatch(/^Overview +last 7 days +7 days before$/m);
-    expect(text).toMatch(/^visits +12 +8$/m);
-    expect(text).toMatch(/^on a phone +8% +13%$/m);
+    expect(text).toMatch(/^Overview +today so far +last 7 days +7 days before$/m);
+    expect(text).toMatch(/^visits +2 +12 +8$/m);
+    expect(text).toMatch(/^on a phone +50% +8% +13%$/m);
   });
 
   it('says when the period before was never collected', () => {
@@ -57,11 +57,11 @@ describe('reportText', () => {
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
         },
-        overview: { current: someVisits(12), previous: null },
+        overview: { today: someVisits(2), current: someVisits(12), previous: null },
       }),
       { all: false },
     );
-    expect(text).toMatch(/^Overview +last 16 days$/m);
+    expect(text).toMatch(/^Overview +today so far +last 16 days$/m);
     expect(text).toContain(
       'Some of the 16 days before were never collected, so there is nothing to compare with.',
     );
@@ -97,7 +97,7 @@ describe('reportText', () => {
   it('prints every section in order, and says so when one has nothing in it', () => {
     const text = reportText(aReport(), { all: false });
     const headings = [
-      'Visits in the last 7 days',
+      'Visits in the last 7 full days and today',
       'Overview',
       'Weeks from Monday, UTC',
       'Sources: none',
