@@ -44,6 +44,18 @@ function Part({ part, first }: { part: ReportPart; first: boolean }) {
         return <p className="pl-4 text-sm">{part.text}</p>;
       }
       return <p className={first ? 'font-semibold' : undefined}>{part.text}</p>;
+    case 'application':
+      return (
+        <p className="flex flex-wrap items-baseline gap-x-3">
+          <span>{part.text}</span>
+          <a
+            className="text-sm underline underline-offset-4"
+            href={`/admin/applications/${part.code}/cv`}
+          >
+            Download CV
+          </a>
+        </p>
+      );
     case 'more':
       return <p className={`text-sm text-muted ${part.indent ? 'pl-4' : ''}`}>{part.text}</p>;
   }

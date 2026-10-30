@@ -18,6 +18,7 @@ import { bakuTime } from './time.ts';
 
 export type ReportPart =
   | { kind: 'line'; text: string; indent: boolean }
+  | { kind: 'application'; text: string; code: string }
   | { kind: 'table'; rows: string[][] }
   | { kind: 'more'; text: string; indent: boolean };
 
@@ -411,7 +412,12 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
     ...listed(guesses, all, (guess) => [item(guessText(guess))]),
     ...more(`low guesses not shown: ${String(lowHidden)}`, lowHidden, true),
   ];
-  return parts.length === 0 ? [line(`${heading}: no visits yet`)] : [line(heading), ...parts];
+  const named = (text: string): ReportPart => ({
+    kind: 'application',
+    text: printable(text),
+    code: application.code,
+  });
+  return parts.length === 0 ? [named(`${heading}: no visits yet`)] : [named(heading), ...parts];
 }
 
 function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
