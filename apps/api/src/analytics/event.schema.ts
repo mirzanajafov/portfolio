@@ -1,12 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
-import { errorMessageMaxLength, maxSeconds, webVitals } from '@portfolio/content/analytics';
+import {
+  errorMessageMaxLength,
+  geolocationCredit,
+  maxPathLength,
+  maxSeconds,
+  webVitals,
+} from '@portfolio/content/analytics';
 import { z } from 'zod';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { CONTENT } from '../content.js';
 
 const host = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
-const path = z.string().regex(/^\/(?!\/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,200}$/);
+const path = z
+  .string()
+  .regex(new RegExp(`^/(?!/)[A-Za-z0-9._~%!$&'()*+,;=:@/-]{0,${String(maxPathLength)}}$`));
 const pageView = z.uuid();
 const seconds = z.int().min(0).max(maxSeconds);
 
@@ -16,7 +24,7 @@ export function linksIn({ profile, projects }: Content): Set<string> {
     profile.links.github,
     profile.links.linkedin,
     '/cv.pdf',
-    'https://db-ip.com',
+    geolocationCredit,
     ...projects.flatMap(({ links, facts }) => [
       links.live,
       ...(links.repo ? [links.repo] : []),

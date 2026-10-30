@@ -1,6 +1,8 @@
 export const analyticsDays = 30;
 export const errorMessageMaxLength = 200;
 export const maxSeconds = 86_400;
+export const maxPathLength = 200;
+export const geolocationCredit = 'https://db-ip.com';
 
 export const webVitals = ['LCP', 'INP', 'CLS'] as const;
 

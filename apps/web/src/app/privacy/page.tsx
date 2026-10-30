@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
-import { analyticsDays } from '@portfolio/content/analytics';
+import { analyticsDays, geolocationCredit } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 
 const { profile } = content;
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
         <p className="max-w-[65ch]">
           From the request itself, the server works out the kind of device and browser, and the
           country, city and network owner of your IP address, using an offline database (
-          <a className="underline underline-offset-4" href="https://db-ip.com">
+          <a className="underline underline-offset-4" href={geolocationCredit}>
             IP Geolocation by DB-IP
           </a>
           ). To tell that two pages were seen by the same visitor on the same day, it mixes your IP
