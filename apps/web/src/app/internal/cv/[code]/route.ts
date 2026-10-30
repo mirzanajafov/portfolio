@@ -15,9 +15,9 @@ dockerNetworks.addSubnet('fc00::', 7, 'ipv6');
 dockerNetworks.addAddress('::1', 'ipv6');
 
 function fromInside(request: Request): boolean {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim();
   if (!forwarded) {
-    return true;
+    return false;
   }
   const address = forwarded.replace(/^::ffff:/, '');
   const family = isIP(address);
