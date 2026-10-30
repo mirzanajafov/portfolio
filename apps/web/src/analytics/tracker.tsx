@@ -2,6 +2,7 @@
 
 import {
   errorMessageMaxLength,
+  maxPathLength,
   webVitals,
   type VisitEvent,
   type WebVital,
@@ -12,9 +13,9 @@ import { Component, useCallback, useEffect, useRef, type ReactNode } from 'react
 import { Reading } from './reading';
 
 const maxErrors = 5;
-const maxPath = 201;
+const settleMs = 1_000;
 
-type PageView = { id: string; reading: Reading; seq: number; errors: number };
+type PageView = { id: string; started: number; reading: Reading; seq: number; errors: number };
 
 function send(event: VisitEvent): void {
   const body = new Blob([JSON.stringify(event)], { type: 'application/json' });
@@ -37,12 +38,13 @@ function pathOf(path: string): string {
   return path
     .replace(/^\/+/, '/')
     .replace(/[[\]^|]/g, encodeURIComponent)
-    .slice(0, maxPath);
+    .slice(0, maxPathLength + 1);
 }
 
 function begin(withReferrer: boolean, lastInput: number | undefined): PageView {
   const view = {
     id: crypto.randomUUID(),
+    started: performance.now(),
     reading: new Reading(() => performance.now(), lastInput),
     seq: 0,
     errors: 0,
@@ -73,7 +75,7 @@ function ownScript(file: string): string | undefined {
     return undefined;
   }
   const url = new URL(file, location.href);
-  return url.origin === location.origin ? url.pathname : undefined;
+  return url.origin === location.origin ? pathOf(url.pathname) : undefined;
 }
 
 function ownFrame(stack: string | undefined): string | undefined {
@@ -133,14 +135,14 @@ function Tracker() {
         start(true, false);
       }
     };
+
+    start(landing.current === null, landing.current === null);
     const timer = setInterval(() => {
       const view = current.current;
       if (view?.reading.newlyRead()) {
         flush(view);
       }
     }, 1000);
-
-    start(landing.current === null, landing.current === null);
     window.addEventListener('pageshow', onPageShow);
     return () => {
       clearInterval(timer);
@@ -157,7 +159,13 @@ function Tracker() {
       lastInput.current = performance.now();
       current.current?.reading.input();
     };
-    const onScroll = () => current.current?.reading.scrolled(scrollDepth());
+    const onScroll = () => {
+      const view = current.current;
+      if (view && performance.now() - view.started > settleMs) {
+        onInput();
+      }
+      view?.reading.scrolled(scrollDepth());
+    };
     const onVisibility = () => {
       const view = current.current;
       const visible = document.visibilityState === 'visible';

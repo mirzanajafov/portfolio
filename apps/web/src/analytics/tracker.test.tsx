@@ -223,6 +223,30 @@ describe('VisitTracker', () => {
     expect((await sent()).at(-1)).toMatchObject({ type: 'read', blocks: { experience: 3 } });
   });
 
+  it('takes a scroll as input once the page has settled, but not the scroll the browser makes on arrival', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    render(
+      <>
+        <section data-read="problem" />
+        <VisitTracker />
+      </>,
+    );
+    const block = document.querySelector('[data-read="problem"]');
+    assert(block);
+    fireEvent.scroll(window);
+    act(() => {
+      observer().show(block, true);
+      vi.advanceTimersByTime(3_000);
+    });
+    expect((await sent()).filter(({ type }) => type === 'read')).toEqual([]);
+    fireEvent.scroll(window);
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+    expect((await sent()).at(-1)).toMatchObject({ type: 'read', blocks: { problem: 2 } });
+  });
+
   it('starts a new page view, without referrer, when the page comes back from the back-forward cache', async () => {
     vi.stubGlobal('IntersectionObserver', FakeObserver);
     render(
@@ -283,13 +307,15 @@ describe('VisitTracker', () => {
       new ErrorEvent('error', { message: 'x is undefined', filename, lineno: 3, colno: 14 });
     window.dispatchEvent(error('chrome-extension://abc/content.js'));
     window.dispatchEvent(error(''));
+    window.dispatchEvent(error(`${location.origin}/_next/static/[x].js`));
     for (let count = 0; count < 6; count += 1) {
       window.dispatchEvent(error(`${location.origin}/_next/static/chunks/a.js`));
     }
 
     const errors = (await sent()).filter((event) => event.type === 'error');
     expect(errors).toHaveLength(5);
-    expect(errors[0]).toMatchObject({
+    expect(errors[0]).toMatchObject({ source: '/_next/static/%5Bx%5D.js' });
+    expect(errors[1]).toMatchObject({
       message: 'x is undefined',
       source: '/_next/static/chunks/a.js',
       line: 3,
