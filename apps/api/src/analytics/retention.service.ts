@@ -20,7 +20,12 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    this.stop = runEvery(cleanupEveryMs, 'retention', () => this.cleanup(), this.log);
+    this.stop = runEvery(
+      cleanupEveryMs,
+      'visit rollup and cleanup',
+      () => this.cleanup(),
+      this.log,
+    );
   }
 
   onModuleDestroy(): void {
