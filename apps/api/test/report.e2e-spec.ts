@@ -224,15 +224,12 @@ describe('the visitor report against a real database', () => {
       {
         confidence: 'medium',
         candidates: [{ company: 'Xsolla', role: 'Backend Engineer' }],
-        signals: [
-          { kind: 'city', city: 'Baku' },
-          { kind: 'country', country: 'AZ' },
-        ],
+        signals: [{ kind: 'city', city: 'Baku' }],
         daysAfter: 1,
       },
     ]);
     expect(reportText(report, { all: false })).toContain(
-      'possibly Xsolla, medium (Baku, AZ, 1 day after applying)',
+      'possibly Xsolla, medium (Baku, 1 day after applying)',
     );
   });
 });

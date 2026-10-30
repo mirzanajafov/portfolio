@@ -15,7 +15,7 @@ function sectionOf(
 }
 
 describe('applicationsOf', () => {
-  it('tells each coded visit page by page, with the blocks read, the clicks and no interaction', () => {
+  it('tells each coded visit page by page, newest first, with the blocks read, the clicks and no interaction', () => {
     const { list } = sectionOf([
       aVisit(
         [
@@ -39,6 +39,13 @@ describe('applicationsOf', () => {
     ]);
     expect(list[0]?.visits).toEqual([
       {
+        at: hoursAgo(1),
+        from: null,
+        pages: [{ path: '/', seconds: 0, read: [] }],
+        clicks: [],
+        interacted: false,
+      },
+      {
         at: hoursAgo(3),
         from: 'www.linkedin.com',
         pages: [
@@ -48,17 +55,10 @@ describe('applicationsOf', () => {
         clicks: ['CV PDF'],
         interacted: true,
       },
-      {
-        at: hoursAgo(1),
-        from: null,
-        pages: [{ path: '/', seconds: 0, read: [] }],
-        clicks: [],
-        interacted: false,
-      },
     ]);
   });
 
-  it('adds the days that were rolled up, oldest first', () => {
+  it('adds the days that were rolled up, newest first', () => {
     const { list } = sectionOf(
       [],
       [anApplication()],
@@ -69,8 +69,8 @@ describe('applicationsOf', () => {
       ],
     );
     expect(list[0]?.days).toEqual([
-      { day: '2026-09-12', visits: 2, views: 5 },
       { day: '2026-09-20', visits: 1, views: 2 },
+      { day: '2026-09-12', visits: 2, views: 5 },
     ]);
   });
 
@@ -106,12 +106,12 @@ describe('applicationsOf', () => {
     expect(list[0]?.guesses).toEqual([]);
   });
 
-  it('lists visits in the order they happened, whatever order the rows came in', () => {
+  it('lists the newest visits first, whatever order the rows came in', () => {
     const { list } = sectionOf([
       aVisit([aView({ ref: 'memh', path: '/cv' })], { startedAt: hoursAgo(1) }),
       aVisit([aView({ ref: 'memh' })], { startedAt: hoursAgo(5) }),
     ]);
-    expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(5), hoursAgo(1)]);
+    expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(1), hoursAgo(5)]);
   });
 
   it('checks the guesser on the coded visits with their code hidden', () => {

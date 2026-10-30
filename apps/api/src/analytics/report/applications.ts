@@ -1,8 +1,14 @@
 import { dayOf } from '../days.js';
 import { rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type Visit } from '../visits.js';
-import { guessOf } from './guess.js';
-import { readSeconds, type Outcome, type Report, type VisitStory } from './report.js';
+import { guesserFor, type Guess } from './guess.js';
+import {
+  readSeconds,
+  type GuessedVisit,
+  type Outcome,
+  type Report,
+  type VisitStory,
+} from './report.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 function storyOf(visit: Visit, labels: ReadonlyMap<string, string>): VisitStory {
@@ -33,19 +39,21 @@ function outcomeOf(named: boolean, candidates: number): Outcome {
 
 function scoreOf(
   coded: readonly { visit: Visit; application: ApplicationRow }[],
-  applications: readonly ApplicationRow[],
+  guess: (visit: Visit) => Guess | null,
 ): Report['applications']['score'] {
   const none = (): Record<Outcome, number> => ({ right: 0, wrong: 0, tied: 0 });
   const levels = { high: none(), medium: none(), low: none() };
   let unplaced = 0;
   for (const { visit, application } of coded) {
-    const guess = guessOf(visit, applications);
-    if (!guess) {
+    const guessed = guess(visit);
+    if (!guessed) {
       unplaced += 1;
       continue;
     }
-    const named = guess.candidates.some((candidate) => candidate.application.id === application.id);
-    levels[guess.confidence][outcomeOf(named, guess.candidates.length)] += 1;
+    const named = guessed.candidates.some(
+      (candidate) => candidate.application.id === application.id,
+    );
+    levels[guessed.confidence][outcomeOf(named, guessed.candidates.length)] += 1;
   }
   return { visits: coded.length, unplaced, levels };
 }
@@ -56,18 +64,41 @@ export function applicationsOf(
   rolled: readonly RolledApplicationDay[],
   labels: ReadonlyMap<string, string>,
 ): Report['applications'] {
+  const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
-  const ordered = visits.toSorted((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
-  const coded = ordered.flatMap((visit) => {
+  const newest = visits.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  const coded = newest.flatMap((visit) => {
     const code = codeOf(visit);
     const application = code === null ? undefined : byCode.get(code);
     return application ? [{ visit, application }] : [];
   });
-  const guessed = ordered.flatMap((visit) => {
-    const guess = codeOf(visit) === null ? guessOf(visit, applications) : null;
-    return guess ? [{ visit, guess }] : [];
-  });
-  const unknown = ordered.flatMap((visit) => {
+  const guessesOf = new Map<string, GuessedVisit[]>();
+  for (const visit of newest) {
+    const guessed = codeOf(visit) === null ? guess(visit) : null;
+    if (!guessed) {
+      continue;
+    }
+    const candidates = guessed.candidates.map(({ application: { company, role } }) => ({
+      company,
+      role,
+    }));
+    for (const { application, signals, daysAfter } of guessed.candidates) {
+      const entry = {
+        ...storyOf(visit, labels),
+        confidence: guessed.confidence,
+        candidates,
+        signals,
+        daysAfter,
+      };
+      const list = guessesOf.get(application.id);
+      if (list) {
+        list.push(entry);
+      } else {
+        guessesOf.set(application.id, [entry]);
+      }
+    }
+  }
+  const unknown = newest.flatMap((visit) => {
     const code = codeOf(visit);
     return code !== null && !byCode.has(code) ? [{ code, visit }] : [];
   });
@@ -89,33 +120,15 @@ export function applicationsOf(
           .map(({ visit }) => storyOf(visit, labels)),
         days: rolled
           .filter(({ applicationId }) => applicationId === application.id)
-          .toSorted((a, b) => a.day.getTime() - b.day.getTime())
+          .toSorted((a, b) => b.day.getTime() - a.day.getTime())
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
-        guesses: guessed.flatMap(({ visit, guess }) => {
-          const mine = guess.candidates.find(
-            (candidate) => candidate.application.id === application.id,
-          );
-          return mine
-            ? [
-                {
-                  ...storyOf(visit, labels),
-                  confidence: guess.confidence,
-                  candidates: guess.candidates.map(({ application: { company, role } }) => ({
-                    company,
-                    role,
-                  })),
-                  signals: mine.signals,
-                  daysAfter: mine.daysAfter,
-                },
-              ]
-            : [];
-        }),
+        guesses: guessesOf.get(application.id) ?? [],
       })),
-    score: scoreOf(coded, applications),
+    score: scoreOf(coded, guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,
-      firstSeen: group[0].visit.startedAt,
+      firstSeen: new Date(Math.min(...group.map(({ visit }) => visit.startedAt.getTime()))),
     })),
   };
 }

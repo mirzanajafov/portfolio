@@ -3,6 +3,7 @@ import { vitalBars } from '../analytics/report/quality.js';
 import { dayOf, inBaku } from '../analytics/days.js';
 import {
   readSeconds,
+  type ApplicationEntry,
   type Confidence,
   type Outcome,
   type Report,
@@ -15,6 +16,7 @@ import type { Source } from '../analytics/sources.js';
 import { quickExitSeconds } from '../analytics/visits.js';
 
 const listLength = 10;
+const candidateLength = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -75,6 +77,10 @@ function shownOf<T>(rows: readonly T[], all: boolean): readonly T[] {
   return all ? rows : rows.slice(0, listLength);
 }
 
+function moreLine(hidden: number, indent = ''): string[] {
+  return hidden > 0 ? [`${indent}and ${String(hidden)} more, --all shows them`] : [];
+}
+
 function section(
   title: string,
   columns: readonly string[],
@@ -85,11 +91,7 @@ function section(
     return [`${title}: none`];
   }
   const shown = shownOf(rows, all);
-  const hidden = rows.length - shown.length;
-  return [
-    ...table([[title, ...columns], ...shown]),
-    ...(hidden > 0 ? [`and ${String(hidden)} more, --all shows them`] : []),
-  ];
+  return [...table([[title, ...columns], ...shown]), ...moreLine(rows.length - shown.length)];
 }
 
 function totalsColumn(totals: Totals): string[] {
@@ -338,28 +340,31 @@ function signalText(signal: Signal): string {
 }
 
 function candidatesText(candidates: readonly { company: string; role: string }[]): string {
-  return candidates
-    .map(({ company, role }) =>
-      candidates.filter((other) => other.company === company).length > 1
-        ? `${company} (${role})`
-        : company,
-    )
-    .join(' or ');
-}
-
-function listed<T>(items: readonly T[], all: boolean, line: (item: T) => string): string[] {
-  const shown = shownOf(items, all);
-  const hidden = items.length - shown.length;
-  return [
-    ...shown.map(line),
-    ...(hidden > 0 ? [`  and ${String(hidden)} more, --all shows them`] : []),
+  const names = [
+    ...new Set(
+      candidates.map(({ company, role }) =>
+        candidates.filter((other) => other.company === company).length > 1
+          ? `${company} (${role})`
+          : company,
+      ),
+    ),
   ];
+  const named = names.slice(0, candidateLength);
+  const others = names.length - named.length;
+  return others > 0 ? `${named.join(', ')} or ${String(others)} more` : named.join(' or ');
 }
 
-function applicationLines(
-  application: Report['applications']['list'][number],
+function listed<T>(
+  items: readonly T[],
   all: boolean,
+  line: (item: T) => string,
+  indent = '  ',
 ): string[] {
+  const shown = shownOf(items, all);
+  return [...shown.map(line), ...moreLine(items.length - shown.length, indent)];
+}
+
+function applicationLines(application: ApplicationEntry, all: boolean): string[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
   const heading = printable(
@@ -371,7 +376,7 @@ function applicationLines(
       application.days,
       all,
       ({ day, visits, views }) =>
-        `  ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
+        `  UTC day ${day}, rolled up: ${counted(visits, 'visit')}, ${counted(views, 'page view')}`,
     ),
     ...listed(
       guesses,
@@ -401,15 +406,12 @@ function applications({ applications }: Report, all: boolean): string[] {
       ? ['Applications: none registered']
       : [
           'Applications, every visit kept rather than only the period, times in Baku',
-          ...shownOf(list, all).flatMap((application) => applicationLines(application, all)),
-          ...(list.length > listLength && !all
-            ? [`and ${String(list.length - listLength)} more, --all shows them`]
-            : []),
+          ...listed(list, all, (application) => applicationLines(application, all).join('\n'), ''),
           `Guesses checked on ${counted(score.visits, 'coded visit')}: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
         ]),
     ...(unknownCodes.length > 0
       ? [
-          'Unknown codes',
+          'Unknown codes, first seen in Baku time',
           ...listed(unknownCodes, all, ({ code, visits, firstSeen }) =>
             printable(`  ${code}: ${counted(visits, 'visit')}, first ${bakuTime(firstSeen)}`),
           ),

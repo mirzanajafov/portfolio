@@ -1,13 +1,13 @@
 import { assert, describe, expect, it } from 'vitest';
 import { anApplication, aView, aVisit } from '../testing.js';
 import { inOrder, type VisitRow } from '../visits.js';
-import { guessOf } from './guess.js';
+import { guesserFor } from './guess.js';
 import type { ApplicationRow } from './rows.js';
 
 function guess(row: VisitRow, applications: ApplicationRow[]) {
   const [visit] = inOrder(row);
   assert(visit);
-  return guessOf(visit, applications);
+  return guesserFor(applications)(visit);
 }
 
 function companiesOf(row: VisitRow, applications: ApplicationRow[]) {
@@ -72,10 +72,7 @@ describe('guessOf', () => {
       confidence: 'medium',
       candidates: [
         {
-          signals: [
-            { kind: 'city', city: 'Baku' },
-            { kind: 'country', country: 'AZ' },
-          ],
+          signals: [{ kind: 'city', city: 'Baku' }],
         },
       ],
     });
@@ -91,6 +88,28 @@ describe('guessOf', () => {
     expect(at('2026-10-28T20:00:00Z')?.candidates[0]?.daysAfter).toBe(0);
     expect(at('2026-11-12T19:59:00Z')?.candidates[0]?.daysAfter).toBe(14);
     expect(at('2026-11-12T20:00:00Z')).toBeNull();
+  });
+
+  it('counts a city without the country it already implies', () => {
+    const kapital = anApplication({
+      id: 'kapital',
+      company: 'Kapital',
+      country: 'AZ',
+      city: 'Baku',
+    });
+    const pasha = anApplication({ id: 'pasha', company: 'Pasha', city: 'Baku' });
+    expect(companiesOf(aVisit(), [kapital, pasha])).toEqual(['Kapital', 'Pasha']);
+    const wolt = anApplication({ id: 'wolt', company: 'Wolt', atsHost: 'boards.greenhouse.io' });
+    expect(
+      companiesOf(aVisit([aView({ referrerHost: 'boards.greenhouse.io' })]), [wolt, kapital]),
+    ).toEqual(['Wolt', 'Kapital']);
+  });
+
+  it('folds the letters accents alone leave, as Azerbaijani names need', () => {
+    expect(
+      guess(fromNetwork('Azercell Telekom LLC'), [anApplication({ company: 'Azərcell' })])
+        ?.confidence,
+    ).toBe('high');
   });
 
   it('names every application that matches as well as the best one', () => {

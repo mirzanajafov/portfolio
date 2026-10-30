@@ -30,11 +30,21 @@ export type VisitStory = {
   interacted: boolean;
 };
 
-type GuessedVisit = VisitStory & {
+export type GuessedVisit = VisitStory & {
   confidence: Confidence;
   candidates: { company: string; role: string }[];
   signals: Signal[];
   daysAfter: number;
+};
+
+export type ApplicationEntry = {
+  code: string;
+  company: string;
+  role: string;
+  appliedOn: string;
+  visits: VisitStory[];
+  days: { day: string; visits: number; views: number }[];
+  guesses: GuessedVisit[];
 };
 
 export type Rating = 'good' | 'needs improvement' | 'poor';
@@ -100,15 +110,7 @@ export type Report = {
   };
   filter: { day: string; bot: number; limited: number }[];
   applications: {
-    list: {
-      code: string;
-      company: string;
-      role: string;
-      appliedOn: string;
-      visits: VisitStory[];
-      days: { day: string; visits: number; views: number }[];
-      guesses: GuessedVisit[];
-    }[];
+    list: ApplicationEntry[];
     score: {
       visits: number;
       unplaced: number;

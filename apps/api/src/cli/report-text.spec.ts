@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Report, Totals, VisitStory } from '../analytics/report/report.js';
+import type { GuessedVisit, Report, Totals, VisitStory } from '../analytics/report/report.js';
 import { reportText } from './report-text.js';
 
 const someVisits = (visits: number): Totals => ({
@@ -349,13 +349,54 @@ describe('reportText', () => {
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
         '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF',
         '  2026-10-30 15:00: / 0 s, no interaction',
-        '  2026-09-12, rolled up: 2 visits, 5 page views',
+        '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
         'Guesses checked on 3 coded visits: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
-        'Unknown codes',
+        'Unknown codes, first seen in Baku time',
         '  check1: 2 visits, first 2026-10-30 12:00',
       ].join('\n'),
     );
+  });
+
+  it('names at most three candidates of a guess, and each of them once', () => {
+    const company = (name: string, role = 'Developer') => ({ company: name, role });
+    const text = reportText(
+      aReport({
+        applications: {
+          list: [
+            anEntry({
+              guesses: [
+                {
+                  ...aStory(),
+                  confidence: 'medium',
+                  candidates: [
+                    company('Xsolla'),
+                    company('Wolt'),
+                    company('Kapital'),
+                    company('Pasha'),
+                    company('Azercell'),
+                  ],
+                  signals: [{ kind: 'city', city: 'Baku' }],
+                  daysAfter: 0,
+                },
+                {
+                  ...aStory(),
+                  confidence: 'medium',
+                  candidates: [company('Xsolla'), company('Xsolla')],
+                  signals: [{ kind: 'city', city: 'Baku' }],
+                  daysAfter: 0,
+                },
+              ],
+            }),
+          ],
+          score: { visits: 0, unplaced: 0, levels: noOutcomes },
+          unknownCodes: [],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).toContain('possibly Xsolla, Wolt, Kapital or 2 more, medium');
+    expect(text).toContain('possibly Xsolla (Developer), medium');
   });
 
   it('names the role when a guess could be either of two applications to the same company', () => {
@@ -390,11 +431,11 @@ describe('reportText', () => {
   });
 
   it('hides low guesses unless asked for all, and says so, and says when an application has no visits yet', () => {
-    const lowGuess = {
+    const lowGuess: GuessedVisit = {
       ...aStory(),
-      confidence: 'low' as const,
+      confidence: 'low',
       candidates: [{ company: 'Xsolla', role: 'Backend Engineer' }],
-      signals: [{ kind: 'country' as const, country: 'AZ' }],
+      signals: [{ kind: 'country', country: 'AZ' }],
       daysAfter: 1,
     };
     const report = aReport({
@@ -435,8 +476,8 @@ describe('reportText', () => {
     });
     const short = reportText(report, { all: false });
     expect(short).not.toContain('Company 10');
-    expect(short).toContain('and 2 more, --all shows them');
-    expect(short).toContain('  and 2 more, --all shows them');
+    expect(short).toMatch(/^and 2 more, --all shows them$/m);
+    expect(short).toMatch(/^ {2}and 2 more, --all shows them$/m);
     expect(short).not.toContain('check10');
     const full = reportText(report, { all: true });
     expect(full).toContain('Company 11');
