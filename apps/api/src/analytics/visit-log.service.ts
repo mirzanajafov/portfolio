@@ -4,6 +4,7 @@ import { runEvery } from '../common/run-every.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
+import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
@@ -11,7 +12,7 @@ const keepMs = 30 * 24 * 60 * 60 * 1000;
 
 type DropReason = 'bot' | 'limited';
 
-type Visitor = { key: string; device: Device; browser: Browser };
+type Visitor = Place & { key: string; device: Device; browser: Browser };
 
 type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type: T }>;
 
@@ -87,9 +88,9 @@ export class VisitLogService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.visit.deleteMany({ where: { startedAt: { lt: cutoff } } });
   }
 
-  private async recordView(event: EventOf<'view'>, { key, device, browser }: Visitor, at: Date) {
+  private async recordView(event: EventOf<'view'>, { key, ...visit }: Visitor, at: Date) {
     await this.prisma.visit.createMany({
-      data: [{ visitor: key, startedAt: at, device, browser }],
+      data: [{ visitor: key, startedAt: at, ...visit }],
       skipDuplicates: true,
     });
     await this.prisma.pageView.createMany({
