@@ -5,6 +5,7 @@ export async function fetchApplicationCv(
 ): Promise<Buffer> {
   const response = await fetchImpl(`${webUrl}/internal/cv/${code}`, {
     headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
     throw new Error(`the site answered ${String(response.status)} for the CV of ${code}`);
