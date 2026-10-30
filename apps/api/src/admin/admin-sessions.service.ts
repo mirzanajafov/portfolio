@@ -5,7 +5,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
-import { adminLinkMinutes } from '@portfolio/content/admin';
+import { adminLinkMinutes, adminSessionDays } from '@portfolio/content/admin';
 import { createHash, randomBytes } from 'node:crypto';
 import { clientKey, networkOf } from '../common/client-key.js';
 import { ClockService } from '../common/clock.service.js';
@@ -17,7 +17,7 @@ import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 const linkLastsMs = adminLinkMinutes * 60 * 1000;
-const sessionLastsMs = 30 * 24 * 60 * 60 * 1000;
+const sessionLastsMs = adminSessionDays * 24 * 60 * 60 * 1000;
 const signInsPerTenMinutes = 5;
 
 type SignIn =
