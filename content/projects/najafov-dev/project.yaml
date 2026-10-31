@@ -25,9 +25,9 @@ facts:
     kind: design
     source: { file: apps/api/src/ask/sentence-gate.ts }
   - id: daily-key
-    text: Questions are never stored with an IP address. Their keys mix the network (an IPv4 address or an IPv6 /64) with a random value deleted within hours of midnight UTC, so no key leads back to an address or follows anyone from day to day.
+    text: No IP address is stored with a question, only a key that ties it to its visit. Keys mix the network with a random value deleted within hours of midnight UTC, and once it is gone no key leads back to an address.
     kind: design
-    source: { file: apps/api/src/analytics/visitor-salt.service.ts }
+    source: { file: README.md, section: Asking it things }
 health: https://najafov.dev/
 knowledge:
   - README.md
