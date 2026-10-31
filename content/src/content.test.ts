@@ -12,7 +12,7 @@ function headingsOf(path: string): string[] {
   return readFileSync(path, 'utf8')
     .split('\n')
     .filter((line) => line.startsWith('#'))
-    .map((line) => line.replace(/^#+ /, ''));
+    .map((line) => line.replace(/^#+/, '').trim());
 }
 
 describe('the real content', () => {

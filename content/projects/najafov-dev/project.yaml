@@ -25,7 +25,7 @@ facts:
     kind: design
     source: { file: apps/api/src/ask/sentence-gate.ts }
   - id: daily-key
-    text: No IP address is stored with a question, only a key that ties it to its visit. Keys mix the network with a random value deleted within hours of midnight UTC, and once it is gone no key leads back to an address.
+    text: No IP address is stored with a question. Its rate limits key on the network under the same daily key as visits, so no key follows anyone from one day to the next, and it is tied to its visit unless the browser opts out.
     kind: design
     source: { file: README.md, section: Asking it things }
 health: https://najafov.dev/
