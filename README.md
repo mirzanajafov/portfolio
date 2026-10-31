@@ -140,7 +140,8 @@ compose="docker compose -f docker-compose.yml -f docker-compose.prod.yml --profi
 $compose stop api web backup
 $compose exec postgres dropdb -U portfolio portfolio
 $compose exec postgres createdb -U portfolio portfolio
-$compose run --rm --entrypoint pg_restore backup --no-owner --dbname portfolio /backups/db/portfolio-<stamp>.dump
+$compose run --rm --entrypoint pg_restore backup --no-owner --single-transaction --exit-on-error \
+  --dbname portfolio /backups/db/portfolio-<stamp>.dump
 $compose up -d
 ```
 

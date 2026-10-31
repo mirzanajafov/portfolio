@@ -114,12 +114,14 @@ backup > /dev/null
 expect "a good backup is marked successful and its dump is readable" \
   '[ -s /backups/last-success ] && pg_restore --list /backups/db/portfolio-*.dump > /dev/null'
 expect "the health check passes after a good backup" 'backup check'
-expect "dumps and their folder can only be read by the backup's own user"   '[ "$(stat -c %a /backups/db)" = 700 ] && [ "$(stat -c %a /backups/db/portfolio-*.dump)" = 600 ]'
+expect "dumps and their folder can only be read by the backup's own user" \
+  '[ "$(stat -c %a /backups/db)" = 700 ] && [ "$(stat -c %a /backups/db/portfolio-*.dump)" = 600 ]'
 
 dump=$(in_volume 'ls /backups/db')
 psql --dbname postgres --command 'CREATE DATABASE restored'
 docker run --rm --network "$name" --volume "$name:/backups" --env PGHOST="$name-postgres" --env PGUSER=postgres \
-  --env PGPASSWORD=test --entrypoint pg_restore "$name" --no-owner --dbname restored "/backups/db/$dump"
+  --env PGPASSWORD=test --entrypoint pg_restore "$name" --no-owner --single-transaction --exit-on-error \
+  --dbname restored "/backups/db/$dump"
 expected=$(echo "$source_counts" | awk '
   $1 == "VisitorSalt" || $1 == "RateLimit" || $1 == "AdminLoginToken" || $1 == "AdminSession" { $2 = 0 }
   { print }')
@@ -133,10 +135,11 @@ $restored"
 expect "the health check fails once the last good backup is over 26 hours old" \
   'touch -d "27 hours ago" /backups/last-success && ! backup check'
 
-in_volume 'touch -d "8 days ago" /backups/db/portfolio-old.dump && touch -d "6 days ago" /backups/db/portfolio-recent.dump'
+in_volume 'touch -d "-6 days -23 hours -30 minutes" /backups/db/portfolio-week.dump &&
+  touch -d "-6 days -22 hours" /backups/db/portfolio-days.dump'
 backup_fails --env PGHOST=missing.invalid
-expect "a run deletes dumps over 7 days old even when its own dump fails, and keeps newer ones" \
-  '[ ! -e /backups/db/portfolio-old.dump ] && [ -e /backups/db/portfolio-recent.dump ]'
+expect "a run deletes every dump older than 6 days and 23 hours, even when its own dump fails" \
+  '[ ! -e /backups/db/portfolio-week.dump ] && [ -e /backups/db/portfolio-days.dump ]'
 
 docker run --detach --name "$name-scheduler" --user 1000:1000 --volume "$name:/backups" "$name" > /dev/null
 timeout 30 sh -c "until docker logs $name-scheduler 2>&1 | grep -q scheduled; do sleep 1; done" ||
