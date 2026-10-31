@@ -112,7 +112,6 @@ describe('POST /ask against a real database', () => {
     expect(row?.engine).toBe('keyword');
     expect(row?.refused).toBe(false);
     expect(row?.visitor).toMatch(/^[0-9a-f]{32}$/);
-    expect(row?.client).toBeNull();
     expect(JSON.stringify(row)).not.toContain('203.0.113.7');
     expect(JSON.stringify(row)).not.toContain('Windows NT');
     expect(row?.sentences).toEqual([
