@@ -21,7 +21,7 @@ facts:
     kind: measured
     source: { file: README.md, section: When a dimension breaks }
   - id: proxy-overhead
-    text: At 1,000 requests a second on one vCPU it adds 155 µs at p50, 16 µs over Go's bare ReverseProxy; nginx adds 107 µs, HAProxy 108, Caddy 201 and Envoy 207.
+    text: At 1,000 requests a second on one vCPU it adds 155 µs at p50, 16 µs over Go's bare ReverseProxy. For comparison, nginx adds 107 µs, HAProxy 108, Caddy 201 and Envoy 207.
     kind: measured
     source: { file: README.md, section: What a proxy in the path costs }
   - id: own-code-cost
@@ -29,7 +29,7 @@ facts:
     kind: measured
     source: { file: README.md, section: What a proxy in the path costs }
   - id: admission-cap
-    text: Without a cap on requests in flight, a cold start at 8,000 requests a second took down both Go proxies; with a cap of 128 or 256 nothing collapsed in 30 runs, and 256 is the default.
+    text: Without a cap on requests in flight, a cold start at 8,000 requests a second took down both Go proxies. With a cap of 128 or 256 nothing collapsed in 30 runs, and 256 is the default.
     kind: measured
     source: { file: README.md, section: Turning work away }
   - id: in-flight-memory
@@ -61,7 +61,7 @@ facts:
     kind: measured
     source: { file: README.md, section: When a dimension breaks }
   - id: canary-sprt
-    text: The canary uses a sequential test on who the errors came from; in 36 simulated cells with a good canary it rolled back 0.1-0.7%, against 22-52% for a z-test checked every second.
+    text: The canary uses a sequential test on who the errors came from. In 36 simulated cells with a good canary it rolled back 0.1-0.7%, against 22-52% for a z-test checked every second.
     kind: measured
     source: { file: README.md, section: Catching a bad release }
   - id: retry-budget
@@ -69,11 +69,11 @@ facts:
     kind: parameter
     source: { file: README.md, section: How a request goes through it }
   - id: no-shared-path
-    text: Gateways keep routing on the last config they had; losing the controller freezes config, losing Redis switches limiters to a static split, and each case is a Docker e2e test.
+    text: Gateways keep routing on the last config they had. Losing the controller freezes config, losing Redis switches limiters to a static split, and each case is a Docker e2e test.
     kind: design
     source: { file: README.md, section: How the pieces fit }
   - id: bounded-chaos
-    text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, and start a canary rollout, three an hour per address; the controller never touches the Docker socket.
+    text: Visitors can kill or slow a dimension on the live demo, one action at a time for at most 30 seconds, and start a canary rollout, three an hour per address. The controller never touches the Docker socket.
     kind: design
     source: { file: README.md, section: How the pieces fit }
   - id: fivefamilies-registry

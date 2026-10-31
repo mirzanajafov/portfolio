@@ -21,7 +21,7 @@ facts:
     kind: measured
     source: { file: README.md, section: Asking it things }
   - id: sentence-gate
-    text: Every sentence is checked before it is sent; it needs a source that exists, it cannot repeat 8 or more words of the question, and it cannot commit to anything on my behalf.
+    text: Every sentence is checked before it is sent. It needs a source that exists, it cannot repeat 8 or more words of the question, and it cannot commit to anything on my behalf.
     kind: design
     source: { file: apps/api/src/ask/sentence-gate.ts }
   - id: daily-key

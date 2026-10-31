@@ -24,7 +24,7 @@ facts:
     kind: design
     source: { file: apps/api/src/auth/services/token.service.ts }
   - id: trusted-proxies
-    text: The API finds the real caller by trusting proxies by subnet rather than by hop count; before that fix, ten wrong passwords could have locked out everybody.
+    text: The API finds the real caller by trusting proxies by subnet rather than by hop count. Before that fix, ten wrong passwords could have locked out everybody.
     kind: design
     source: { file: apps/api/src/config/trusted-proxies.ts }
 health: https://tm.najafov.dev/api/health
