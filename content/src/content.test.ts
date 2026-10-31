@@ -47,6 +47,10 @@ describe('the real content', () => {
     expect(broken).toEqual([]);
   });
 
+  it('writes no semicolon or em dash anywhere', () => {
+    expect(JSON.stringify(content)).not.toMatch(/[;\u2014]/);
+  });
+
   it('publishes no phone number anywhere', () => {
     expect(JSON.stringify(content)).not.toMatch(phoneNumber);
   });
