@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { content } from '@portfolio/content';
-import { analyticsDays, dailyTotalsMonths, geolocationCredit } from '@portfolio/content/analytics';
+import {
+  analyticsDays,
+  backupDays,
+  dailyTotalsMonths,
+  geolocationCredit,
+} from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 
 const { profile } = content;
@@ -89,6 +94,16 @@ export default function PrivacyPage() {
           Control or Do Not Track on, a question is still answered and kept, but tied to no visit.
           Questions are rate limited by your network mixed with that same daily value, so the
           address itself is never stored.
+        </p>
+      </Part>
+
+      <Part title="Backups">
+        <p className="max-w-[65ch]">
+          Every day, and before each update of the site, the server makes a backup of the records
+          above, so that a mistake can&apos;t lose them. The daily random value and the rate limit
+          counts are never in a backup. A backup is deleted by the first daily run after it turns{' '}
+          {backupDays} days old, so a deleted record can stay in a backup for up to {backupDays + 1}{' '}
+          more days. The backups stay on the same server.
         </p>
       </Part>
 

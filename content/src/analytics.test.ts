@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { readingBlocks } from './analytics.ts';
+import { backupDays, readingBlocks } from './analytics.ts';
 import { aCaseStudy, aProject, contentOf } from './testing.ts';
 
 describe('readingBlocks', () => {
@@ -31,5 +32,12 @@ describe('readingBlocks', () => {
         ['/projects/told', ['problem', 'decision-1', 'decision-2', 'decision-3', 'proof', 'next']],
       ]),
     );
+  });
+});
+
+describe('backupDays', () => {
+  it('is the age at which the backup deletes a dump', () => {
+    const script = readFileSync(new URL('../../deploy/backup/backup.sh', import.meta.url), 'utf8');
+    expect(script).toMatch(new RegExp(`^KEEP_DAYS=${String(backupDays)}$`, 'm'));
   });
 });

@@ -19,6 +19,7 @@ on_old() { [ "$(git rev-parse HEAD)" = "$OLD" ]; }
 case "$*" in
   *"--wait"*) [ -z "${POSTGRES_DOWN:-}" ] ;;
   *"--force-recreate api"*) echo "api recreated" ;;
+  *"run --rm backup once"*) on_old && [ -z "${BACKUP_FAILS:-}" ] && echo "backed up the old release" ;;
   *"--build"*)
     echo "released with the IP databases of $(cat geo/month 2> /dev/null || echo nobody)," \
       "city file $(head -c 3 geo/dbip-city-lite.mmdb 2> /dev/null || echo missing)"
@@ -121,7 +122,8 @@ expect() {
 }
 
 deploy
-expect 0 "$new" 1 "$new" "deploys a healthy release" "Live:"
+expect 0 "$new" 1 "$new" "backs up before the merge and deploys a healthy release" \
+  "backed up the old release" "Live:"
 deploy
 expect 0 "$new" 1 "$new" "fetches this month's IP databases before the release and restarts the API" \
   "released with the IP databases of $month, city file new" "api recreated"
@@ -157,5 +159,7 @@ expect 1 "$old" 2 "$old" "says so when the previous release can't come back eith
   "The rollback failed too"
 deploy POSTGRES_DOWN=1
 expect 1 "$old" 0 none "stops before the merge when Postgres is down" "Waiting for the database"
+deploy BACKUP_FAILS=1
+expect 1 "$old" 0 none "stops before the merge when the backup fails" "Backing up before the deploy"
 
 exit "$failed"

@@ -14,3 +14,4 @@ content/src/.generated/
 apps/api/src/generated/
 /geo/*
 !/geo/.gitkeep
+/backups/

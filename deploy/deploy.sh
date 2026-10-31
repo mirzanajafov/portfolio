@@ -49,6 +49,9 @@ fi
 say "Waiting for the database"
 "${compose[@]}" up -d --wait --wait-timeout 120 postgres
 
+say "Backing up before the deploy"
+"${compose[@]}" run --rm backup once
+
 say "Deploying $(git log --oneline -1 "$target")"
 git merge --ff-only --quiet "$target"
 places_updated=false
@@ -68,7 +71,7 @@ fi
 say "The release failed, rolling back to $(git log --oneline -1 "$previous")"
 git reset --hard --quiet "$previous"
 if release && reload_places && healthy; then
-  echo "Rolled back. Any migration the failed release ran stays applied."
+  echo "Rolled back. Any migration the failed release ran stays applied, and the dump taken before it is in backups/db."
 else
   echo "The rollback failed too. Check: ${compose[*]} logs migrate api web" >&2
 fi
