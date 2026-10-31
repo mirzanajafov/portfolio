@@ -27,7 +27,7 @@ decisions:
       balance row there is a lock every payment waits on. I measured four ways around it with an
       open-loop generator checked against pgbench. SERIALIZABLE with retries, the textbook answer,
       was the worst. Derived balances carried the most, but one long transaction makes every read
-      sum a longer tail. Sixteen split rows carry nearly as much with cheap reads, so I chose those.
+      sum a longer tail. I chose 16 split rows, which carry nearly as much with cheap reads.
       Posting is one round trip of locks and one CTE on plain pg, because Prisma's query API took
       twice the round trips.
     facts: [hot-account, paging-stall, plain-pg]

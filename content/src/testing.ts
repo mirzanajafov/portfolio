@@ -32,6 +32,8 @@ type ProjectFolder = {
   caseStudy?: CaseStudyFile;
 };
 
+export const pausePunctuation = /[;\u2014]| --? /;
+
 export const phoneNumber = /(?:(?<!\w)\+|\b0)(?:[\s().-]*\d){9,}/;
 
 export function aFact(overrides: Partial<FactFile> = {}): FactFile {

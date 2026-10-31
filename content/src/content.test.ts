@@ -3,10 +3,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadContent } from './load.ts';
-import { phoneNumber } from './testing.ts';
+import { pausePunctuation, phoneNumber } from './testing.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const content = await loadContent(root);
+const published = JSON.stringify(content);
 
 function sectionsOf(path: string): string[] {
   return readFileSync(path, 'utf8')
@@ -47,12 +48,12 @@ describe('the real content', () => {
     expect(broken).toEqual([]);
   });
 
-  it('writes no semicolon or em dash anywhere', () => {
-    expect(JSON.stringify(content)).not.toMatch(/[;\u2014]/);
+  it('writes no semicolon or dash for a pause anywhere', () => {
+    expect(published).not.toMatch(pausePunctuation);
   });
 
   it('publishes no phone number anywhere', () => {
-    expect(JSON.stringify(content)).not.toMatch(phoneNumber);
+    expect(published).not.toMatch(phoneNumber);
   });
 
   it('lists every role newest first', () => {

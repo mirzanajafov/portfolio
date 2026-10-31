@@ -70,7 +70,7 @@ facts:
     kind: measured
     source: { file: README.md, section: The audit log }
   - id: tamper-signed
-    text: Every tamper that touched a journal the witness had signed was caught and the right journal named, 2,704 of 2,704, while the same rewrite above the last checkpoint was caught 0 of 100 times.
+    text: Every tamper that touched a journal the witness had signed was caught and the right journal named, 2,704 of 2,704. The same rewrite above the last checkpoint was caught 0 of 100 times.
     kind: measured
     source: { file: README.md, section: The audit log }
   - id: audit-scale

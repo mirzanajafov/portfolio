@@ -1,7 +1,7 @@
 import { content } from '@portfolio/content';
 import { analyticsDays, backupDays, dailyTotalsMonths } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
-import { phoneNumber } from '@portfolio/content/testing';
+import { pausePunctuation, phoneNumber } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import PrivacyPage from './page';
@@ -39,5 +39,6 @@ describe('the privacy page', () => {
       `mailto:${content.profile.links.email}`,
     );
     expect(container.textContent).not.toMatch(phoneNumber);
+    expect(container.textContent).not.toMatch(pausePunctuation);
   });
 });
