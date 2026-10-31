@@ -9,10 +9,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const content = await loadContent(root);
 
 function headingsOf(path: string): string[] {
-  return readFileSync(path, 'utf8')
-    .split('\n')
-    .filter((line) => line.startsWith('#'))
-    .map((line) => line.replace(/^#+/, '').trim());
+  let fenced = false;
+  const headings: string[] = [];
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.startsWith('```')) {
+      fenced = !fenced;
+    } else if (!fenced && /^#{1,6} /.test(line)) {
+      headings.push(line.replace(/^#+/, '').trim());
+    }
+  }
+  return headings;
 }
 
 describe('the real content', () => {
