@@ -33,7 +33,7 @@ decisions:
       decision through one perfect token bucket. The local budget synced every 100 ms is the
       default: nothing measurable on the request and within 1.3% everywhere. The exact limiter
       taught me the most. Its 2 ms timeout never applied, and its first breaker let too many
-      through; with the debt charged back it is the one I'd use for a limit that's a contract.
+      through. With the debt charged back it is the one I'd use for a limit that's a contract.
     facts: [local-sync, static-split, breaker-rebuild, limiter-bugs]
   - title: Three kinds of health, because each misses something
     body: >-

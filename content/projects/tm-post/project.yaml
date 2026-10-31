@@ -12,7 +12,7 @@ stack: [Electron, React, NestJS, PostgreSQL, Prisma]
 headline: cancel-latency
 facts:
   - id: cancel-latency
-    text: Cancelling is one abort signal end to end; aborted at 300 ms, a request reports canceled at 306 ms, where the version before the fix was still waiting 230 seconds later.
+    text: Cancelling is one abort signal end to end. Aborted at 300 ms, a request reports canceled at 306 ms, where the version before the fix was still waiting 230 seconds later.
     kind: measured
     source: { file: packages/executor/src/node-executor.ts }
   - id: connect-timeout

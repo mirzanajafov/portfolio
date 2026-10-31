@@ -30,7 +30,7 @@ facts:
     kind: measured
     source: { file: README.md, section: The hot account }
   - id: plain-pg
-    text: Posting a journal is one round trip of locks plus one CTE on plain pg; Prisma's query API took twice the round trips and 1.7 times the latency for the same journal.
+    text: Posting a journal is one round trip of locks plus one CTE on plain pg. Prisma's query API took twice the round trips and 1.7 times the latency for the same journal.
     kind: measured
     source: { file: README.md, section: The hot account }
   - id: db-enforced
@@ -38,11 +38,11 @@ facts:
     kind: design
     source: { file: README.md, section: The books }
   - id: independent-checker
-    text: The invariant checker is separate code with its own SQL, running as a read-only role, so a bug in posting can't hide behind the same bug in the check; it has eight safety and five liveness checks.
+    text: The invariant checker is separate code with its own SQL, running as a read-only role, so a bug in posting can't hide behind the same bug in the check. It has eight safety and five liveness checks.
     kind: design
     source: { file: README.md, section: The books }
   - id: idempotency-fence
-    text: Idempotency keys follow Stripe's rules and are held by a lease that every write checks; the first chaos runs showed that without it a slow request could create a second payment for its key.
+    text: Idempotency keys follow Stripe's rules and are held by a lease that every write checks. The first chaos runs showed that without it a slow request could create a second payment for its key.
     kind: design
     source: { file: README.md, section: Payments }
   - id: exactly-once-effect
@@ -70,7 +70,7 @@ facts:
     kind: measured
     source: { file: README.md, section: The audit log }
   - id: tamper-signed
-    text: Every tamper that touched a journal the witness had signed was caught and the right journal named, 2,704 of 2,704; the same rewrite above the last checkpoint was caught 0 of 100 times.
+    text: Every tamper that touched a journal the witness had signed was caught and the right journal named, 2,704 of 2,704. The same rewrite above the last checkpoint was caught 0 of 100 times.
     kind: measured
     source: { file: README.md, section: The audit log }
   - id: audit-scale
@@ -82,11 +82,11 @@ facts:
     kind: design
     source: { file: README.md, section: The audit log }
   - id: online-migration
-    text: Changing a table of 20 million entries under 200 payments a second, a naive ALTER plus UPDATE failed 99.7% of payments for 8.2 minutes; four separate steps refused none, at a p99 of 34.5 ms.
+    text: Changing a table of 20 million entries under 200 payments a second, a naive ALTER plus UPDATE failed 99.7% of payments for 8.2 minutes. Four separate steps refused none, at a p99 of 34.5 ms.
     kind: measured
     source: { file: README.md, section: Changing a big table while it takes payments }
   - id: simulated-bank
-    text: The payment provider and the bank are a simulator I wrote and the money is fake; the ledger, its rules, the invariant checker and the audit log are the real thing.
+    text: The payment provider and the bank are a simulator I wrote and the money is fake. The ledger, its rules, the invariant checker and the audit log are the real thing.
     kind: design
     source: { file: README.md }
   - id: witness-same-server
