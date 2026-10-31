@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -26,6 +27,13 @@ describe('the real content', () => {
       }
     },
   );
+
+  it('cites a file that exists in this repo for every fact about this site', () => {
+    const facts = content.projects.find((project) => project.slug === 'najafov-dev')?.facts ?? [];
+    expect(facts.length).toBeGreaterThan(0);
+    const missing = facts.filter((fact) => !existsSync(join(root, '..', fact.source.file)));
+    expect(missing.map((fact) => fact.source.file)).toEqual([]);
+  });
 
   it('publishes no phone number anywhere', () => {
     expect(JSON.stringify(content)).not.toMatch(phoneNumber);
