@@ -2,6 +2,7 @@ import type { CaseStudy, Content } from './schema.ts';
 
 export const analyticsDays = 30;
 export const dailyTotalsMonths = 25;
+export const backupDays = 7;
 export const refCode = /^[a-z0-9]{3,16}$/;
 export const hostName = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 export const errorMessageMaxLength = 200;

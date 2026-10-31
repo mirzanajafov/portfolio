@@ -47,3 +47,11 @@ jobs:
       - run: pnpm test:e2e
       - run: pnpm test:deploy
       - run: pnpm build
+
+  backup:
+    name: Backup and restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - run: sh deploy/backup/backup.test.sh

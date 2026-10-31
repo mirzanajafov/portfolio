@@ -1,5 +1,5 @@
 import { content } from '@portfolio/content';
-import { analyticsDays, dailyTotalsMonths } from '@portfolio/content/analytics';
+import { analyticsDays, backupDays, dailyTotalsMonths } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 import { phoneNumber } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
@@ -18,6 +18,13 @@ describe('the privacy page', () => {
     expect(container.textContent).toContain(`I keep questions for ${askLogDays} days`);
     expect(container.textContent).toContain(
       'With Global Privacy Control or Do Not Track on, a question is still answered and kept, but tied to no visit.',
+    );
+  });
+
+  it('says how long a backup can keep a deleted record, from the number the backup uses', () => {
+    const { container } = render(<PrivacyPage />);
+    expect(container.textContent).toContain(
+      `so a deleted record can stay in a backup for up to ${String(backupDays + 1)} more days.`,
     );
   });
 

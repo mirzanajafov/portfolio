@@ -27,6 +27,23 @@ services:
       - default
       - edge
 
+  backup:
+    build: ./deploy/backup
+    container_name: portfolio-backup
+    profiles: ['app']
+    user: '${BACKUP_UID:?set BACKUP_UID}:${BACKUP_GID:?set BACKUP_GID}'
+    environment:
+      PGHOST: postgres
+      PGUSER: portfolio
+      PGDATABASE: portfolio
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 networks:
   edge:
     name: ${EDGE_NETWORK:?set EDGE_NETWORK}
