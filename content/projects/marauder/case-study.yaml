@@ -30,8 +30,9 @@ decisions:
   - title: Recognize a tag exactly once
     body: >-
       Several receivers can hear a new tag in the same instant, so several messages race to create
-      it. Resolution goes through a Redis SET NX first and the database's unique constraint second,
-      and the first sighting creates one entity no matter how many messages arrive together.
+      it. Each one inserts the tag and skips it when the fingerprint already exists, so the unique
+      constraint alone decides, and only the message whose insert went in announces the new tag. One
+      entity comes out no matter how many messages arrive together.
     facts: [race-free-first-sighting]
   - title: Keep a day, back up what matters
     body: >-
