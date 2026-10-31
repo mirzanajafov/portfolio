@@ -1,6 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import { content, projectsWithCaseStudy, siteUrl } from '@portfolio/content';
-import { phoneNumber } from '@portfolio/content/testing';
+import { pausePunctuation, phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCvPdf } from './cv-pdf';
@@ -140,10 +140,11 @@ describe('the CV as a PDF', () => {
     expect(text).toContain('Freelance');
   });
 
-  it('carries the email, the site and no phone number', () => {
+  it('carries the email, the site, no phone number and no pause punctuation', () => {
     expect(text).toContain(content.profile.links.email);
     expect(text).toContain('najafov.dev');
     expect(text).not.toMatch(phoneNumber);
+    expect(text).not.toMatch(pausePunctuation);
   });
 });
 

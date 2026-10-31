@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aFact, aProject, contentOf } from './testing.ts';
+import { aFact, aProject, contentOf, pausePunctuation } from './testing.ts';
 
 describe('contentOf', () => {
   it('links the facts of a public project to its repo, as the loader does', async () => {
@@ -39,4 +39,17 @@ describe('contentOf', () => {
       'two fixture projects use the slug demo',
     );
   });
+});
+
+describe('pausePunctuation', () => {
+  it.each(['a; b', 'a \u2014 b', 'a - b', 'a -- b'])('finds a pause in %j', (text) => {
+    expect(text).toMatch(pausePunctuation);
+  });
+
+  it.each(['36-40%', 'Sep 2025 \u2013 present', 'read-only', 'Ctrl-C'])(
+    'lets %j through',
+    (text) => {
+      expect(text).not.toMatch(pausePunctuation);
+    },
+  );
 });
