@@ -25,19 +25,19 @@ facts:
     kind: measured
     source: { file: README.md, section: How accurate it is }
   - id: log-distance-fit
-    text: Each receiver's signal strength is smoothed in dB, the position is fitted in log-distance space and clamped to the floor plan, four or more receivers also fit one path-loss scale, and a light moving average keeps markers from jumping.
+    text: Each receiver's signal strength is smoothed in dB, the position is fitted in log-distance space when three or more receivers hear a tag, and a light moving average keeps markers from jumping.
     kind: design
-    source: { file: README.md, section: How accurate it is }
+    source: { file: README.md, section: How it works }
   - id: batched-broadcast
     text: Position updates reach the map as one batch every 150 ms instead of one event per radio reading.
     kind: parameter
-    source: { file: apps/api/src/position/position.service.ts }
+    source: { file: apps/api/src/config/env.validation.ts }
   - id: race-free-first-sighting
     text: The first sighting of a tag creates its entity exactly once, because the insert skips a fingerprint that already exists and only the message whose insert went in announces the new tag.
     kind: design
     source: { file: apps/api/src/entities/entity.store.ts }
   - id: history-retention
-    text: Position history keeps one day in hourly chunks; without retention it had grown to a 3.65 GB table in under four days and the history view never loaded.
+    text: Position history keeps one day in hourly chunks. Without retention it had grown to a 3.65 GB table in under four days and the history view never loaded.
     kind: measured
     source: { file: README.md, section: Deploying }
   - id: lean-backups
