@@ -20,7 +20,6 @@ model RateLimit {
 model AskLog {
   id         String   @id @default(uuid(7)) @db.Uuid
   createdAt  DateTime @default(now())
-  client     String?
   visitor    String?
   question   String
   engine     String

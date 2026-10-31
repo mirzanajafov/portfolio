@@ -1,0 +1,1 @@
+ALTER TABLE "AskLog" DROP COLUMN "client";
