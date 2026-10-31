@@ -8,17 +8,11 @@ import { phoneNumber } from './testing.ts';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const content = await loadContent(root);
 
-function headingsOf(path: string): string[] {
-  let fenced = false;
-  const headings: string[] = [];
-  for (const line of readFileSync(path, 'utf8').split('\n')) {
-    if (line.startsWith('```')) {
-      fenced = !fenced;
-    } else if (!fenced && /^#{1,6} /.test(line)) {
-      headings.push(line.replace(/^#+/, '').trim());
-    }
-  }
-  return headings;
+function sectionsOf(path: string): string[] {
+  return readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((line) => line.startsWith('## '))
+    .map((line) => line.slice(3).trim());
 }
 
 describe('the real content', () => {
@@ -48,7 +42,7 @@ describe('the real content', () => {
       .map(({ source }) => source)
       .filter(({ file, section }) => {
         const path = join(root, '..', file);
-        return !existsSync(path) || (section !== undefined && !headingsOf(path).includes(section));
+        return !existsSync(path) || (section !== undefined && !sectionsOf(path).includes(section));
       });
     expect(broken).toEqual([]);
   });
