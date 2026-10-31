@@ -99,11 +99,11 @@ export default function PrivacyPage() {
 
       <Part title="Backups">
         <p className="max-w-[65ch]">
-          Every day, and before each update of the site, the server makes a backup of everything
-          above, so that a mistake can&apos;t lose it. The daily random value is never in a backup.
-          A backup is deleted at the first daily run after it turns {backupDays} days old, so a
-          deleted record can stay in a backup for up to {backupDays + 1} more days. The backups stay
-          on the same server.
+          Every day, and before each update of the site, the server makes a backup of the records
+          above, so that a mistake can&apos;t lose them. The daily random value and the rate limit
+          counts are never in a backup. A backup is deleted by the first daily run after it turns{' '}
+          {backupDays} days old, so a deleted record can stay in a backup for up to {backupDays + 1}{' '}
+          more days. The backups stay on the same server.
         </p>
       </Part>
 

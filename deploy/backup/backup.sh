@@ -13,13 +13,12 @@ log() {
 }
 
 delete_old_dumps() {
-  find "$BACKUPS/db" -name 'portfolio-*' -mmin +$((KEEP_DAYS * 24 * 60)) -delete
+  find "$BACKUPS/db" -name 'portfolio-*' -mmin +$((KEEP_DAYS * 24 * 60 - 60)) -delete
 }
 
 backup_database() {
-  stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-  target="$BACKUPS/db/portfolio-$stamp.dump"
-  partial="$target.partial"
+  target="$BACKUPS/db/portfolio-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
+  partial=$(mktemp "$target.XXXXXX")
   timeout --foreground "$DUMP_TIMEOUT" pg_dump --format=custom --no-owner --no-privileges \
     --exclude-table-data='"VisitorSalt"' --exclude-table-data='"RateLimit"' \
     --exclude-table-data='"AdminLoginToken"' --exclude-table-data='"AdminSession"' \

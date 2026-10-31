@@ -114,6 +114,7 @@ backup > /dev/null
 expect "a good backup is marked successful and its dump is readable" \
   '[ -s /backups/last-success ] && pg_restore --list /backups/db/portfolio-*.dump > /dev/null'
 expect "the health check passes after a good backup" 'backup check'
+expect "dumps and their folder can only be read by the backup's own user"   '[ "$(stat -c %a /backups/db)" = 700 ] && [ "$(stat -c %a /backups/db/portfolio-*.dump)" = 600 ]'
 
 dump=$(in_volume 'ls /backups/db')
 psql --dbname postgres --command 'CREATE DATABASE restored'
