@@ -24,10 +24,10 @@ facts:
     text: Every sentence is checked before it is sent; it needs a source that exists, it cannot repeat 8 or more words of the question, and it cannot commit to anything on my behalf.
     kind: design
     source: { file: apps/api/src/ask/sentence-gate.ts }
-  - id: daily-client-key
-    text: Rate limits key on an HMAC of the IP address and the date, so the address is never stored and a stored key cannot follow anyone from one day to the next.
+  - id: daily-key
+    text: No IP address is stored with a question. Rate limits key on the network under the same daily key as visits, so no key follows anyone from one day to the next, and a question is tied to the visit it was asked in if that visit was recorded.
     kind: design
-    source: { file: apps/api/src/ask/client-key.ts }
+    source: { file: README.md, section: Asking it things }
 health: https://najafov.dev/
 knowledge:
   - README.md

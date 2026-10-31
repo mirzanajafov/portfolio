@@ -847,10 +847,10 @@
       "project": "najafov-dev",
       "question": "Do you store my IP address when I ask a question?",
       "expected": [
-        "najafov-dev/daily-client-key"
+        "najafov-dev/daily-key"
       ],
       "cited": [
-        "najafov-dev/daily-client-key"
+        "najafov-dev/daily-key"
       ],
       "hit": true,
       "refused": false

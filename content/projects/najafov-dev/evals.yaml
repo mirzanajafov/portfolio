@@ -3,6 +3,6 @@
 - question: How heavy is this site to load?
   expects: [first-load]
 - question: Do you store my IP address when I ask a question?
-  expects: [daily-client-key]
+  expects: [daily-key]
 - question: How often does the Ask box give the right answer?
   expects: [keyword-baseline]
