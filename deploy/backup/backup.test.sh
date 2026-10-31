@@ -120,7 +120,7 @@ expect "dumps and their folder can only be read by the backup's own user" \
 dump=$(in_volume 'ls /backups/db')
 psql --dbname postgres --command 'CREATE DATABASE restored'
 docker run --rm --network "$name" --volume "$name:/backups" --env PGHOST="$name-postgres" --env PGUSER=postgres \
-  --env PGPASSWORD=test --entrypoint pg_restore "$name" --no-owner --single-transaction --exit-on-error \
+  --env PGPASSWORD=test --entrypoint pg_restore "$name" --no-owner --single-transaction \
   --dbname restored "/backups/db/$dump"
 expected=$(echo "$source_counts" | awk '
   $1 == "VisitorSalt" || $1 == "RateLimit" || $1 == "AdminLoginToken" || $1 == "AdminSession" { $2 = 0 }

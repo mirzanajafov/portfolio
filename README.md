@@ -133,14 +133,14 @@ Four tables stay out. Deleting the daily salts is what makes a visitor key impos
 
 `deploy/backup/backup.test.sh` runs the backup against a real Postgres. It applies every migration, puts a row in every table (and fails if it missed one, so a new table can't slip through without a decision), backs up, restores into an empty database and compares the rows table by table. On the server, `backups/` has to exist with mode 700 and belong to `BACKUP_UID` before the first run. Otherwise Docker creates it as root, every backup fails, and the next deploy stops before its merge. The dumps sit on the same disk as the database, so they cover a bad migration or a lost volume, not a dead server. Copying them somewhere else is the next step.
 
-To restore, I stop the API and the site, replace the database with the dump and start everything again:
+To restore, I stop the API, the site and the backup, replace the database with the dump in one transaction, so a restore that fails leaves an empty database rather than half of one, and start everything again. Whatever was written since the dump is gone, I have to sign in again, and the day gets a new salt, so someone who visited earlier that day counts twice.
 
 ```bash
 compose="docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app"
 $compose stop api web backup
 $compose exec postgres dropdb -U portfolio portfolio
 $compose exec postgres createdb -U portfolio portfolio
-$compose run --rm --entrypoint pg_restore backup --no-owner --single-transaction --exit-on-error \
+$compose run --rm --entrypoint pg_restore backup --no-owner --single-transaction \
   --dbname portfolio /backups/db/portfolio-<stamp>.dump
 $compose up -d
 ```

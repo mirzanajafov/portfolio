@@ -19,7 +19,7 @@ delete_old_dumps() {
 backup_database() {
   target="$BACKUPS/db/portfolio-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
   partial=$(mktemp "$target.XXXXXX")
-  timeout --foreground "$DUMP_TIMEOUT" pg_dump --format=custom --no-owner --no-privileges \
+  timeout --foreground "$DUMP_TIMEOUT" pg_dump --format=custom --no-privileges \
     --exclude-table-data='"VisitorSalt"' --exclude-table-data='"RateLimit"' \
     --exclude-table-data='"AdminLoginToken"' --exclude-table-data='"AdminSession"' \
     --file="$partial"
