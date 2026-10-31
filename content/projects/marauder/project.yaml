@@ -33,7 +33,7 @@ facts:
     kind: parameter
     source: { file: apps/api/src/config/env.validation.ts }
   - id: race-free-first-sighting
-    text: The first sighting of a tag creates its entity exactly once, because the insert skips a fingerprint that already exists and only the message whose insert went in announces the new tag.
+    text: The first sighting of a tag creates its entity exactly once, because the insert skips a fingerprint that already exists, so the unique constraint alone decides.
     kind: design
     source: { file: apps/api/src/entities/entity.store.ts }
   - id: history-retention
