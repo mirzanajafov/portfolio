@@ -16,9 +16,13 @@ type AdminCommand = Extract<Command, { name: 'admin link' | 'admin revoke' }>;
 
 type ApplicationCommand = Exclude<Command, { name: 'report' } | AdminCommand>;
 
-async function runAdmin(command: AdminCommand, sessions: AdminSessionsService): Promise<number> {
+async function runAdmin(
+  command: AdminCommand,
+  sessions: AdminSessionsService,
+  env: Env,
+): Promise<number> {
   if (command.name === 'admin link') {
-    process.stdout.write(`${siteUrl}/admin/link?token=${await sessions.link()}\n`);
+    process.stdout.write(`${env.SITE_ORIGIN}/admin/link?token=${await sessions.link()}\n`);
     process.stderr.write(`it signs in once, within ${String(adminLinkMinutes)} minutes\n`);
     return 0;
   }
@@ -68,7 +72,7 @@ async function run(command: Command, app: INestApplicationContext): Promise<numb
     return 0;
   }
   if (command.name === 'admin link' || command.name === 'admin revoke') {
-    return runAdmin(command, app.get(AdminSessionsService));
+    return runAdmin(command, app.get(AdminSessionsService), app.get<Env>(ENV));
   }
   return runApplication(command, app.get(ApplicationsService), app.get<Env>(ENV));
 }
