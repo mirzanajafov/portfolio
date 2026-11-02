@@ -219,12 +219,13 @@ describe('the CLI commands', () => {
     });
   });
 
-  it('prints a sign-in link that starts one session', async () => {
+  it('prints a sign-in link to the site it runs next to that starts one session', async () => {
+    vi.stubEnv('SITE_ORIGIN', 'http://localhost:3202');
     const { status, stdout, stderr } = await cli('admin', 'link');
     expect(status).toBe(0);
     expect(stderr).toBe('it signs in once, within 10 minutes\n');
     const link = new URL(stdout.trim());
-    expect(`${link.origin}${link.pathname}`).toBe('https://najafov.dev/admin/link');
+    expect(`${link.origin}${link.pathname}`).toBe('http://localhost:3202/admin/link');
     const token = link.searchParams.get('token') ?? '';
     expect((await sessions.signIn(token, '203.0.113.7')).kind).toBe('signed in');
     expect((await sessions.signIn(token, '203.0.113.7')).kind).toBe('refused');
