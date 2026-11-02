@@ -23,6 +23,8 @@ const nothingWritten = {
 
 const fromElsewhere = { Origin: 'https://example.com' };
 
+const fromTheDemo = { Origin: 'https://tuner.najafov.dev' };
+
 const aView = (overrides: Record<string, unknown> = {}) => ({
   type: 'view',
   id: randomUUID(),
@@ -226,6 +228,81 @@ describe('POST /events against a real database', () => {
   it('refuses an invalid event from another site before anything is written', async () => {
     await sendEvent(app, { type: 'view', path: '/' }, { headers: fromElsewhere }).expect(400);
     expect(await everything()).toEqual(nothingWritten);
+  });
+
+  it("records a demo's page view under its project, in the same visit as the site's pages", async () => {
+    await sendEvent(app, aView({ path: '/projects/tuner' })).expect(204);
+    await sendEvent(app, aView({ referrer: 'najafov.dev' }), { headers: fromTheDemo }).expect(204);
+
+    const { visits, views, dropped } = await everything();
+    expect(visits).toHaveLength(1);
+    expect(views.map(({ path, site, referrerHost }) => [path, site, referrerHost])).toEqual([
+      ['/projects/tuner', null, null],
+      ['/', 'tuner', 'najafov.dev'],
+    ]);
+    expect(dropped).toEqual([]);
+  });
+
+  it("keeps each action once per page view, and only on the demo's own page views", async () => {
+    const onTheSite = aView();
+    const onTheDemo = aView();
+    await sendEvent(app, onTheSite).expect(204);
+    await sendEvent(app, onTheDemo, { headers: fromTheDemo }).expect(204);
+    const answered = { type: 'action', view: onTheDemo.id, name: 'answered' };
+    await sendEvent(app, answered, { headers: fromTheDemo }).expect(204);
+    await sendEvent(app, answered, { headers: fromTheDemo }).expect(204);
+    await sendEvent(app, { ...answered, view: onTheSite.id }, { headers: fromTheDemo }).expect(204);
+    await sendEvent(app, {
+      type: 'read',
+      view: onTheDemo.id,
+      seq: 1,
+      activeSeconds: 30,
+      maxScroll: 50,
+      blocks: {},
+    }).expect(204);
+
+    const { views } = await everything();
+    expect(views.map(({ site, actions, readSeq }) => [site, actions, readSeq])).toEqual([
+      [null, [], 0],
+      ['tuner', ['answered'], 0],
+    ]);
+  });
+
+  it("keeps a demo's reading of its own page view", async () => {
+    const onTheDemo = aView();
+    await sendEvent(app, onTheDemo, { headers: fromTheDemo }).expect(204);
+    await sendEvent(
+      app,
+      { type: 'read', view: onTheDemo.id, seq: 1, activeSeconds: 30, maxScroll: 50, blocks: {} },
+      { headers: fromTheDemo },
+    ).expect(204);
+
+    const [view] = (await everything()).views;
+    expect(view).toMatchObject({ site: 'tuner', readSeq: 1, activeSeconds: 30, maxScroll: 50 });
+  });
+
+  it('refuses from a demo what only the site sends, and an action the demo does not list', async () => {
+    const onTheDemo = aView();
+    await sendEvent(app, onTheDemo, { headers: fromTheDemo }).expect(204);
+    await sendEvent(
+      app,
+      { type: 'click', view: onTheDemo.id, href: '/cv.pdf' },
+      { headers: fromTheDemo },
+    ).expect(400);
+    await sendEvent(
+      app,
+      { type: 'action', view: onTheDemo.id, name: 'pulled-plug' },
+      { headers: fromTheDemo },
+    ).expect(400);
+    await sendEvent(app, { type: 'action', view: onTheDemo.id, name: 'answered' }).expect(400);
+  });
+
+  it("counts a demo's events against the same limits as the site's", async () => {
+    for (let sent = 0; sent < 4; sent += 1) {
+      await sendEvent(app, aView()).expect(204);
+      await sendEvent(app, aView(), { headers: fromTheDemo }).expect(204);
+    }
+    await sendEvent(app, aView(), { headers: fromTheDemo }).expect(429);
   });
 
   it('limits each address, counts what it refuses, and leaves other addresses alone', async () => {

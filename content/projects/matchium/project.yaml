@@ -9,6 +9,9 @@ visibility: public
 links:
   live: https://matchium.najafov.dev
   repo: https://github.com/mirzanajafov/matchium
+analytics:
+  actions:
+    answered: answered a question
 stack: [Python, NestJS, Next.js, PostgreSQL, Prisma]
 headline: half-the-questions
 facts:

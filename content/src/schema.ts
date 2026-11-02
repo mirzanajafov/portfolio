@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { questionMaxLength } from './ask.ts';
+import { siteUrl } from './site.ts';
 
 export const slugSchema = z
   .string()
@@ -58,6 +59,11 @@ const factSchema = z.strictObject({
   }),
 });
 
+function isSubdomainOfSite(url: string): boolean {
+  const { protocol, hostname } = new URL(url);
+  return protocol === 'https:' && hostname.endsWith(`.${new URL(siteUrl).hostname}`);
+}
+
 export const projectSchema = z
   .strictObject({
     name: z.string().min(1),
@@ -77,6 +83,16 @@ export const projectSchema = z
     facts: z.array(factSchema).min(1),
     health: z.url().optional(),
     knowledge: z.array(z.string().min(1)).default([]),
+    analytics: z
+      .strictObject({
+        actions: z
+          .record(z.string().regex(/^[a-z][a-z0-9-]{0,39}$/), z.string().min(1).max(40))
+          .refine((actions) => {
+            const count = Object.keys(actions).length;
+            return count >= 1 && count <= 3;
+          }, 'a demo reports one to three actions'),
+      })
+      .optional(),
   })
   .superRefine((project, ctx) => {
     const ids = new Set<string>();
@@ -120,6 +136,21 @@ export const projectSchema = z
         code: 'custom',
         message: 'a private repo must not be linked',
         path: ['links', 'repo'],
+      });
+    }
+    if (project.analytics && project.visibility === 'private') {
+      ctx.addIssue({
+        code: 'custom',
+        message: "only a public project's demo records visits",
+        path: ['analytics'],
+      });
+    }
+    if (project.analytics && !isSubdomainOfSite(project.links.live)) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'a demo that records visits must be served over https from a subdomain of the site',
+        path: ['links', 'live'],
       });
     }
     if (project.visibility === 'private' && project.knowledge.length > 0) {

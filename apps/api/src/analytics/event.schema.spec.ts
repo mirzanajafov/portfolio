@@ -1,9 +1,10 @@
 import type { VisitEvent } from '@portfolio/content/analytics';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
-import { eventSchema } from './event.schema.js';
+import { demoEventSchema, siteEventSchema } from './event.schema.js';
 
-const schema = eventSchema(new Set(['/cv.pdf']));
+const schema = siteEventSchema(new Set(['/cv.pdf']));
+const demo = demoEventSchema(['answered']);
 const view = '0193f1a2-7c4e-7b2a-9d1e-5f6a7b8c9d0e';
 
 const aView = (overrides: Record<string, unknown> = {}) => ({
@@ -23,7 +24,7 @@ const aRead = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-describe('eventSchema', () => {
+describe('siteEventSchema', () => {
   it('accepts a page view and marks it as found unless told otherwise', () => {
     expect(schema.parse(aView({ referrer: 'WWW.LinkedIn.com', ref: 'memh' }))).toEqual({
       type: 'view',
@@ -114,8 +115,32 @@ describe('eventSchema', () => {
   });
 });
 
-describe('the contract with the site', () => {
-  it('accepts every event the tracker on the site can send', () => {
-    expectTypeOf<VisitEvent>().toEqualTypeOf<z.input<typeof schema>>();
+describe('demoEventSchema', () => {
+  it('takes a page view and a reading the way the site does', () => {
+    expect(demo.safeParse(aView()).success).toBe(true);
+    expect(demo.safeParse(aRead()).success).toBe(true);
+  });
+
+  it('takes an action only by a name this demo lists', () => {
+    expect(demo.safeParse({ type: 'action', view, name: 'answered' }).success).toBe(true);
+    expect(demo.safeParse({ type: 'action', view, name: 'pulled-plug' }).success).toBe(false);
+  });
+
+  it('refuses the clicks, Web Vitals and errors only the site sends', () => {
+    expect(demo.safeParse({ type: 'click', view, href: '/cv.pdf' }).success).toBe(false);
+    expect(demo.safeParse({ type: 'vital', view, name: 'LCP', value: 4200 }).success).toBe(false);
+    expect(demo.safeParse({ type: 'error', view, message: 'x', source: '/a.js' }).success).toBe(
+      false,
+    );
+  });
+
+  it('is not something the site sends', () => {
+    expect(schema.safeParse({ type: 'action', view, name: 'answered' }).success).toBe(false);
+  });
+});
+
+describe('the contract with the site and the demos', () => {
+  it('accepts every event the tracker on the site and visit.js can send', () => {
+    expectTypeOf<VisitEvent>().toEqualTypeOf<z.input<typeof schema> | z.input<typeof demo>>();
   });
 });

@@ -10,6 +10,10 @@ visibility: public
 links:
   live: https://carwash.najafov.dev
   repo: https://github.com/mirzanajafov/carwash-ledger
+analytics:
+  actions:
+    pulled-plug: pulled the plug
+    checked-journal: checked a journal in the browser
 stack: [NestJS, PostgreSQL, Kafka, Prisma, Next.js]
 headline: chaos-campaign
 facts:

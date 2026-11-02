@@ -154,10 +154,16 @@ describe('the visitor report against a real database', () => {
     expect(throughJson(report)).toEqual(report);
   });
 
-  it('gives a day the same totals before and after it is rolled up', async () => {
+  it("counts only the site's pages, before and after a day is rolled up, and deletes the demo's pages with the day", async () => {
     const reading = randomUUID();
+    const fromTheDemo = { headers: { Origin: 'https://tuner.najafov.dev' } };
     at('12:00:00');
     await send({ type: 'view', id: reading, path: '/' });
+    await send({ type: 'view', id: randomUUID(), path: '/' }, fromTheDemo);
+    await send(
+      { type: 'view', id: randomUUID(), path: '/' },
+      { ip: '198.51.100.9', ...fromTheDemo },
+    );
     await send({
       type: 'read',
       view: reading,
@@ -175,9 +181,11 @@ describe('the visitor report against a real database', () => {
 
     clock.current = new Date('2026-10-03T12:00:00Z');
     const raw = await weekOf();
+    expect((await reports.build(7)).pages.find(({ path }) => path === '/')?.views).toBe(1);
     clock.current = new Date('2026-11-02T00:00:00Z');
     await app.get(RetentionService).cleanup();
     expect(await prisma.visit.count()).toBe(0);
+    expect(await prisma.pageView.count()).toBe(0);
     const rolled = await weekOf();
 
     const totals = (week: typeof raw) => ({

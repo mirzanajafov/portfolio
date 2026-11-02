@@ -25,6 +25,7 @@ export type VisitEvent =
       blocks: Record<string, number>;
     }
   | { type: 'click'; view: string; href: string }
+  | { type: 'action'; view: string; name: string }
   | { type: 'vital'; view: string; name: WebVital; value: number }
   | {
       type: 'error';
@@ -34,6 +35,24 @@ export type VisitEvent =
       line?: number;
       column?: number;
     };
+
+export type DemoSite = {
+  slug: string;
+  name: string;
+  host: string;
+  actions: Record<string, string>;
+};
+
+export function demoSites({ projects }: Content): Map<string, DemoSite> {
+  const demos = new Map<string, DemoSite>();
+  for (const { slug, name, links, analytics } of projects) {
+    if (analytics) {
+      const live = new URL(links.live);
+      demos.set(live.origin, { slug, name, host: live.host, actions: analytics.actions });
+    }
+  }
+  return demos;
+}
 
 function caseStudyBlocks({ demo, demoCaption, decisions }: CaseStudy): string[] {
   return [

@@ -306,6 +306,55 @@ describe('loadContent', () => {
     expect((await issues()).map((i) => i.path)).toEqual(['links.repo']);
   });
 
+  describe('a demo that records visits', () => {
+    const demo = (live: string, overrides: Record<string, unknown> = {}) =>
+      project(2, {
+        links: { live, repo: 'https://github.com/test/project' },
+        analytics: { actions: { 'ran-it': 'ran it' } },
+        ...overrides,
+      });
+
+    it('is a public project on an https subdomain of the site with one to three actions', async () => {
+      await putProject('alpha', demo('https://alpha.najafov.dev'));
+      expect(await issues()).toEqual([]);
+    });
+
+    it.each([
+      ['the site itself', 'https://najafov.dev'],
+      ['another domain', 'https://alpha.example.com'],
+      ['a lookalike domain', 'https://alphanajafov.dev'],
+      ['plain http', 'http://alpha.najafov.dev'],
+    ])('refuses %s as its live link', async (_, live) => {
+      await putProject('alpha', demo(live));
+      expect((await issues()).map((i) => i.path)).toEqual(['links.live']);
+    });
+
+    it('refuses a private project, whose users are colleagues at work', async () => {
+      await putProject(
+        'alpha',
+        demo('https://alpha.najafov.dev', {
+          visibility: 'private',
+          links: { live: 'https://alpha.najafov.dev' },
+          knowledge: [],
+        }),
+      );
+      expect((await issues()).map((i) => i.path)).toEqual(['analytics']);
+    });
+
+    it.each([
+      ['no actions', {}],
+      ['four actions', { a: 'a', b: 'b', c: 'c', d: 'd' }],
+      ['an action name with capitals', { RanIt: 'ran it' }],
+      ['an empty label', { 'ran-it': '' }],
+      ['a label over 40 characters', { 'ran-it': 'x'.repeat(41) }],
+    ])('refuses %s', async (_, actions) => {
+      await putProject('alpha', demo('https://alpha.najafov.dev', { analytics: { actions } }));
+      expect((await issues()).map((i) => i.path)).toEqual([
+        expect.stringMatching(/^analytics\.actions/),
+      ]);
+    });
+  });
+
   it('rejects two projects with the same order', async () => {
     await putProject('alpha', project(1));
     expect(await issues()).toEqual([

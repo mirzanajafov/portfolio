@@ -15,3 +15,4 @@ apps/api/src/generated/
 /geo/*
 !/geo/.gitkeep
 /backups/
+apps/web/public/visit.js

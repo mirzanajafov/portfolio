@@ -1,11 +1,15 @@
+import { content } from '@portfolio/content';
+import { demoSites } from '@portfolio/content/analytics';
 import { forwardToApi } from '@/lib/forward-to-api';
 
-export function forwardEvent(
+const demoOrigins = new Set(demoSites(content).keys());
+
+export async function forwardEvent(
   request: Request,
   apiUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response> {
-  return forwardToApi(
+  const response = await forwardToApi(
     request,
     {
       url: `${apiUrl}/events`,
@@ -14,4 +18,10 @@ export function forwardEvent(
     },
     () => new Response(null, { status: 204 }),
   );
+  const origin = request.headers.get('origin');
+  response.headers.set('vary', 'Origin');
+  if (origin !== null && demoOrigins.has(origin)) {
+    response.headers.set('access-control-allow-origin', origin);
+  }
+  return response;
 }

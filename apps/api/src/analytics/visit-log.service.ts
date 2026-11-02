@@ -20,7 +20,12 @@ type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 export class VisitLogService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async recordView(event: EventOf<'view'>, { key, ...visit }: Visitor, at: Date): Promise<void> {
+  async recordView(
+    event: EventOf<'view'>,
+    { key, ...visit }: Visitor,
+    site: string | null,
+    at: Date,
+  ): Promise<void> {
     await this.prisma.visit.createMany({
       data: [{ visitor: key, startedAt: at, ...visit }],
       skipDuplicates: true,
@@ -35,23 +40,30 @@ export class VisitLogService {
           notFound: event.notFound,
           referrerHost: event.referrer,
           ref: event.ref,
+          site,
         },
       ],
       skipDuplicates: true,
     });
   }
 
-  async record(event: FollowUp, at: Date): Promise<void> {
+  async record(event: FollowUp, site: string | null, at: Date): Promise<void> {
     switch (event.type) {
       case 'read':
         await this.prisma.pageView.updateMany({
-          where: { id: event.view, readSeq: { lt: event.seq } },
+          where: { id: event.view, site, readSeq: { lt: event.seq } },
           data: {
             readSeq: event.seq,
             activeSeconds: event.activeSeconds,
             maxScroll: event.maxScroll,
             blocks: event.blocks,
           },
+        });
+        return;
+      case 'action':
+        await this.prisma.pageView.updateMany({
+          where: { id: event.view, site, NOT: { actions: { has: event.name } } },
+          data: { actions: { push: event.name } },
         });
         return;
       case 'click':

@@ -1,5 +1,10 @@
 import { content } from '@portfolio/content';
-import { analyticsDays, backupDays, dailyTotalsMonths } from '@portfolio/content/analytics';
+import {
+  analyticsDays,
+  backupDays,
+  dailyTotalsMonths,
+  demoSites,
+} from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 import { pausePunctuation, phoneNumber } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
@@ -26,6 +31,19 @@ describe('the privacy page', () => {
     expect(container.textContent).toContain(
       `so a deleted record can stay in a backup for up to ${String(backupDays + 1)} more days.`,
     );
+  });
+
+  it('names every demo that records visits and the steps it records, where the demos link to', () => {
+    render(<PrivacyPage />);
+    const part = screen.getByRole('heading', { name: 'Demos' }).closest('section');
+    expect(part).toHaveAttribute('id', 'demos');
+    const items = [...(part?.querySelectorAll('li') ?? [])].map(({ textContent }) => textContent);
+    expect(items).toEqual(
+      [...demoSites(content).values()].map(
+        ({ name, host, actions }) => `${name} (${host}): ${Object.values(actions).join(', ')}`,
+      ),
+    );
+    expect(items).toContain('Matchium (matchium.najafov.dev): answered a question');
   });
 
   it('credits DB-IP and gives the address to write to, and no phone number', () => {

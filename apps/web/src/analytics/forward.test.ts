@@ -49,4 +49,37 @@ describe('forwardEvent', () => {
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
     expect(await response.text()).toBe('');
   });
+
+  const from = (origin?: string) =>
+    new Request('http://site/api/events', {
+      method: 'POST',
+      body: '{"type":"view"}',
+      headers: origin ? { origin } : {},
+    });
+
+  it.each([204, 400, 429, 500])(
+    'lets a demo that records visits read a %i, so its console stays clean',
+    async (status) => {
+      const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status }));
+      const response = await forwardEvent(
+        from('https://poof.najafov.dev'),
+        'http://api',
+        fetchImpl,
+      );
+      expect(response.headers.get('access-control-allow-origin')).toBe('https://poof.najafov.dev');
+      expect(response.headers.get('access-control-allow-credentials')).toBeNull();
+      expect(response.headers.get('vary')).toBe('Origin');
+    },
+  );
+
+  it.each([
+    ['a demo that records nothing', 'https://tm.najafov.dev'],
+    ['the site itself', 'https://najafov.dev'],
+    ['no origin', undefined],
+  ])('lets no page read the answer for %s', async (_, origin) => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
+    const response = await forwardEvent(from(origin), 'http://api', fetchImpl);
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
+    expect(response.headers.get('vary')).toBe('Origin');
+  });
 });
