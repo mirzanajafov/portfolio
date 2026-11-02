@@ -75,7 +75,8 @@ export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Pr
     return url.href;
   };
   const onSite = (path = '') => withCode(`${siteUrl}${path}`);
-  const live = (href: string) => (demoOrigins.has(new URL(href).origin) ? withCode(href) : href);
+  const projectLink = (href: string) =>
+    demoOrigins.has(new URL(href).origin) ? withCode(href) : href;
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: margin, bottom: margin, left: margin, right: margin },
@@ -208,12 +209,9 @@ export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Pr
       .text(`  ${project.hook}`, options());
     doc.font('regular').fontSize(10).fillColor(ink).text(project.headline.text, options());
     linkRow(
-      [
-        { text: linkText(project.links.live), href: live(project.links.live) },
-        ...(project.links.repo
-          ? [{ text: linkText(project.links.repo), href: project.links.repo }]
-          : []),
-      ],
+      [project.links.live, project.links.repo]
+        .filter((url) => url !== undefined)
+        .map((url) => ({ text: linkText(url), href: projectLink(url) })),
       9.5,
       muted,
     );

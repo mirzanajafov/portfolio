@@ -60,7 +60,7 @@ export function inOrder({ views, ...visit }: VisitRow): Visit[] {
   return [{ ...visit, views: sorted, landing, exit, pages, found }];
 }
 
-export function secondsOf({ views }: Pick<VisitRow, 'views'>): number {
+export function secondsOf({ views }: VisitRow): number {
   return views.reduce((total, { activeSeconds }) => total + activeSeconds, 0);
 }
 

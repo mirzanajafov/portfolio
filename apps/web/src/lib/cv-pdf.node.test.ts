@@ -162,5 +162,6 @@ describe('a CV for one application', () => {
       ),
     );
     expect(urisOf(own)).toContain('https://matchium.najafov.dev/?r=memh');
+    expect(urisOf(own)).toContain('https://github.com/mirzanajafov/matchium');
   });
 });
