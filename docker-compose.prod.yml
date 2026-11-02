@@ -23,6 +23,7 @@ services:
   web:
     environment:
       CV_RENDER_TOKEN: ${CV_RENDER_TOKEN:?set CV_RENDER_TOKEN}
+      SITE_ORIGIN: https://najafov.dev
     ports: !reset []
     networks:
       - default
