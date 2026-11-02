@@ -1,5 +1,7 @@
 import { callerHeaders, forwardToApi } from '@/lib/forward-to-api';
 
+const eventHeaders = [...callerHeaders, 'origin'];
+
 export function forwardEvent(
   request: Request,
   apiUrl: string,
@@ -9,7 +11,7 @@ export function forwardEvent(
     request,
     {
       url: `${apiUrl}/events`,
-      headers: callerHeaders,
+      headers: eventHeaders,
       fetchImpl,
       signal: AbortSignal.timeout(5_000),
     },

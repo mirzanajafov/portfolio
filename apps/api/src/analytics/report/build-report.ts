@@ -226,6 +226,7 @@ function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] 
       day,
       bot: droppedFor(rows, 'bot'),
       limited: droppedFor(rows, 'limited'),
+      origin: droppedFor(rows, 'origin'),
     }))
     .toSorted((a, b) => a.day.localeCompare(b.day, 'en'));
 }

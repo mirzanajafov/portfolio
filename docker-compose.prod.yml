@@ -15,6 +15,7 @@ services:
       DATABASE_URL: postgresql://portfolio:${POSTGRES_PASSWORD}@postgres:5432/portfolio
       CLIENT_HASH_SECRET: ${CLIENT_HASH_SECRET:?set CLIENT_HASH_SECRET}
       GEO_DIR: /app/geo
+      SITE_ORIGIN: https://najafov.dev
       CV_RENDER_TOKEN: ${CV_RENDER_TOKEN:?set CV_RENDER_TOKEN}
     volumes:
       - ./geo:/app/geo:ro

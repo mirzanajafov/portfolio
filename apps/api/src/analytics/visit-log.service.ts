@@ -6,7 +6,7 @@ import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
 
-export const dropReasons = ['bot', 'limited'] as const;
+export const dropReasons = ['bot', 'limited', 'origin'] as const;
 
 export type DropReason = (typeof dropReasons)[number];
 

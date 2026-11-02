@@ -105,6 +105,15 @@ describe('reportText', () => {
     expect(positions).toEqual(positions.toSorted((a, b) => a - b));
   });
 
+  it('gives each reason for dropping events its own column', () => {
+    const text = reportText(
+      aReport({ filter: [{ day: '2026-10-30', bot: 3, limited: 1, origin: 5 }] }),
+      { all: false },
+    );
+    expect(text).toMatch(/^Filtered out, UTC day +bots +limited +other sites$/m);
+    expect(text).toMatch(/^2026-10-30 +3 +1 +5$/m);
+  });
+
   it('shows the share of views that read each block', () => {
     const text = reportText(
       aReport({

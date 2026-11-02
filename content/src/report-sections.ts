@@ -476,8 +476,13 @@ function filter({ filter }: Report): ReportSection {
   }
   return [
     table([
-      ['Filtered out, UTC day', 'bots', 'limited'],
-      ...filter.map(({ day, bot, limited }) => [day, String(bot), String(limited)]),
+      ['Filtered out, UTC day', 'bots', 'limited', 'other sites'],
+      ...filter.map(({ day, bot, limited, origin }) => [
+        day,
+        String(bot),
+        String(limited),
+        String(origin),
+      ]),
     ]),
   ];
 }
