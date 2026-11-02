@@ -43,7 +43,8 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/today?r=memh');
   setReferrer('https://najafov.dev/projects/matchium');
   vi.stubGlobal('fetch', fetchMock);
-  fetchMock.mockClear();
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
 });
 
 afterEach(() => {
@@ -92,7 +93,7 @@ describe('trackVisit', () => {
     );
   });
 
-  it('sends each action once a page view, and again in the page view after a return from the back-forward cache', () => {
+  it('sends each action once a page view, and again in the page view after a return from the back-forward cache', async () => {
     stop = trackVisit(aScript());
     act('answered');
     act('answered');
@@ -100,13 +101,43 @@ describe('trackVisit', () => {
     window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     act('answered');
 
-    const [first, answered, liked, restored, again] = sent();
+    await vi.waitFor(() => {
+      expect(sent()).toHaveLength(5);
+    });
+    const [first, restored, ...actions] = sent();
     assert(first?.type === 'view' && restored?.type === 'view');
-    expect(answered).toEqual({ type: 'action', view: first.id, name: 'answered' });
-    expect(liked).toEqual({ type: 'action', view: first.id, name: 'liked' });
     expect(restored.id).not.toBe(first.id);
     expect(restored).not.toHaveProperty('referrer');
-    expect(again).toEqual({ type: 'action', view: restored.id, name: 'answered' });
+    expect(actions).toEqual([
+      { type: 'action', view: first.id, name: 'answered' },
+      { type: 'action', view: first.id, name: 'liked' },
+      { type: 'action', view: restored.id, name: 'answered' },
+    ]);
+  });
+
+  it('sends an action only once its page view has arrived, so the step finds the view to land on', async () => {
+    let arrive: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          arrive = resolve;
+        }),
+    );
+    stop = trackVisit(aScript());
+    act('answered');
+    await Promise.resolve();
+    expect(sent().map(({ type }) => type)).toEqual(['view']);
+
+    arrive(new Response(null, { status: 204 }));
+    await vi.waitFor(() => {
+      expect(sent().map(({ type }) => type)).toEqual(['view', 'action']);
+    });
+  });
+
+  it('records only the first part of the address, because a demo puts ids in the rest', () => {
+    window.history.replaceState({}, '', '/chats/9f8e7d6c?r=memh');
+    stop = trackVisit(aScript());
+    expect(sent()[0]).toMatchObject({ type: 'view', path: '/chats', ref: 'memh' });
   });
 
   it('ignores an action that is not a name', () => {
@@ -116,7 +147,7 @@ describe('trackVisit', () => {
     expect(sent().map(({ type }) => type)).toEqual(['view']);
   });
 
-  it('never sends what the page holds: its cookies, its storage or what was typed into it', () => {
+  it('never sends what the page holds: its cookies, its storage or what was typed into it', async () => {
     document.cookie = 'matchium_session=secret-session';
     localStorage.setItem('marauder_token', 'secret-token');
     const input = document.createElement('input');
@@ -127,19 +158,23 @@ describe('trackVisit', () => {
     act('answered');
     setVisibility('hidden');
 
+    await vi.waitFor(() => {
+      expect(sent().map(({ type }) => type)).toEqual(['view', 'read', 'action']);
+    });
     expect(bodies().join('\n')).not.toMatch(/secret/);
     input.remove();
     localStorage.clear();
+    document.cookie = 'matchium_session=; max-age=0';
   });
 
-  it('keeps the page working when the site cannot be reached', async () => {
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+  it('keeps the page working when the site cannot be reached, and sends no action for a view that never arrived', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     expect(() => {
       stop = trackVisit(aScript());
       act('answered');
     }).not.toThrow();
-    await Promise.resolve();
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent().map(({ type }) => type)).toEqual(['view']);
   });
 
   it('does nothing when it was not loaded by a script tag', () => {

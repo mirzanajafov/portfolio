@@ -92,9 +92,9 @@ export default function PrivacyPage() {
       <Part title="Demos" id="demos">
         <p className="max-w-[65ch]">
           The demos below load a small script from this site that records a visit to them the same
-          way: which page of the demo you opened and the domain of the site that linked to it, how
-          long it was in front of you, how far down you scrolled, and which of the demo&apos;s main
-          steps you did. Nothing you type or see in a demo is sent.
+          way: which part of the demo you opened (the first part of its address only) and the domain
+          of the site that linked to it, how long it was in front of you, how far down you scrolled,
+          and which of the demo&apos;s main steps you did. Nothing you type into a demo is sent.
         </p>
         <ul className="flex max-w-[65ch] list-disc flex-col gap-1 pl-5">
           {demos.map(({ slug, name, host, actions }) => (
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
           A demo page opened on the same UTC day as a page of this site, from the same browser and
           network, counts as the same visit, through the same daily value as above. That is how I
           can see whether someone who read about a demo also tried it. If you came through a link I
-          sent with a job application, the demos you opened that day show up in that
+          sent with a job application, the demos you opened that day are recorded as part of that
           application&apos;s visit. Everything above applies to the demos too: Global Privacy
           Control and Do Not Track record nothing, bots are only counted, and the records are
           deleted on the same schedule. The demos are separate apps with their own data, such as a

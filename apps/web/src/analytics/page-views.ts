@@ -29,7 +29,10 @@ export class PageViews {
   current: PageView | null = null;
   private lastInput: number | undefined;
 
-  constructor(private readonly send: (event: VisitEvent) => void) {}
+  constructor(
+    private readonly send: (event: VisitEvent) => void,
+    private readonly pagePath = () => pathOf(location.pathname),
+  ) {}
 
   start(withReferrer: boolean): PageView {
     const view = {
@@ -42,7 +45,7 @@ export class PageViews {
     this.send({
       type: 'view',
       id: view.id,
-      path: pathOf(location.pathname),
+      path: this.pagePath(),
       referrer: withReferrer ? referrerHost() : undefined,
       ref: new URLSearchParams(location.search).get('r') ?? undefined,
       notFound: document.querySelector('[data-not-found]') !== null,

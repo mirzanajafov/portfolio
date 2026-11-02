@@ -60,6 +60,9 @@ const factSchema = z.strictObject({
 });
 
 function isSubdomainOfSite(url: string): boolean {
+  if (!URL.canParse(url)) {
+    return true;
+  }
   const { protocol, hostname } = new URL(url);
   return protocol === 'https:' && hostname.endsWith(`.${new URL(siteUrl).hostname}`);
 }

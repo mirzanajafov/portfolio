@@ -1,7 +1,8 @@
 import { Controller, HttpCode, HttpException, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { callerOf } from '../common/caller.js';
-import { EventPipe, EventRequest, type SourcedEvent } from './event.schema.js';
+import { EventPipe, PostedEvent } from './event.pipe.js';
+import type { SourcedEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';
 
 @Controller('events')
@@ -11,7 +12,7 @@ export class EventsController {
   @Post()
   @HttpCode(HttpStatus.NO_CONTENT)
   async record(
-    @EventRequest(EventPipe) sourced: SourcedEvent,
+    @PostedEvent(EventPipe) sourced: SourcedEvent,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {

@@ -57,7 +57,7 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
-    const site = source.kind === 'demo' ? source.slug : null;
+    const demo = source.kind === 'demo' ? source.slug : null;
     if (event.type === 'view') {
       const visitor = {
         key: keys.visitor(caller.ip, userAgent),
@@ -65,9 +65,9 @@ export class EventsService {
         browser: browserOf(userAgent),
         ...this.places.placeOf(caller.ip),
       };
-      await this.visits.recordView(event, visitor, site, now);
+      await this.visits.recordView(event, visitor, demo, now);
     } else {
-      await this.visits.record(event, site, now);
+      await this.visits.record(event, demo, now);
     }
     return { kind: 'accepted' };
   }

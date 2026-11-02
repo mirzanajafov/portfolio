@@ -9,7 +9,7 @@ const blockSeconds = z.record(z.string(), z.number());
 const knownDevice = z.enum(devices);
 const knownBrowser = z.enum(browsers);
 
-const onTheSite = { site: null };
+const onTheSite = { demo: null };
 
 export async function findVisits(
   db: Prisma.TransactionClient,
@@ -27,6 +27,7 @@ export async function findVisits(
       network: true,
       views: {
         where: onTheSite,
+        orderBy: { createdAt: 'asc' },
         select: {
           createdAt: true,
           path: true,
@@ -47,6 +48,7 @@ export async function findVisits(
   });
   return visits.map(({ views, device, browser, ...visit }) => ({
     ...visit,
+    startedAt: views[0]?.createdAt ?? visit.startedAt,
     device: knownDevice.parse(device),
     browser: knownBrowser.parse(browser),
     views: views.map(({ blocks, ...view }) => ({ ...view, blocks: blockSeconds.parse(blocks) })),

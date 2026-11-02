@@ -232,11 +232,12 @@ describe('POST /events against a real database', () => {
 
   it("records a demo's page view under its project, in the same visit as the site's pages", async () => {
     await sendEvent(app, aView({ path: '/projects/tuner' })).expect(204);
+    clock.current = new Date('2026-10-02T12:01:00Z');
     await sendEvent(app, aView({ referrer: 'najafov.dev' }), { headers: fromTheDemo }).expect(204);
 
     const { visits, views, dropped } = await everything();
     expect(visits).toHaveLength(1);
-    expect(views.map(({ path, site, referrerHost }) => [path, site, referrerHost])).toEqual([
+    expect(views.map(({ path, demo, referrerHost }) => [path, demo, referrerHost])).toEqual([
       ['/projects/tuner', null, null],
       ['/', 'tuner', 'najafov.dev'],
     ]);
@@ -247,6 +248,7 @@ describe('POST /events against a real database', () => {
     const onTheSite = aView();
     const onTheDemo = aView();
     await sendEvent(app, onTheSite).expect(204);
+    clock.current = new Date('2026-10-02T12:01:00Z');
     await sendEvent(app, onTheDemo, { headers: fromTheDemo }).expect(204);
     const answered = { type: 'action', view: onTheDemo.id, name: 'answered' };
     await sendEvent(app, answered, { headers: fromTheDemo }).expect(204);
@@ -262,7 +264,7 @@ describe('POST /events against a real database', () => {
     }).expect(204);
 
     const { views } = await everything();
-    expect(views.map(({ site, actions, readSeq }) => [site, actions, readSeq])).toEqual([
+    expect(views.map(({ demo, actions, readSeq }) => [demo, actions, readSeq])).toEqual([
       [null, [], 0],
       ['tuner', ['answered'], 0],
     ]);
@@ -278,7 +280,27 @@ describe('POST /events against a real database', () => {
     ).expect(204);
 
     const [view] = (await everything()).views;
-    expect(view).toMatchObject({ site: 'tuner', readSeq: 1, activeSeconds: 30, maxScroll: 50 });
+    expect(view).toMatchObject({ demo: 'tuner', readSeq: 1, activeSeconds: 30, maxScroll: 50 });
+  });
+
+  it("lets no click, Web Vital or error from the site land on a demo's page view", async () => {
+    const onTheDemo = aView();
+    await sendEvent(app, onTheDemo, { headers: fromTheDemo }).expect(204);
+    await sendEvent(app, { type: 'click', view: onTheDemo.id, href: '/cv.pdf' }).expect(204);
+    await sendEvent(app, { type: 'vital', view: onTheDemo.id, name: 'LCP', value: 1800 }).expect(
+      204,
+    );
+    await sendEvent(app, {
+      type: 'error',
+      view: onTheDemo.id,
+      message: 'x is undefined',
+      source: '/a.js',
+    }).expect(204);
+
+    const { views, clicks, errors } = await everything();
+    expect(views).toEqual([expect.objectContaining({ demo: 'tuner', lcpMs: null })]);
+    expect(clicks).toEqual([]);
+    expect(errors).toEqual([]);
   });
 
   it('refuses from a demo what only the site sends, and an action the demo does not list', async () => {

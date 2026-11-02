@@ -1,20 +1,28 @@
 import type { VisitEvent } from '@portfolio/content/analytics';
-import { PageViews, type PageView } from './page-views';
+import { PageViews, pathOf, type PageView } from './page-views';
 
 export function trackVisit(script: HTMLOrSVGScriptElement | null): () => void {
   if (!(script instanceof HTMLScriptElement)) {
     return () => undefined;
   }
   const endpoint = new URL('/api/events', script.src).href;
-  const send = (event: VisitEvent) => {
+  const post = (event: VisitEvent) =>
     fetch(endpoint, {
       method: 'POST',
       body: JSON.stringify(event),
       keepalive: true,
       credentials: 'omit',
-    }).catch(() => undefined);
+    });
+  let viewSent: Promise<unknown> = Promise.resolve();
+  const send = (event: VisitEvent) => {
+    const sending = event.type === 'action' ? viewSent.then(() => post(event)) : post(event);
+    if (event.type === 'view') {
+      viewSent = sending;
+    }
+    sending.catch(() => undefined);
   };
-  const views = new PageViews(send);
+  const firstSegment = () => pathOf(`/${location.pathname.split('/')[1] ?? ''}`);
+  const views = new PageViews(send, firstSegment);
   const actionsSent = new WeakMap<PageView, Set<string>>();
 
   const onPageShow = ({ persisted }: PageTransitionEvent) => {

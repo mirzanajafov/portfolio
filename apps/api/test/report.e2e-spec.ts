@@ -205,6 +205,21 @@ describe('the visitor report against a real database', () => {
     expect(totals(rolled)).toEqual(totals(raw));
   });
 
+  it('starts a visit at its first page on the site, not at a demo page opened earlier that day', async () => {
+    at('00:30:00');
+    await send(
+      { type: 'view', id: randomUUID(), path: '/' },
+      { headers: { Origin: 'https://tuner.najafov.dev' } },
+    );
+    at('21:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/', ref: 'late1' });
+
+    const { unknownCodes } = (await reports.build(7)).applications;
+    expect(unknownCodes).toEqual([
+      expect.objectContaining({ code: 'late1', firstSeen: new Date('2026-10-02T21:00:00Z') }),
+    ]);
+  });
+
   it('counts a day that is due but not rolled up yet from its raw rows', async () => {
     at('12:00:00');
     await send({ type: 'view', id: randomUUID(), path: '/' });

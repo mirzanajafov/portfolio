@@ -329,6 +329,22 @@ describe('loadContent', () => {
       expect((await issues()).map((i) => i.path)).toEqual(['links.live']);
     });
 
+    it('refuses a live link that is not a URL with only the one complaint', async () => {
+      await putProject('alpha', demo('alpha.najafov.dev'));
+      expect((await issues()).map((i) => i.path)).toEqual(['links.live']);
+    });
+
+    it('refuses a second demo on an origin that already records visits', async () => {
+      await putProject('alpha', demo('https://alpha.najafov.dev/one'));
+      await putProject('gamma', { ...demo('https://alpha.najafov.dev/two'), order: 3 });
+      expect(await issues()).toEqual([
+        expect.objectContaining({
+          path: 'links.live',
+          message: 'https://alpha.najafov.dev already records visits for alpha',
+        }),
+      ]);
+    });
+
     it('refuses a private project, whose users are colleagues at work', async () => {
       await putProject(
         'alpha',
