@@ -9,15 +9,11 @@ function post(body: BodyInit, headers: Record<string, string> = {}) {
 }
 
 function forward(request: Request, fetchImpl: typeof fetch) {
-  return forwardToApi(
-    request,
-    { url: 'http://api/x', headers: ['x-forwarded-for'], fetchImpl },
-    ok,
-  );
+  return forwardToApi(request, { url: 'http://api/x', fetchImpl }, ok);
 }
 
 describe('forwardToApi', () => {
-  it('posts the body as JSON with only the headers it was told to pass, and answers with the caller', async () => {
+  it('posts the body as JSON with only the caller headers, and answers with the caller', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const response = await forward(
       post('{"a":1}', { 'x-forwarded-for': '203.0.113.7', cookie: 'secret=1' }),

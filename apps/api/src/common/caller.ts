@@ -26,7 +26,7 @@ export function visitorAgent({ userAgent, optedOut }: Caller): string | null {
     : userAgent;
 }
 
-export function fromSite({ origin }: Caller, siteOrigin: string): boolean {
+export function fromSite(origin: string | undefined, siteOrigin: string): boolean {
   return origin === undefined || origin === siteOrigin;
 }
 

@@ -1,23 +1,22 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   HttpException,
   HttpStatus,
-  Inject,
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
-import { callerOf, fromSite, visitorAgent } from '../common/caller.js';
+import { callerOf, visitorAgent } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
+import { SiteOriginGuard } from '../common/site-origin.guard.js';
 import { ZodPipe } from '../common/zod.pipe.js';
-import { ENV, type Env } from '../config/env.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
@@ -36,21 +35,18 @@ export class AskController {
     private readonly askLog: AskLogService,
     private readonly salts: VisitorSaltService,
     private readonly clock: ClockService,
-    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Post()
+  @UseGuards(SiteOriginGuard)
   async stream(
     @Body(new ZodPipe(askRequestSchema)) { question }: AskRequest,
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const caller = callerOf(req);
-    if (!fromSite(caller, this.env.SITE_ORIGIN)) {
-      throw new ForbiddenException('questions are only taken from the site itself');
-    }
     const abort = new AbortController();
     res.on('close', () => abort.abort());
+    const caller = callerOf(req);
     const askedAt = this.clock.now();
     const keys = await this.salts.dayKeys(askedAt);
     const verdict = await this.limits.admit(keys.limit(caller.ip));

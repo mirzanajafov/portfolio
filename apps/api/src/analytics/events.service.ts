@@ -27,7 +27,7 @@ export class EventsService {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (!fromSite(caller, this.env.SITE_ORIGIN)) {
+    if (!fromSite(caller.origin, this.env.SITE_ORIGIN)) {
       await this.visits.countDropped('origin', now);
       return { kind: 'accepted' };
     }

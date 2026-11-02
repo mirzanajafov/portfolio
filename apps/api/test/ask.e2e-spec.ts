@@ -161,11 +161,16 @@ describe('POST /ask against a real database', () => {
   });
 
   it.each(['https://example.com', 'null'])(
-    'refuses a question posted from %s before it counts against any limit or is logged',
+    'refuses a question posted from %s before reading it or reaching a limit, the day key or the log',
     async (origin) => {
-      await ask(app, 'Stripe?', '198.51.100.6', { 'User-Agent': chrome, Origin: origin }).expect(
-        403,
-      );
+      clock.current = new Date('2026-11-01T12:00:00Z');
+      await prisma.visitorSalt.deleteMany({ where: { day: new Date('2026-11-01') } });
+      const fromElsewhere = { 'User-Agent': chrome, Origin: origin };
+      const refused = await ask(app, 'Stripe?', '198.51.100.6', fromElsewhere).expect(403);
+      expect(refused.headers['content-type']).toMatch(/application\/json/);
+      await ask(app, '', '198.51.100.6', fromElsewhere).expect(403);
+      const salt = await prisma.visitorSalt.findUnique({ where: { day: new Date('2026-11-01') } });
+      expect(salt).toBeNull();
       expect(await prisma.rateLimit.findMany()).toEqual([]);
       expect(await prisma.askLog.findMany()).toEqual([]);
     },

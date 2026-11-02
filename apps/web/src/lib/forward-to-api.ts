@@ -1,10 +1,9 @@
 const maxBodyBytes = 2_000;
 
-export const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt', 'origin'] as const;
+const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt', 'origin'] as const;
 
 type Forward = {
   url: string;
-  headers: readonly string[];
   fetchImpl: typeof fetch;
   signal?: AbortSignal;
 };
@@ -46,7 +45,7 @@ async function readCapped(request: Request): Promise<string | null> {
 
 export async function forwardToApi(
   request: Request,
-  { url, headers: passed, fetchImpl, signal }: Forward,
+  { url, fetchImpl, signal }: Forward,
   respond: (upstream: Response) => Response,
 ): Promise<Response> {
   const body = await readCapped(request);
@@ -54,7 +53,7 @@ export async function forwardToApi(
     return new Response(null, { status: 413 });
   }
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  for (const name of passed) {
+  for (const name of callerHeaders) {
     const value = request.headers.get(name);
     if (value) {
       headers[name] = value;

@@ -10,10 +10,16 @@ describe('failureMessage', () => {
     expect(failureMessage(429, null, 'me@example.com')).toMatch(/in 1 minute,/);
   });
 
-  it('explains a validation error and falls back to email for everything else', () => {
+  it.each([403, 503])(
+    'falls back to email for a %i, a question from another site included',
+    (status) => {
+      expect(failureMessage(status, null, 'me@example.com')).toBe(
+        "I can't answer right now. Email me at me@example.com instead.",
+      );
+    },
+  );
+
+  it('explains a validation error', () => {
     expect(failureMessage(400, null, 'me@example.com')).toBe('Keep it under 300 characters.');
-    expect(failureMessage(503, null, 'me@example.com')).toBe(
-      "I can't answer right now. Email me at me@example.com instead.",
-    );
   });
 });
