@@ -14,6 +14,7 @@ describe('forwardAsk', () => {
       'user-agent': 'Chrome',
       'sec-gpc': '1',
       dnt: '1',
+      origin: 'https://najafov.dev',
       cookie: 'unrelated=1',
     });
     const response = await forwardAsk(request, 'http://api:3201', fetchImpl);

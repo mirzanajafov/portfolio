@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { forwardEvent } from './forward';
 
 describe('forwardEvent', () => {
-  it('passes the event, the caller address, the browser and its privacy signals, and finishes on its own clock even if the visitor has gone', async () => {
+  it('passes the event, the caller address, the browser, its privacy signals and the origin, and finishes on its own clock even if the visitor has gone', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const request = new Request('http://site/api/events', {
       method: 'POST',
@@ -12,6 +12,7 @@ describe('forwardEvent', () => {
         'user-agent': 'Chrome',
         'sec-gpc': '1',
         dnt: '1',
+        origin: 'https://najafov.dev',
         cookie: 'unrelated=1',
       },
     });
@@ -26,6 +27,7 @@ describe('forwardEvent', () => {
           'user-agent': 'Chrome',
           'sec-gpc': '1',
           dnt: '1',
+          origin: 'https://najafov.dev',
         },
       }),
     );

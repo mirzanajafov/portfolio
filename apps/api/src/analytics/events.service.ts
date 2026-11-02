@@ -22,11 +22,19 @@ export class EventsService {
     @Inject(PLACE_LOOKUP) private readonly places: PlaceLookup,
   ) {}
 
-  async accept(event: AnalyticsEvent, caller: Caller): Promise<Outcome> {
+  async accept(
+    event: AnalyticsEvent,
+    caller: Caller,
+    origin: string | undefined,
+  ): Promise<Outcome> {
     if (caller.optedOut) {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
+    if (origin !== undefined && origin !== this.env.SITE_ORIGIN) {
+      await this.visits.countDropped('origin', now);
+      return { kind: 'accepted' };
+    }
     const userAgent = visitorAgent(caller);
     if (userAgent === null) {
       await this.visits.countDropped('bot', now);

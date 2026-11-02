@@ -12,6 +12,17 @@ import { FixedClock, knownPlaces, startApp } from './start-app.js';
 const headlessChrome =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/130.0.0.0 Safari/537.36';
 
+const nothingWritten = {
+  visits: [],
+  views: [],
+  clicks: [],
+  errors: [],
+  dropped: [],
+  limits: [],
+};
+
+const fromElsewhere = { Origin: 'https://example.com' };
+
 const aView = (overrides: Record<string, unknown> = {}) => ({
   type: 'view',
   id: randomUUID(),
@@ -157,21 +168,18 @@ describe('POST /events against a real database', () => {
   it.each([
     ['Sec-GPC', '1'],
     ['DNT', '1'],
-  ])('records nothing at all for a browser that sends %s', async (header, value) => {
-    clock.current = new Date('2026-11-01T12:00:00Z');
-    await prisma.visitorSalt.deleteMany({ where: { day: new Date('2026-11-01') } });
-    await sendEvent(app, aView(), { headers: { [header]: value } }).expect(204);
-    const salt = await prisma.visitorSalt.findUnique({ where: { day: new Date('2026-11-01') } });
-    expect(salt).toBeNull();
-    expect(await everything()).toEqual({
-      visits: [],
-      views: [],
-      clicks: [],
-      errors: [],
-      dropped: [],
-      limits: [],
-    });
-  });
+  ])(
+    'records nothing at all for a browser that sends %s, not even a count',
+    async (header, value) => {
+      clock.current = new Date('2026-11-01T12:00:00Z');
+      await prisma.visitorSalt.deleteMany({ where: { day: new Date('2026-11-01') } });
+      await sendEvent(app, aView(), { headers: { [header]: value } }).expect(204);
+      await sendEvent(app, aView(), { headers: { [header]: value, ...fromElsewhere } }).expect(204);
+      const salt = await prisma.visitorSalt.findUnique({ where: { day: new Date('2026-11-01') } });
+      expect(salt).toBeNull();
+      expect(await everything()).toEqual(nothingWritten);
+    },
+  );
 
   it('refuses a forwarded address that is not an IP address', async () => {
     const refused = await sendEvent(app, aView(), { ip: '1:2:3:4:5:6:7::8:9' }).expect(400);
@@ -190,6 +198,39 @@ describe('POST /events against a real database', () => {
     expect(visits).toEqual([]);
     expect(views).toEqual([]);
     expect(dropped).toEqual([expect.objectContaining({ reason: 'bot', count: 3 })]);
+  });
+
+  it("records events from the site's own pages, with or without an Origin", async () => {
+    await sendEvent(app, aView(), { headers: { Origin: 'https://najafov.dev' } }).expect(204);
+    await sendEvent(app, aView()).expect(204);
+
+    const { views, dropped } = await everything();
+    expect(views).toHaveLength(2);
+    expect(dropped).toEqual([]);
+  });
+
+  it('drops events from pages on other sites, and only counts them', async () => {
+    await sendEvent(app, aView(), { headers: fromElsewhere }).expect(204);
+    await sendEvent(app, aView(), { headers: { Origin: 'null' } }).expect(204);
+    await sendEvent(app, aView(), {
+      headers: { Origin: 'https://najafov.dev.example.com' },
+    }).expect(204);
+
+    const { visits, views, limits, dropped } = await everything();
+    expect(visits).toEqual([]);
+    expect(views).toEqual([]);
+    expect(limits).toEqual([]);
+    expect(dropped).toEqual([expect.objectContaining({ reason: 'origin', count: 3 })]);
+  });
+
+  it('refuses an invalid event from another site before anything is written, and lets no page read why', async () => {
+    const refused = await sendEvent(
+      app,
+      { type: 'view', path: '/' },
+      { headers: fromElsewhere },
+    ).expect(400);
+    expect(refused.headers['access-control-allow-origin']).toBeUndefined();
+    expect(await everything()).toEqual(nothingWritten);
   });
 
   it('limits each address, counts what it refuses, and leaves other addresses alone', async () => {

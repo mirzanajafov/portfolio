@@ -18,6 +18,13 @@ describe('parseEnv', () => {
     );
   });
 
+  it("takes the site's origin from SITE_ORIGIN, or the public site's when it is unset", () => {
+    expect(parseEnv(base).SITE_ORIGIN).toBe('https://najafov.dev');
+    expect(parseEnv({ ...base, SITE_ORIGIN: 'http://localhost:3200/' }).SITE_ORIGIN).toBe(
+      'http://localhost:3200',
+    );
+  });
+
   it('names every missing or broken variable at once, so a bad deploy fails on boot', () => {
     expect(() => parseEnv({ DATABASE_URL: 'mysql://x', ASK_PER_DAY: '-1' })).toThrow(
       /DATABASE_URL[\s\S]*CLIENT_HASH_SECRET[\s\S]*ASK_PER_DAY/,

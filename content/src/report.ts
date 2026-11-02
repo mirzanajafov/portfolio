@@ -172,7 +172,7 @@ export const reportSchema = z.object({
       z.object({ path: z.string(), views: z.number(), referrers: z.array(z.string()) }),
     ),
   }),
-  filter: z.array(z.object({ day, bot: z.number(), limited: z.number() })),
+  filter: z.array(z.object({ day, bot: z.number(), limited: z.number(), origin: z.number() })),
   applications: z.object({
     list: z.array(applicationEntrySchema),
     score: z.object({

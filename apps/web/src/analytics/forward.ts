@@ -9,7 +9,7 @@ export function forwardEvent(
     request,
     {
       url: `${apiUrl}/events`,
-      headers: callerHeaders,
+      headers: [...callerHeaders, 'origin'],
       fetchImpl,
       signal: AbortSignal.timeout(5_000),
     },
