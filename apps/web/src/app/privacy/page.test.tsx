@@ -45,7 +45,7 @@ describe('the privacy page', () => {
     );
     expect(items).toContain('Matchium (matchium.najafov.dev): answered a question');
     expect(part?.textContent).toContain(
-      `For each day I keep, for ${String(dailyTotalsMonths)} months, how many visits opened each demo, how many did each step and how long they stayed.`,
+      `For each day I keep, for ${String(dailyTotalsMonths)} months, how many visits clicked a link to each demo, opened it and from which kind of site they came, how many did each step and how long they stayed.`,
     );
   });
 

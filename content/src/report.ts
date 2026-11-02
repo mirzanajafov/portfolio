@@ -215,7 +215,6 @@ export const reportSchema = z.object({
 
 export type Report = z.infer<typeof reportSchema>;
 export type Totals = z.infer<typeof totalsSchema>;
-export type DemosSection = Report['demos'];
 export type Week = z.infer<typeof weekSchema>;
 export type Confidence = z.infer<typeof confidenceSchema>;
 export type Signal = z.infer<typeof signalSchema>;

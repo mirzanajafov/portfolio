@@ -15,6 +15,10 @@ export type DemoTotals = {
   activeSeconds: number[];
 };
 
+export function touched({ clicked, activeSeconds }: DemoTotals): boolean {
+  return clicked > 0 || activeSeconds.length > 0;
+}
+
 export function demoTotals(rows: readonly VisitRow[], { slug, live }: DemoSite): DemoTotals {
   const clickedIn = rows.filter(({ views }) =>
     views.some(({ clicks }) => clicks.some(({ href }) => href === live)),

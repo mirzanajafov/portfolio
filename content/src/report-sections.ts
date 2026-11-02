@@ -272,6 +272,9 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 
 function demos({ demos }: Report): ReportSection[] {
   const { visits, opened, didStep, demoOnly, list } = demos;
+  if (visits === 0 && demoOnly === 0) {
+    return [[line('Demos: none')]];
+  }
   const headline = line(
     `Demos: of ${counted(visits, 'site visit')}, ${String(opened)} opened a demo (${share(opened, visits)}) and ${String(didStep)} did a step in one (${share(didStep, visits)}). ${counted(demoOnly, 'more visit')} saw only a demo.`,
   );
@@ -285,7 +288,7 @@ function demos({ demos }: Report): ReportSection[] {
         [
           'Demo',
           'clicked',
-          'opened from the site',
+          'opened in a site visit',
           'clicked, not opened',
           'only the demo',
           'did a step',

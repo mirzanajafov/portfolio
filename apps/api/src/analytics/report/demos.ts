@@ -1,13 +1,16 @@
 import type { Content } from '@portfolio/content';
 import { demoSites } from '@portfolio/content/analytics';
 import type { Report } from '@portfolio/content/report';
-import { dayTotals } from '../day-totals.js';
-import { demoTotals } from '../demos.js';
+import type { DayTotals } from '../day-totals.js';
+import { demoTotals, touched } from '../demos.js';
 import { median } from '../statistics.js';
-import { inOrder, type VisitRow } from '../visits.js';
+import type { VisitRow } from '../visits.js';
 
-export function demosOf(rows: readonly VisitRow[], content: Content): Report['demos'] {
-  const { visits, openedDemo, didDemoStep } = dayTotals(rows.flatMap(inOrder));
+export function demosOf(
+  rows: readonly VisitRow[],
+  { visits, openedDemo, didDemoStep }: DayTotals,
+  content: Content,
+): Report['demos'] {
   return {
     visits,
     opened: openedDemo,
@@ -16,7 +19,7 @@ export function demosOf(rows: readonly VisitRow[], content: Content): Report['de
       .length,
     list: [...demoSites(content).values()].flatMap((site) => {
       const totals = demoTotals(rows, site);
-      if (totals.clicked === 0 && totals.activeSeconds.length === 0) {
+      if (!touched(totals)) {
         return [];
       }
       return [

@@ -32,7 +32,11 @@ export function firstReportedDay(now: Date, days: number): Date {
   return before < trend ? before : trend;
 }
 
-function startedBetween(visits: readonly Visit[], from: Date, to: Date): Visit[] {
+function startedBetween<T extends { startedAt: Date }>(
+  visits: readonly T[],
+  from: Date,
+  to: Date,
+): T[] {
   return visits.filter(({ startedAt }) => startedAt >= from && startedAt < to);
 }
 
@@ -266,10 +270,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    demos: demosOf(
-      rows.visits.filter(({ startedAt }) => startedAt >= from && startedAt < now),
-      content,
-    ),
+    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), content),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),

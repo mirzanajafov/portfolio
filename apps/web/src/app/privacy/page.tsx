@@ -111,9 +111,9 @@ export default function PrivacyPage() {
           application&apos;s visit. Everything above applies to the demos too: Global Privacy
           Control and Do Not Track record nothing, bots are only counted, and the records are
           deleted on the same schedule. For each day I keep, for {dailyTotalsMonths} months, how
-          many visits opened each demo, how many did each step and how long they stayed. The demos
-          are separate apps with their own data, such as a Matchium account, and this page covers
-          only what they send here.
+          many visits clicked a link to each demo, opened it and from which kind of site they came,
+          how many did each step and how long they stayed. The demos are separate apps with their
+          own data, such as a Matchium account, and this page covers only what they send here.
         </p>
       </Part>
 

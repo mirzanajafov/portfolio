@@ -1,7 +1,7 @@
 import type { DemoSite } from '@portfolio/content/analytics';
 import type { Source } from '@portfolio/content/report';
 import { dayTotals, type DayTotals } from './day-totals.js';
-import { demoTotals, type DemoTotals } from './demos.js';
+import { demoTotals, touched, type DemoTotals } from './demos.js';
 import { sourceOf } from './sources.js';
 import { rankedGroups } from './statistics.js';
 import type { Device } from './user-agent.js';
@@ -111,8 +111,6 @@ export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): R
     })),
     clicks: clicksOf(visits),
     applications: applicationsOf(visits),
-    demos: demos
-      .map((demo) => demoTotals(rows, demo))
-      .filter(({ clicked, activeSeconds }) => clicked > 0 || activeSeconds.length > 0),
+    demos: demos.map((demo) => demoTotals(rows, demo)).filter(touched),
   };
 }

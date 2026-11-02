@@ -89,7 +89,7 @@ describe('reportText', () => {
       'CV page views: 0',
       'CV PDF clicks from: none',
       'Link clicks: none',
-      'Demos: of 0 site visits, 0 opened a demo',
+      'Demos: none',
       'Ask: 0 questions, 0 refused',
       'Devices: none',
       'Browsers: none',

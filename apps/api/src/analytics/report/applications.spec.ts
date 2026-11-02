@@ -123,8 +123,10 @@ describe('applicationsOf', () => {
 
   it('lists the newest visits first, whatever order the rows came in', () => {
     const { list } = sectionOf([
-      aVisit([aView({ ref: 'memh', path: '/cv' })], { startedAt: hoursAgo(1) }),
-      aVisit([aView({ ref: 'memh' })], { startedAt: hoursAgo(5) }),
+      aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh', path: '/cv' })], {
+        startedAt: hoursAgo(1),
+      }),
+      aVisit([aView({ createdAt: hoursAgo(5), ref: 'memh' })], { startedAt: hoursAgo(5) }),
     ]);
     expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(1), hoursAgo(5)]);
   });
@@ -203,5 +205,20 @@ describe('applicationsOf', () => {
       },
       { demo: null, path: '/cv', seconds: 8, read: [], did: [] },
     ]);
+  });
+
+  it('starts a story at its first page, a demo page included, and counts time on a demo as interaction', () => {
+    const { list } = sectionOf([
+      aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh', activeSeconds: 0 })], {
+        demoViews: [
+          aDemoView({ createdAt: hoursAgo(2), referrerHost: 'github.com', activeSeconds: 90 }),
+        ],
+      }),
+    ]);
+    expect(list[0]?.visits[0]).toMatchObject({
+      at: hoursAgo(2),
+      from: 'github.com',
+      interacted: true,
+    });
   });
 });

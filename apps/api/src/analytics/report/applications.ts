@@ -16,9 +16,12 @@ type Asked = ReadonlyMap<string, readonly string[]>;
 
 type Demos = ReadonlyMap<string, DemoSite>;
 
-function pagesOf(visit: Visit, demos: Demos): VisitStory['pages'] {
-  const onTheSite = visit.views.map(({ createdAt, path, activeSeconds, blocks }) => ({
+type StoryPage = { at: Date; from: string | null; page: VisitStory['pages'][number] };
+
+function pagesOf(visit: Visit, demos: Demos): StoryPage[] {
+  const onTheSite = visit.views.map(({ createdAt, referrerHost, path, activeSeconds, blocks }) => ({
     at: createdAt,
+    from: referrerHost,
     page: {
       demo: null,
       path,
@@ -29,22 +32,23 @@ function pagesOf(visit: Visit, demos: Demos): VisitStory['pages'] {
       did: [],
     },
   }));
-  const onDemos = visit.demoViews.map(({ createdAt, demo, path, activeSeconds, actions }) => {
-    const site = demos.get(demo);
-    return {
-      at: createdAt,
-      page: {
-        demo: site?.host ?? demo,
-        path,
-        seconds: activeSeconds,
-        read: [],
-        did: actions.map((action) => site?.actions[action] ?? action),
-      },
-    };
-  });
-  return [...onTheSite, ...onDemos]
-    .toSorted((a, b) => a.at.getTime() - b.at.getTime())
-    .map(({ page }) => page);
+  const onDemos = visit.demoViews.map(
+    ({ createdAt, referrerHost, demo, path, activeSeconds, actions }) => {
+      const site = demos.get(demo);
+      return {
+        at: createdAt,
+        from: referrerHost,
+        page: {
+          demo: site?.host ?? demo,
+          path,
+          seconds: activeSeconds,
+          read: [],
+          did: actions.map((action) => site?.actions[action] ?? action),
+        },
+      };
+    },
+  );
+  return [...onTheSite, ...onDemos].toSorted((a, b) => a.at.getTime() - b.at.getTime());
 }
 
 function storyOf(
@@ -57,13 +61,18 @@ function storyOf(
     clicks.map(({ href }) => labels.get(href) ?? href),
   );
   const questions = [...(asked.get(visit.visitor) ?? [])];
+  const pages = pagesOf(visit, demos);
+  const [first] = pages;
+  const usedADemo = visit.demoViews.some(
+    ({ activeSeconds, actions }) => activeSeconds > 0 || actions.length > 0,
+  );
   return {
-    at: visit.startedAt,
-    from: visit.landing.referrerHost,
-    pages: pagesOf(visit, demos),
+    at: first?.at ?? visit.startedAt,
+    from: first?.from ?? visit.landing.referrerHost,
+    pages: pages.map(({ page }) => page),
     clicks,
     questions,
-    interacted: secondsOf(visit) > 0 || clicks.length > 0 || questions.length > 0,
+    interacted: secondsOf(visit) > 0 || clicks.length > 0 || questions.length > 0 || usedADemo,
   };
 }
 
