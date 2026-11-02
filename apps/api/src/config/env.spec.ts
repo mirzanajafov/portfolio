@@ -25,6 +25,10 @@ describe('parseEnv', () => {
     );
   });
 
+  it('refuses a site origin that is not an http or https URL, whose origin would be "null"', () => {
+    expect(() => parseEnv({ ...base, SITE_ORIGIN: 'localhost:3200' })).toThrow(/SITE_ORIGIN/);
+  });
+
   it('names every missing or broken variable at once, so a bad deploy fails on boot', () => {
     expect(() => parseEnv({ DATABASE_URL: 'mysql://x', ASK_PER_DAY: '-1' })).toThrow(
       /DATABASE_URL[\s\S]*CLIENT_HASH_SECRET[\s\S]*ASK_PER_DAY/,

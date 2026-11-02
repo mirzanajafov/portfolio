@@ -21,6 +21,8 @@ const nothingWritten = {
   limits: [],
 };
 
+const siteOrigin = 'http://localhost:3200';
+
 const fromElsewhere = { Origin: 'https://example.com' };
 
 const aView = (overrides: Record<string, unknown> = {}) => ({
@@ -46,7 +48,7 @@ describe('POST /events against a real database', () => {
   });
 
   beforeAll(async () => {
-    ({ app, clock, prisma } = await startApp());
+    ({ app, clock, prisma } = await startApp({ SITE_ORIGIN: siteOrigin }));
     secret = app.get<Env>(ENV).CLIENT_HASH_SECRET;
   });
 
@@ -201,7 +203,7 @@ describe('POST /events against a real database', () => {
   });
 
   it("records events from the site's own pages, with or without an Origin", async () => {
-    await sendEvent(app, aView(), { headers: { Origin: 'https://najafov.dev' } }).expect(204);
+    await sendEvent(app, aView(), { headers: { Origin: siteOrigin } }).expect(204);
     await sendEvent(app, aView()).expect(204);
 
     const { views, dropped } = await everything();
@@ -213,7 +215,7 @@ describe('POST /events against a real database', () => {
     await sendEvent(app, aView(), { headers: fromElsewhere }).expect(204);
     await sendEvent(app, aView(), { headers: { Origin: 'null' } }).expect(204);
     await sendEvent(app, aView(), {
-      headers: { Origin: 'https://najafov.dev.example.com' },
+      headers: { Origin: 'http://localhost:32000' },
     }).expect(204);
 
     const { visits, views, limits, dropped } = await everything();

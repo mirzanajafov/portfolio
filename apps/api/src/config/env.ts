@@ -13,7 +13,7 @@ const envSchema = z
     GEO_DIR: z.string().optional(),
     WEB_URL: z.url().default('http://portfolio-web:3200'),
     SITE_ORIGIN: z
-      .url()
+      .url({ protocol: /^https?$/ })
       .default(siteUrl)
       .transform((url) => new URL(url).origin),
     CV_RENDER_TOKEN: z.string().min(32).optional(),
