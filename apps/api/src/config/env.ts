@@ -14,8 +14,11 @@ const envSchema = z
     WEB_URL: z.url().default('http://portfolio-web:3200'),
     SITE_ORIGIN: z
       .url({ protocol: /^https?$/ })
-      .default(siteUrl)
-      .transform((url) => new URL(url).origin),
+      .refine(
+        (url) => new URL(url).origin === url,
+        'must be an origin, such as https://najafov.dev',
+      )
+      .default(new URL(siteUrl).origin),
     CV_RENDER_TOKEN: z.string().min(32).optional(),
     ASK_PER_CLIENT_10_MIN: positive(20),
     ASK_PER_CLIENT_DAY: positive(100),
