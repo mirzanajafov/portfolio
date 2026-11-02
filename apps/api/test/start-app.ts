@@ -18,6 +18,8 @@ const placeLookup = {
   placeOf: (ip: string) => knownPlaces.get(ip) ?? nowhere,
 };
 
+export const siteOrigin = 'http://localhost:3200';
+
 export class FixedClock extends ClockService {
   current = new Date('2026-10-02T12:00:00Z');
   override now(): Date {
@@ -29,7 +31,7 @@ export async function startApp(overrides: Record<string, string> = {}, engine?: 
   const clock = new FixedClock();
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV)
-    .useValue(parseEnv({ ...process.env, ...overrides }))
+    .useValue(parseEnv({ ...process.env, SITE_ORIGIN: siteOrigin, ...overrides }))
     .overrideProvider(ClockService)
     .useValue(clock)
     .overrideProvider(CONTENT)

@@ -1,4 +1,13 @@
-import { Body, Controller, HttpException, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
@@ -6,6 +15,7 @@ import { z } from 'zod';
 import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { callerOf, visitorAgent } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
+import { SiteOriginGuard } from '../common/site-origin.guard.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
@@ -28,6 +38,7 @@ export class AskController {
   ) {}
 
   @Post()
+  @UseGuards(SiteOriginGuard)
   async stream(
     @Body(new ZodPipe(askRequestSchema)) { question }: AskRequest,
     @Req() req: Request,

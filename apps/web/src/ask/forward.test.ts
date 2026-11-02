@@ -5,7 +5,7 @@ const ask = (body: string, headers: Record<string, string> = {}) =>
   new Request('http://site/api/ask', { method: 'POST', body, headers });
 
 describe('forwardAsk', () => {
-  it('passes the question and the caller address to the API, stops when the visitor does, and streams the answer back', async () => {
+  it('passes the question, the caller address and the origin to the API, stops when the visitor does, and streams the answer back', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('data: {}\n\n', { status: 200 }),
     );
@@ -30,6 +30,7 @@ describe('forwardAsk', () => {
           'user-agent': 'Chrome',
           'sec-gpc': '1',
           dnt: '1',
+          origin: 'https://najafov.dev',
         },
       }),
     );

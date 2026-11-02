@@ -9,15 +9,11 @@ function post(body: BodyInit, headers: Record<string, string> = {}) {
 }
 
 function forward(request: Request, fetchImpl: typeof fetch) {
-  return forwardToApi(
-    request,
-    { url: 'http://api/x', headers: ['x-forwarded-for'], fetchImpl },
-    ok,
-  );
+  return forwardToApi(request, { url: 'http://api/x', fetchImpl }, ok);
 }
 
 describe('forwardToApi', () => {
-  it('posts the body as JSON with only the headers it was told to pass, and answers with the caller', async () => {
+  it('posts the body as JSON with only the caller headers, and answers with the caller', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const response = await forward(
       post('{"a":1}', { 'x-forwarded-for': '203.0.113.7', cookie: 'secret=1' }),
@@ -63,12 +59,14 @@ describe('forwardToApi', () => {
     expect((await forward(post('{}'), fetchImpl)).status).toBe(503);
   });
 
-  it('passes a refusal and a rate limit through, with only the time to wait', async () => {
+  it('passes a bad request, a forbidden one and a rate limit through, with only the time to wait', async () => {
     const refused = vi.fn<typeof fetch>(async () => new Response('{"m":"x"}', { status: 400 }));
+    const forbidden = vi.fn<typeof fetch>(async () => new Response('{"m":"x"}', { status: 403 }));
     const limited = vi.fn<typeof fetch>(
       async () => new Response('{}', { status: 429, headers: { 'retry-after': '420' } }),
     );
     expect((await forward(post('{}'), refused)).status).toBe(400);
+    expect((await forward(post('{}'), forbidden)).status).toBe(403);
     const response = await forward(post('{}'), limited);
     expect(response.status).toBe(429);
     expect(response.headers.get('retry-after')).toBe('420');

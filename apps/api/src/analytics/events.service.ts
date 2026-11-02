@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { visitorAgent, type Caller } from '../common/caller.js';
+import { fromSite, visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -22,16 +22,12 @@ export class EventsService {
     @Inject(PLACE_LOOKUP) private readonly places: PlaceLookup,
   ) {}
 
-  async accept(
-    event: AnalyticsEvent,
-    caller: Caller,
-    origin: string | undefined,
-  ): Promise<Outcome> {
+  async accept(event: AnalyticsEvent, caller: Caller): Promise<Outcome> {
     if (caller.optedOut) {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (origin !== undefined && origin !== this.env.SITE_ORIGIN) {
+    if (!fromSite(caller.origin, this.env.SITE_ORIGIN)) {
       await this.visits.countDropped('origin', now);
       return { kind: 'accepted' };
     }

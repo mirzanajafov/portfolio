@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -22,11 +21,10 @@ export class EventsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async record(
     @Body(EventPipe) event: AnalyticsEvent,
-    @Headers('origin') origin: string | undefined,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    const outcome = await this.events.accept(event, callerOf(req), origin);
+    const outcome = await this.events.accept(event, callerOf(req));
     if (outcome.kind === 'limited') {
       res.set('Retry-After', String(outcome.retryAfterSeconds));
       throw new HttpException(

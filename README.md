@@ -51,7 +51,7 @@ FiveFamilies started at 6 of 8. Its first question, asked the way I'd put it (do
 
 A keyword matcher drifts like that every time the corpus grows, and it's the clearest argument I have for the model that will replace it, behind the same gate.
 
-The browser never talks to the API. It posts to `/api/ask` on the Next server, which forwards the question and streams the answer back as server-sent events.
+The browser never talks to the API. It posts to `/api/ask` on the Next server, which forwards the question and streams the answer back as server-sent events. A question posted from a page on another site, which the browser's `Origin` header gives away, gets a 403 before it touches a limit or the matcher, so a page elsewhere can't use up the day's questions through its visitors' browsers.
 
 Questions are rate limited per caller (20 per 10 minutes, 100 a day) and overall (2,000 a day, which is mostly there for when a paid model sits behind it). The counters live in Postgres, one `INSERT ... ON CONFLICT DO UPDATE ... RETURNING count` per limit, so any number of API instances agree without Redis. A caller is its network, the IPv4 address or the /64 of an IPv6 one, keyed with the same daily key as visits (below), so the limits work within a day, a stored key can't follow anyone from one day to the next, and the address itself is never written down. It used to be an HMAC under the secret and the date alone, which the secret turns back into an address by trying all 2^32 of them, about 8 minutes on my laptop's 16 threads, so I moved Ask onto the daily key once visits had one. The API only believes `X-Forwarded-For` from proxies it trusts by subnet, and a test checks that a caller can't dodge the limit by inventing addresses.
 

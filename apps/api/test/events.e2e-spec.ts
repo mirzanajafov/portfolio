@@ -7,7 +7,7 @@ import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 import { address, chrome, sendEvent } from './send-event.js';
-import { FixedClock, knownPlaces, startApp } from './start-app.js';
+import { FixedClock, knownPlaces, siteOrigin, startApp } from './start-app.js';
 
 const headlessChrome =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/130.0.0.0 Safari/537.36';
@@ -20,8 +20,6 @@ const nothingWritten = {
   dropped: [],
   limits: [],
 };
-
-const siteOrigin = 'http://localhost:3200';
 
 const fromElsewhere = { Origin: 'https://example.com' };
 
@@ -48,7 +46,7 @@ describe('POST /events against a real database', () => {
   });
 
   beforeAll(async () => {
-    ({ app, clock, prisma } = await startApp({ SITE_ORIGIN: siteOrigin }));
+    ({ app, clock, prisma } = await startApp());
     secret = app.get<Env>(ENV).CLIENT_HASH_SECRET;
   });
 
