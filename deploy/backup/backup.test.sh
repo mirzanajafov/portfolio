@@ -88,6 +88,8 @@ VALUES (current_date - 31, '/', 'desktop', 1, 1, 1, 0, '{}');
 INSERT INTO "DailySource" ("day", "source", "host", "visits") VALUES (current_date - 31, 'direct', '', 1);
 INSERT INTO "DailyCountry" ("day", "country", "visits") VALUES (current_date - 31, 'AZ', 1);
 INSERT INTO "DailyClick" ("day", "path", "href", "clicks") VALUES (current_date - 31, '/', 'https://github.com', 1);
+INSERT INTO "DailyDemo" ("day", "demo", "clicked", "fromSite", "clickedNotOpened", "demoOnly", "didStep", "steps", "activeSeconds")
+VALUES (current_date - 31, 'tuner', 1, 1, 0, '[]', 0, '[]', '{10}');
 INSERT INTO "AdminLoginToken" ("hash", "expiresAt") VALUES (decode('01', 'hex'), now());
 INSERT INTO "AdminSession" ("hash", "expiresAt") VALUES (decode('02', 'hex'), now());
 SQL

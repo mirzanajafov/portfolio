@@ -1,5 +1,6 @@
+import type { DemoSite } from '@portfolio/content/analytics';
 import type { ApplicationRow } from './report/rows.js';
-import type { ViewRow, VisitRow } from './visits.js';
+import type { DemoViewRow, ViewRow, VisitRow } from './visits.js';
 
 export const now = new Date('2026-10-30T12:00:00Z');
 
@@ -30,6 +31,29 @@ export function aView(overrides: Partial<ViewRow> = {}): ViewRow {
   };
 }
 
+export function aDemoSite(overrides: Partial<DemoSite> = {}): DemoSite {
+  return {
+    slug: 'tuner',
+    name: 'Tuner',
+    live: 'https://tuner.najafov.dev',
+    host: 'tuner.najafov.dev',
+    actions: { answered: 'answered a question' },
+    ...overrides,
+  };
+}
+
+export function aDemoView(overrides: Partial<DemoViewRow> = {}): DemoViewRow {
+  return {
+    demo: 'tuner',
+    createdAt: hoursAgo(1),
+    path: '/',
+    referrerHost: 'najafov.dev',
+    activeSeconds: 20,
+    actions: [],
+    ...overrides,
+  };
+}
+
 export function aVisit(
   views: ViewRow[] = [aView()],
   overrides: Partial<Omit<VisitRow, 'views'>> = {},
@@ -43,6 +67,7 @@ export function aVisit(
     city: 'Baku',
     network: null,
     views,
+    demoViews: [],
     ...overrides,
   };
 }

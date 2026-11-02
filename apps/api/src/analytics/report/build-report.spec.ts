@@ -2,14 +2,20 @@ import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import type { DayTotals } from '../day-totals.js';
 import { utcDay } from '../days.js';
-import { anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
+import { aDemoView, anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
 import type { ReportRows } from './rows.js';
 
 const content = await contentOf({
   projects: [
-    aProject({ slug: 'tuner', name: 'Tuner', caseStudy: aCaseStudy() }),
+    aProject({
+      slug: 'tuner',
+      name: 'Tuner',
+      caseStudy: aCaseStudy(),
+      links: { live: 'https://tuner.najafov.dev', repo: 'https://github.com/someone/tuner' },
+      analytics: { actions: { answered: 'answered a question', liked: 'liked a match' } },
+    }),
     aProject({ slug: 'courier', name: 'Courier', order: 2 }),
   ],
 });
@@ -54,6 +60,8 @@ function rolledDays(from: string, count: number): (DayTotals & { day: Date })[] 
     phoneVisits: 0,
     quickExits: 0,
     visitSeconds: [10],
+    openedDemo: 0,
+    didDemoStep: 0,
   }));
 }
 
@@ -81,6 +89,8 @@ describe('buildReport', () => {
       medianVisitSeconds: 10,
       phoneVisits: 0,
       quickExits: 0,
+      openedDemo: 0,
+      didDemoStep: 0,
     });
   });
 
@@ -131,6 +141,8 @@ describe('buildReport', () => {
       medianVisitSeconds: 12,
       phoneVisits: 1,
       quickExits: 1,
+      openedDemo: 0,
+      didDemoStep: 0,
     });
   });
 
@@ -388,5 +400,57 @@ describe('buildReport', () => {
       { day: '2026-10-29', bot: 3, limited: 1, origin: 0 },
       { day: '2026-10-30', bot: 2, limited: 0, origin: 4 },
     ]);
+  });
+
+  describe('the demos', () => {
+    const clickedTuner = aView({ clicks: [{ href: 'https://tuner.najafov.dev' }] });
+
+    it('counts the site visits that opened a demo and did a step in one, and the visits that saw only a demo', () => {
+      const { demos, overview } = reportOf([
+        aVisit([clickedTuner], { demoViews: [aDemoView({ actions: ['answered'] })] }),
+        aVisit([clickedTuner], { demoViews: [aDemoView()] }),
+        aVisit([aView()]),
+        aVisit([], { demoViews: [aDemoView({ referrerHost: 'github.com' })] }),
+      ]);
+      expect(demos).toMatchObject({ visits: 3, opened: 2, didStep: 1, demoOnly: 1 });
+      expect(overview.today).toMatchObject({ visits: 3, openedDemo: 2, didDemoStep: 1 });
+    });
+
+    it('lists each demo that was clicked or opened, with every step it lists in its own order', () => {
+      const { demos } = reportOf([
+        aVisit([clickedTuner], {
+          demoViews: [aDemoView({ activeSeconds: 40, actions: ['answered'] })],
+        }),
+        aVisit([clickedTuner]),
+      ]);
+      expect(demos.list).toEqual([
+        {
+          name: 'Tuner',
+          host: 'tuner.najafov.dev',
+          clicked: 2,
+          fromSite: 1,
+          clickedNotOpened: 1,
+          demoOnly: [],
+          didStep: 1,
+          steps: [
+            { label: 'answered a question', visits: 1 },
+            { label: 'liked a match', visits: 0 },
+          ],
+          medianSeconds: 40,
+        },
+      ]);
+    });
+
+    it('lists no demo nobody clicked or opened', () => {
+      expect(reportOf([aVisit([aView()])]).demos.list).toEqual([]);
+    });
+
+    it('does not take a visit that went on to a demo for a quick exit', () => {
+      const { overview } = reportOf([
+        aVisit([aView({ activeSeconds: 3 })], { demoViews: [aDemoView()] }),
+        aVisit([aView({ activeSeconds: 3 })]),
+      ]);
+      expect(overview.today.quickExits).toBe(1);
+    });
   });
 });

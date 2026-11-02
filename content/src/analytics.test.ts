@@ -58,6 +58,7 @@ describe('demoSites', () => {
           {
             slug: 'alpha',
             name: 'Alpha',
+            live: 'https://alpha.najafov.dev/start',
             host: 'alpha.najafov.dev',
             actions: { 'ran-it': 'ran it' },
           },

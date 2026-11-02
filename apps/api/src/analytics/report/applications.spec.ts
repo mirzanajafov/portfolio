@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { anApplication, aView, aVisit, hoursAgo } from '../testing.js';
+import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo } from '../testing.js';
 import { inOrder, type VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 const labels = new Map([['/cv.pdf', 'CV PDF']]);
+
+const demos = new Map([['tuner', aDemoSite()]]);
 
 function sectionOf(
   rows: VisitRow[],
@@ -12,7 +14,7 @@ function sectionOf(
   rolled: RolledApplicationDay[] = [],
   asked = new Map<string, string[]>(),
 ) {
-  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels, asked);
+  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels, asked, demos);
 }
 
 describe('applicationsOf', () => {
@@ -42,7 +44,7 @@ describe('applicationsOf', () => {
       {
         at: hoursAgo(1),
         from: null,
-        pages: [{ path: '/', seconds: 0, read: [] }],
+        pages: [{ demo: null, path: '/', seconds: 0, read: [], did: [] }],
         clicks: [],
         questions: [],
         interacted: false,
@@ -51,8 +53,8 @@ describe('applicationsOf', () => {
         at: hoursAgo(3),
         from: 'www.linkedin.com',
         pages: [
-          { path: '/', seconds: 40, read: ['tuner'] },
-          { path: '/cv', seconds: 8, read: [] },
+          { demo: null, path: '/', seconds: 40, read: ['tuner'], did: [] },
+          { demo: null, path: '/cv', seconds: 8, read: [], did: [] },
         ],
         clicks: ['CV PDF'],
         questions: [],
@@ -174,5 +176,32 @@ describe('applicationsOf', () => {
       ],
     );
     expect(list.map(({ company }) => company)).toEqual(['Xsolla', 'Old']);
+  });
+
+  it("puts a visit's demo pages in its story, in time order with the site's, by host and with the steps done there", () => {
+    const { list } = sectionOf([
+      aVisit(
+        [
+          aView({ createdAt: hoursAgo(3), ref: 'memh', activeSeconds: 40 }),
+          aView({ createdAt: hoursAgo(1), path: '/cv', activeSeconds: 8 }),
+        ],
+        {
+          demoViews: [
+            aDemoView({ createdAt: hoursAgo(2), activeSeconds: 140, actions: ['answered'] }),
+          ],
+        },
+      ),
+    ]);
+    expect(list[0]?.visits[0]?.pages).toEqual([
+      { demo: null, path: '/', seconds: 40, read: [], did: [] },
+      {
+        demo: 'tuner.najafov.dev',
+        path: '/',
+        seconds: 140,
+        read: [],
+        did: ['answered a question'],
+      },
+      { demo: null, path: '/cv', seconds: 8, read: [], did: [] },
+    ]);
   });
 });

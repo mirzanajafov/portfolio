@@ -39,7 +39,7 @@ describe('the visitor report against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication", "Application" CASCADE`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "AskLog", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo", "DailyApplication", "Application" CASCADE`;
   });
 
   it('reports a scripted visit the way it happened, from events sent to the API, in a shape the site reads back whole', async () => {
@@ -102,9 +102,19 @@ describe('the visitor report against a real database', () => {
       medianVisitSeconds: null,
       phoneVisits: 0,
       quickExits: 0,
+      openedDemo: 0,
+      didDemoStep: 0,
     };
     expect(report.overview).toEqual({
-      today: { visits: 2, pageViews: 3, medianVisitSeconds: 0, phoneVisits: 1, quickExits: 1 },
+      today: {
+        visits: 2,
+        pageViews: 3,
+        medianVisitSeconds: 0,
+        phoneVisits: 1,
+        quickExits: 1,
+        openedDemo: 0,
+        didDemoStep: 0,
+      },
       current: none,
       previous: none,
     });
@@ -194,6 +204,8 @@ describe('the visitor report against a real database', () => {
       medianVisitSeconds: week?.medianVisitSeconds,
       phoneVisits: week?.phoneVisits,
       quickExits: week?.quickExits,
+      openedDemo: week?.openedDemo,
+      didDemoStep: week?.didDemoStep,
     });
     expect(totals(raw)).toEqual({
       visits: 2,
@@ -201,6 +213,8 @@ describe('the visitor report against a real database', () => {
       medianVisitSeconds: 0,
       phoneVisits: 1,
       quickExits: 1,
+      openedDemo: 1,
+      didDemoStep: 0,
     });
     expect(totals(rolled)).toEqual(totals(raw));
   });

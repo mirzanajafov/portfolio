@@ -1,5 +1,7 @@
+import type { DemoSite } from '@portfolio/content/analytics';
 import type { Source } from '@portfolio/content/report';
 import { dayTotals, type DayTotals } from './day-totals.js';
+import { demoTotals, type DemoTotals } from './demos.js';
 import { sourceOf } from './sources.js';
 import { rankedGroups } from './statistics.js';
 import type { Device } from './user-agent.js';
@@ -27,6 +29,7 @@ export type RolledDay = {
   countries: { country: string; visits: number }[];
   clicks: { path: string; href: string; clicks: number }[];
   applications: { code: string; visits: number; views: number }[];
+  demos: DemoTotals[];
 };
 
 function blockSecondsOf(views: readonly ViewRow[]): Record<string, number[]> {
@@ -96,7 +99,7 @@ function applicationsOf(visits: readonly Visit[]): RolledDay['applications'] {
   }));
 }
 
-export function rollUp(rows: readonly VisitRow[]): RolledDay {
+export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): RolledDay {
   const visits = rows.flatMap(inOrder);
   return {
     totals: dayTotals(visits),
@@ -108,5 +111,8 @@ export function rollUp(rows: readonly VisitRow[]): RolledDay {
     })),
     clicks: clicksOf(visits),
     applications: applicationsOf(visits),
+    demos: demos
+      .map((demo) => demoTotals(rows, demo))
+      .filter(({ clicked, activeSeconds }) => clicked > 0 || activeSeconds.length > 0),
   };
 }

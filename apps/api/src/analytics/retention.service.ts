@@ -1,5 +1,14 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
+import type { Content } from '@portfolio/content';
+import { demoSites, type DemoSite } from '@portfolio/content/analytics';
 import { ClockService } from '../common/clock.service.js';
+import { CONTENT } from '../content.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { daysAfter } from './days.js';
@@ -13,11 +22,15 @@ const cleanupEveryMs = 60 * 60 * 1000;
 export class RetentionService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(RetentionService.name);
   private stop?: () => void;
+  private readonly demos: DemoSite[];
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: ClockService,
-  ) {}
+    @Inject(CONTENT) content: Content,
+  ) {
+    this.demos = [...demoSites(content).values()];
+  }
 
   onModuleInit(): void {
     this.stop = runEvery(
@@ -48,8 +61,9 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
   private async rollUpDay(day: Date): Promise<void> {
     const during = { startedAt: { gte: day, lt: daysAfter(day, 1) } };
     await this.prisma.$transaction(async (tx) => {
-      const { totals, pages, sources, countries, clicks, applications } = rollUp(
+      const { totals, pages, sources, countries, clicks, applications, demos } = rollUp(
         await findVisits(tx, during),
+        this.demos,
       );
       const registered = await tx.application.findMany({
         where: { code: { in: applications.map(({ code }) => code) } },
@@ -63,6 +77,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
         data: countries.map((country) => ({ day, ...country })),
       });
       await tx.dailyClick.createMany({ data: clicks.map((click) => ({ day, ...click })) });
+      await tx.dailyDemo.createMany({ data: demos.map((demo) => ({ day, ...demo })) });
       await tx.dailyApplication.createMany({
         data: applications.flatMap(({ code, visits, views }) => {
           const applicationId = idOf.get(code);
@@ -81,6 +96,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       this.prisma.dailySource.deleteMany(old),
       this.prisma.dailyCountry.deleteMany(old),
       this.prisma.dailyClick.deleteMany(old),
+      this.prisma.dailyDemo.deleteMany(old),
       this.prisma.droppedEvents.deleteMany(old),
     ]);
   }

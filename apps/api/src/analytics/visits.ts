@@ -17,6 +17,15 @@ export type ViewRow = {
   errors: { message: string; source: string }[];
 };
 
+export type DemoViewRow = {
+  demo: string;
+  createdAt: Date;
+  path: string;
+  referrerHost: string | null;
+  activeSeconds: number;
+  actions: string[];
+};
+
 export type VisitRow = {
   visitor: string;
   startedAt: Date;
@@ -26,6 +35,7 @@ export type VisitRow = {
   city: string | null;
   network: string | null;
   views: ViewRow[];
+  demoViews: DemoViewRow[];
 };
 
 export type Visit = VisitRow & {
@@ -54,7 +64,9 @@ export function secondsOf({ views }: Visit): number {
 }
 
 export function isQuickExit(visit: Visit): boolean {
-  return visit.pages.length === 1 && secondsOf(visit) < quickExitSeconds;
+  return (
+    visit.pages.length === 1 && secondsOf(visit) < quickExitSeconds && visit.demoViews.length === 0
+  );
 }
 
 export function codeOf(visit: Visit): string | null {

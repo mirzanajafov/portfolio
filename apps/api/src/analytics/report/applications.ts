@@ -1,3 +1,4 @@
+import type { DemoSite } from '@portfolio/content/analytics';
 import {
   readSeconds,
   type GuessedVisit,
@@ -13,7 +14,45 @@ import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 type Asked = ReadonlyMap<string, readonly string[]>;
 
-function storyOf(visit: Visit, labels: ReadonlyMap<string, string>, asked: Asked): VisitStory {
+type Demos = ReadonlyMap<string, DemoSite>;
+
+function pagesOf(visit: Visit, demos: Demos): VisitStory['pages'] {
+  const onTheSite = visit.views.map(({ createdAt, path, activeSeconds, blocks }) => ({
+    at: createdAt,
+    page: {
+      demo: null,
+      path,
+      seconds: activeSeconds,
+      read: Object.entries(blocks)
+        .filter(([, seconds]) => seconds >= readSeconds)
+        .map(([block]) => block),
+      did: [],
+    },
+  }));
+  const onDemos = visit.demoViews.map(({ createdAt, demo, path, activeSeconds, actions }) => {
+    const site = demos.get(demo);
+    return {
+      at: createdAt,
+      page: {
+        demo: site?.host ?? demo,
+        path,
+        seconds: activeSeconds,
+        read: [],
+        did: actions.map((action) => site?.actions[action] ?? action),
+      },
+    };
+  });
+  return [...onTheSite, ...onDemos]
+    .toSorted((a, b) => a.at.getTime() - b.at.getTime())
+    .map(({ page }) => page);
+}
+
+function storyOf(
+  visit: Visit,
+  labels: ReadonlyMap<string, string>,
+  asked: Asked,
+  demos: Demos,
+): VisitStory {
   const clicks = visit.views.flatMap(({ clicks }) =>
     clicks.map(({ href }) => labels.get(href) ?? href),
   );
@@ -21,13 +60,7 @@ function storyOf(visit: Visit, labels: ReadonlyMap<string, string>, asked: Asked
   return {
     at: visit.startedAt,
     from: visit.landing.referrerHost,
-    pages: visit.views.map(({ path, activeSeconds, blocks }) => ({
-      path,
-      seconds: activeSeconds,
-      read: Object.entries(blocks)
-        .filter(([, seconds]) => seconds >= readSeconds)
-        .map(([block]) => block),
-    })),
+    pages: pagesOf(visit, demos),
     clicks,
     questions,
     interacted: secondsOf(visit) > 0 || clicks.length > 0 || questions.length > 0,
@@ -68,6 +101,7 @@ export function applicationsOf(
   rolled: readonly RolledApplicationDay[],
   labels: ReadonlyMap<string, string>,
   asked: Asked,
+  demos: Demos,
 ): Report['applications'] {
   const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
@@ -89,7 +123,7 @@ export function applicationsOf(
     }));
     for (const { application, signals, daysAfter } of guessed.candidates) {
       const entry = {
-        ...storyOf(visit, labels, asked),
+        ...storyOf(visit, labels, asked, demos),
         confidence: guessed.confidence,
         candidates,
         signals,
@@ -122,7 +156,7 @@ export function applicationsOf(
         appliedOn: dayOf(application.appliedOn),
         visits: coded
           .filter((each) => each.application.id === application.id)
-          .map(({ visit }) => storyOf(visit, labels, asked)),
+          .map(({ visit }) => storyOf(visit, labels, asked, demos)),
         days: rolled
           .filter(({ applicationId }) => applicationId === application.id)
           .toSorted((a, b) => b.day.getTime() - a.day.getTime())

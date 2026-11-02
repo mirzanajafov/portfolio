@@ -122,6 +122,8 @@ function totalsColumn(totals: Totals): string[] {
     optional(totals.medianVisitSeconds),
     share(totals.phoneVisits, totals.visits),
     String(totals.quickExits),
+    String(totals.openedDemo),
+    String(totals.didDemoStep),
   ];
 }
 
@@ -141,6 +143,8 @@ function overview({ period, overview: { today, current, previous } }: Report): R
     'median seconds a visit',
     'on a phone',
     `one page under ${String(quickExitSeconds)} s`,
+    'opened a demo',
+    'did a step in one',
   ];
   const days = counted(period.days, 'day');
   const columns: [string, Totals][] = [
@@ -169,12 +173,13 @@ function overview({ period, overview: { today, current, previous } }: Report): R
 function weeks({ weeks }: Report): ReportSection {
   return [
     table([
-      ['Weeks from Monday, UTC', 'visits', 'page views', 'median s'],
+      ['Weeks from Monday, UTC', 'visits', 'page views', 'median s', 'opened a demo'],
       ...weeks.map((week) => [
         `${week.start}${week.partial ? '*' : ''}`,
         String(week.visits),
         String(week.pageViews),
         optional(week.medianVisitSeconds),
+        String(week.openedDemo),
       ]),
     ]),
     line('* some days of the week were never collected or have not come yet'),
@@ -262,6 +267,57 @@ function links({ links }: Report, all: boolean): ReportSection[] {
       links.outbound.map(({ label, clicks }) => [label, String(clicks)]),
       all,
     ),
+  ];
+}
+
+function demos({ demos }: Report): ReportSection[] {
+  const { visits, opened, didStep, demoOnly, list } = demos;
+  const headline = line(
+    `Demos: of ${counted(visits, 'site visit')}, ${String(opened)} opened a demo (${share(opened, visits)}) and ${String(didStep)} did a step in one (${share(didStep, visits)}). ${counted(demoOnly, 'more visit')} saw only a demo.`,
+  );
+  if (list.length === 0) {
+    return [[headline]];
+  }
+  return [
+    [
+      headline,
+      table([
+        [
+          'Demo',
+          'clicked',
+          'opened from the site',
+          'clicked, not opened',
+          'only the demo',
+          'did a step',
+          'median s',
+        ],
+        ...list.map((demo) => [
+          demo.name,
+          String(demo.clicked),
+          String(demo.fromSite),
+          String(demo.clickedNotOpened),
+          String(demo.demoOnly.reduce((total, { visits: count }) => total + count, 0)),
+          String(demo.didStep),
+          optional(demo.medianSeconds),
+        ]),
+      ]),
+      ...list.flatMap(({ name, steps, demoOnly: arrivals }) => [
+        ...(steps.length > 0
+          ? [
+              item(
+                `${name} steps: ${steps.map(({ label, visits: count }) => `${label} ${String(count)}`).join(', ')}`,
+              ),
+            ]
+          : []),
+        ...(arrivals.length > 0
+          ? [
+              item(
+                `${name} only the demo, from: ${arrivals.map(({ source, visits: count }) => `${sourceNames[source]} ${String(count)}`).join(', ')}`,
+              ),
+            ]
+          : []),
+      ]),
+    ],
   ];
 }
 
@@ -370,10 +426,10 @@ function storyText(
 ): string {
   const asked = shownOf(questions, all, questionsInStory);
   const unshown = questions.length - asked.length;
-  const read = pages.map(
-    ({ path, seconds, read }) =>
-      `${path} ${String(seconds)} s${read.length > 0 ? ` (read ${read.join(', ')})` : ''}`,
-  );
+  const read = pages.map(({ demo, path, seconds, read, did }) => {
+    const notes = [...(read.length > 0 ? [`read ${read.join(', ')}`] : []), ...did];
+    return `${demo ?? ''}${path} ${String(seconds)} s${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`;
+  });
   return [
     `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
     ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
@@ -504,6 +560,7 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     ...traffic(report, all),
     ...reading(report),
     ...links(report, all),
+    ...demos(report),
     ask(report),
     ...audience(report, all),
     ...quality(report, all),

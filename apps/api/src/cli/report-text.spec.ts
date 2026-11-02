@@ -6,7 +6,7 @@ import { reportText } from './report-text.js';
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   at: new Date('2026-10-30T12:00:00Z'),
   from: null,
-  pages: [{ path: '/', seconds: 30, read: [] }],
+  pages: [{ demo: null, path: '/', seconds: 30, read: [], did: [] }],
   clicks: [],
   questions: [],
   interacted: true,
@@ -89,6 +89,7 @@ describe('reportText', () => {
       'CV page views: 0',
       'CV PDF clicks from: none',
       'Link clicks: none',
+      'Demos: of 0 site visits, 0 opened a demo',
       'Ask: 0 questions, 0 refused',
       'Devices: none',
       'Browsers: none',
@@ -112,6 +113,39 @@ describe('reportText', () => {
     );
     expect(text).toMatch(/^Filtered out, UTC day +bots +limited +other sites$/m);
     expect(text).toMatch(/^2026-10-30 +3 +1 +5$/m);
+  });
+
+  it('says how many site visits opened a demo, and lists each demo with its steps and where its own visits came from', () => {
+    const text = reportText(
+      aReport({
+        demos: {
+          visits: 80,
+          opened: 12,
+          didStep: 7,
+          demoOnly: 5,
+          list: [
+            {
+              name: 'Matchium',
+              host: 'matchium.najafov.dev',
+              clicked: 10,
+              fromSite: 9,
+              clickedNotOpened: 2,
+              demoOnly: [{ source: 'github', visits: 3 }],
+              didStep: 6,
+              steps: [{ label: 'answered a question', visits: 6 }],
+              medianSeconds: 140,
+            },
+          ],
+        },
+      }),
+      { all: false },
+    );
+    expect(text).toContain(
+      'Demos: of 80 site visits, 12 opened a demo (15%) and 7 did a step in one (9%). 5 more visits saw only a demo.',
+    );
+    expect(text).toMatch(/^Matchium +10 +9 +2 +3 +6 +140$/m);
+    expect(text).toContain('Matchium steps: answered a question 6');
+    expect(text).toContain('Matchium only the demo, from: GitHub 3');
   });
 
   it('shows the share of views that read each block', () => {
@@ -262,15 +296,22 @@ describe('reportText', () => {
                   at: new Date('2026-10-30T10:00:00Z'),
                   from: 'www.linkedin.com',
                   pages: [
-                    { path: '/', seconds: 40, read: ['tuner'] },
-                    { path: '/cv', seconds: 8, read: [] },
+                    { demo: null, path: '/', seconds: 40, read: ['tuner'], did: [] },
+                    {
+                      demo: 'tuner.najafov.dev',
+                      path: '/',
+                      seconds: 140,
+                      read: [],
+                      did: ['answered a question'],
+                    },
+                    { demo: null, path: '/cv', seconds: 8, read: [], did: [] },
                   ],
                   clicks: ['CV PDF'],
                   questions: ['Do you know Go?', 'What did you build with Kafka?'],
                 }),
                 aStory({
                   at: new Date('2026-10-30T11:00:00Z'),
-                  pages: [{ path: '/', seconds: 0, read: [] }],
+                  pages: [{ demo: null, path: '/', seconds: 0, read: [], did: [] }],
                   interacted: false,
                 }),
               ],
@@ -312,7 +353,7 @@ describe('reportText', () => {
       [
         'Applications, every visit kept rather than only the period, times in Baku',
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
-        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
+        '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > tuner.najafov.dev/ 140 s (answered a question) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
