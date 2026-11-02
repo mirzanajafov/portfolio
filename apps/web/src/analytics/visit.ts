@@ -1,5 +1,5 @@
 import type { VisitEvent } from '@portfolio/content/analytics';
-import { PageViews, pathOf, type PageView } from './page-views';
+import { PageViews, pathOf } from './page-views';
 
 export function trackVisit(script: HTMLOrSVGScriptElement | null): () => void {
   if (!(script instanceof HTMLScriptElement)) {
@@ -15,32 +15,37 @@ export function trackVisit(script: HTMLOrSVGScriptElement | null): () => void {
     });
   let viewSent: Promise<unknown> = Promise.resolve();
   const send = (event: VisitEvent) => {
-    const sending = event.type === 'action' ? viewSent.then(() => post(event)) : post(event);
     if (event.type === 'view') {
-      viewSent = sending;
+      viewSent = post(event);
+      viewSent.catch(() => undefined);
+    } else {
+      viewSent.then(() => post(event)).catch(() => undefined);
     }
-    sending.catch(() => undefined);
   };
-  const firstSegment = () => pathOf(`/${location.pathname.split('/')[1] ?? ''}`);
-  const views = new PageViews(send, firstSegment);
-  const actionsSent = new WeakMap<PageView, Set<string>>();
+  const views = new PageViews(send, {
+    path: () => pathOf(`/${location.pathname.split('/')[1] ?? ''}`),
+    depthAtStart: false,
+  });
+  let actionsSent = new Set<string>();
 
   const onPageShow = ({ persisted }: PageTransitionEvent) => {
     if (persisted) {
+      actionsSent = new Set();
       views.start(false);
     }
   };
   const onAction = (event: Event) => {
     const view = views.current;
-    if (!view || !(event instanceof CustomEvent) || typeof event.detail !== 'string') {
+    if (
+      !view ||
+      !(event instanceof CustomEvent) ||
+      typeof event.detail !== 'string' ||
+      actionsSent.has(event.detail)
+    ) {
       return;
     }
-    const sent = actionsSent.get(view) ?? new Set<string>();
-    if (!sent.has(event.detail)) {
-      sent.add(event.detail);
-      actionsSent.set(view, sent);
-      send({ type: 'action', view: view.id, name: event.detail });
-    }
+    actionsSent.add(event.detail);
+    send({ type: 'action', view: view.id, name: event.detail });
   };
 
   views.start(true);

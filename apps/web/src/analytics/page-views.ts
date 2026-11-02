@@ -25,14 +25,21 @@ export function pathOf(path: string): string {
 
 const inputs = ['wheel', 'pointerdown', 'keydown', 'touchstart'] as const;
 
+type Options = { path?: () => string; depthAtStart?: boolean };
+
 export class PageViews {
   current: PageView | null = null;
   private lastInput: number | undefined;
+  private readonly path: () => string;
+  private readonly depthAtStart: boolean;
 
   constructor(
     private readonly send: (event: VisitEvent) => void,
-    private readonly pagePath = () => pathOf(location.pathname),
-  ) {}
+    { path = () => pathOf(location.pathname), depthAtStart = true }: Options = {},
+  ) {
+    this.path = path;
+    this.depthAtStart = depthAtStart;
+  }
 
   start(withReferrer: boolean): PageView {
     const view = {
@@ -40,12 +47,14 @@ export class PageViews {
       reading: new Reading(() => performance.now(), this.lastInput),
       seq: 0,
     };
-    view.reading.scrolled(scrollDepth());
+    if (this.depthAtStart) {
+      view.reading.scrolled(scrollDepth());
+    }
     this.current = view;
     this.send({
       type: 'view',
       id: view.id,
-      path: this.pagePath(),
+      path: this.path(),
       referrer: withReferrer ? referrerHost() : undefined,
       ref: new URLSearchParams(location.search).get('r') ?? undefined,
       notFound: document.querySelector('[data-not-found]') !== null,

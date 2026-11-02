@@ -60,9 +60,6 @@ const factSchema = z.strictObject({
 });
 
 function isSubdomainOfSite(url: string): boolean {
-  if (!URL.canParse(url)) {
-    return true;
-  }
   const { protocol, hostname } = new URL(url);
   return protocol === 'https:' && hostname.endsWith(`.${new URL(siteUrl).hostname}`);
 }
@@ -148,7 +145,8 @@ export const projectSchema = z
         path: ['analytics'],
       });
     }
-    if (project.analytics && !isSubdomainOfSite(project.links.live)) {
+    const live = project.links.live;
+    if (project.analytics && URL.canParse(live) && !isSubdomainOfSite(live)) {
       ctx.addIssue({
         code: 'custom',
         message:

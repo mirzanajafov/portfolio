@@ -79,11 +79,14 @@ describe('trackVisit', () => {
     expect(sent()[0]).not.toHaveProperty('referrer');
   });
 
-  it('sends the reading so far when the tab is hidden and when the page goes, to the same site', () => {
+  it('sends the reading so far when the tab is hidden and when the page goes, after its view and to the same site', async () => {
     stop = trackVisit(aScript('http://localhost:3210/visit.js'));
     setVisibility('hidden');
     window.dispatchEvent(new Event('pagehide'));
 
+    await vi.waitFor(() => {
+      expect(sent()).toHaveLength(3);
+    });
     const [view, hidden, gone] = sent();
     assert(view?.type === 'view');
     expect(hidden).toMatchObject({ type: 'read', view: view.id, seq: 1, blocks: {} });
@@ -140,6 +143,14 @@ describe('trackVisit', () => {
     expect(sent()[0]).toMatchObject({ type: 'view', path: '/chats', ref: 'memh' });
   });
 
+  it('takes scroll depth only from scrolling, since a demo may not have drawn its page when the script runs', async () => {
+    stop = trackVisit(aScript());
+    setVisibility('hidden');
+    await vi.waitFor(() => {
+      expect(sent()[1]).toMatchObject({ type: 'read', maxScroll: 0 });
+    });
+  });
+
   it('ignores an action that is not a name', () => {
     stop = trackVisit(aScript());
     act({ name: 'answered' });
@@ -159,7 +170,7 @@ describe('trackVisit', () => {
     setVisibility('hidden');
 
     await vi.waitFor(() => {
-      expect(sent().map(({ type }) => type)).toEqual(['view', 'read', 'action']);
+      expect(sent().map(({ type }) => type)).toEqual(['view', 'action', 'read']);
     });
     expect(bodies().join('\n')).not.toMatch(/secret/);
     input.remove();

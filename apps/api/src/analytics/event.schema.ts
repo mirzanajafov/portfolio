@@ -77,8 +77,11 @@ export function demoEventSchema(actions: readonly string[]) {
 export type SiteEventSchema = ReturnType<typeof siteEventSchema>;
 export type DemoEventSchema = ReturnType<typeof demoEventSchema>;
 
-export type AnalyticsEvent = z.infer<SiteEventSchema> | z.infer<DemoEventSchema>;
+type SiteEvent = z.infer<SiteEventSchema>;
+type DemoEvent = z.infer<DemoEventSchema>;
 
-type EventSource = { kind: 'site' } | { kind: 'demo'; slug: string } | { kind: 'elsewhere' };
+export type AnalyticsEvent = SiteEvent | DemoEvent;
 
-export type SourcedEvent = { source: EventSource; event: AnalyticsEvent };
+export type SourcedEvent =
+  | { source: { kind: 'site' } | { kind: 'elsewhere' }; event: SiteEvent }
+  | { source: { kind: 'demo'; slug: string }; event: DemoEvent };
