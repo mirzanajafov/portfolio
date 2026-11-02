@@ -7,7 +7,7 @@ import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { chrome, sendEvent } from './send-event.js';
-import { FixedClock, startApp } from './start-app.js';
+import { FixedClock, siteOrigin, startApp } from './start-app.js';
 
 type Event = { event: string; data: AskEvent };
 
@@ -151,6 +151,25 @@ describe('POST /ask against a real database', () => {
     const [row] = await loggedRows(prisma, 'What is your favourite colour?');
     expect(row?.refused).toBe(true);
   });
+
+  it("answers questions from the site's own pages, with or without an Origin", async () => {
+    const fromThePage = { 'User-Agent': chrome, Origin: siteOrigin };
+    await ask(app, 'Stripe, from a page?', '198.51.100.5', fromThePage).expect(200);
+    await ask(app, 'Stripe, without an Origin?', '198.51.100.5').expect(200);
+    expect(await loggedRows(prisma, 'Stripe, from a page?')).toHaveLength(1);
+    expect(await loggedRows(prisma, 'Stripe, without an Origin?')).toHaveLength(1);
+  });
+
+  it.each(['https://example.com', 'null'])(
+    'refuses a question posted from %s before it counts against any limit or is logged',
+    async (origin) => {
+      await ask(app, 'Stripe?', '198.51.100.6', { 'User-Agent': chrome, Origin: origin }).expect(
+        403,
+      );
+      expect(await prisma.rateLimit.findMany()).toEqual([]);
+      expect(await prisma.askLog.findMany()).toEqual([]);
+    },
+  );
 
   it('limits each caller separately and says when to come back', async () => {
     for (let i = 0; i < 3; i += 1) {

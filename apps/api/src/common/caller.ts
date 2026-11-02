@@ -3,7 +3,12 @@ import type { Request } from 'express';
 import { isbot } from 'isbot';
 import { isIP } from 'node:net';
 
-export type Caller = { ip: string; userAgent: string | undefined; optedOut: boolean };
+export type Caller = {
+  ip: string;
+  userAgent: string | undefined;
+  optedOut: boolean;
+  origin: string | undefined;
+};
 
 export function clientAddress({ ip }: Request): string {
   if (!ip) {
@@ -21,10 +26,15 @@ export function visitorAgent({ userAgent, optedOut }: Caller): string | null {
     : userAgent;
 }
 
+export function fromSite({ origin }: Caller, siteOrigin: string): boolean {
+  return origin === undefined || origin === siteOrigin;
+}
+
 export function callerOf(request: Request): Caller {
   return {
     ip: clientAddress(request),
     userAgent: request.get('user-agent'),
     optedOut: request.get('sec-gpc') === '1' || request.get('dnt') === '1',
+    origin: request.get('origin'),
   };
 }

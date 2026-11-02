@@ -1,6 +1,6 @@
 const maxBodyBytes = 2_000;
 
-export const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt'] as const;
+export const callerHeaders = ['x-forwarded-for', 'user-agent', 'sec-gpc', 'dnt', 'origin'] as const;
 
 type Forward = {
   url: string;
@@ -66,7 +66,7 @@ export async function forwardToApi(
   } catch {
     return new Response(null, { status: 503 });
   }
-  if (upstream.status === 400 || upstream.status === 429) {
+  if (upstream.status === 400 || upstream.status === 403 || upstream.status === 429) {
     const retryAfter = upstream.headers.get('retry-after');
     return new Response(null, {
       status: upstream.status,
