@@ -221,4 +221,24 @@ describe('applicationsOf', () => {
       interacted: true,
     });
   });
+
+  it('names a direct arrival at a demo as direct, even when the site page after it came from elsewhere', () => {
+    const { list } = sectionOf([
+      aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh', referrerHost: 'www.linkedin.com' })], {
+        demoViews: [aDemoView({ createdAt: hoursAgo(2), referrerHost: null })],
+      }),
+    ]);
+    expect(list[0]?.visits[0]?.from).toBeNull();
+  });
+
+  it('lists the stories newest first by the time they start, a demo page included', () => {
+    const { list } = sectionOf([
+      aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh' })], {
+        startedAt: hoursAgo(1),
+        demoViews: [aDemoView({ createdAt: hoursAgo(9) })],
+      }),
+      aVisit([aView({ createdAt: hoursAgo(3), ref: 'memh' })], { startedAt: hoursAgo(3) }),
+    ]);
+    expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(3), hoursAgo(9)]);
+  });
 });

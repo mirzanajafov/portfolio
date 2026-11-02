@@ -67,13 +67,17 @@ function storyOf(
     ({ activeSeconds, actions }) => activeSeconds > 0 || actions.length > 0,
   );
   return {
-    at: first?.at ?? visit.startedAt,
-    from: first?.from ?? visit.landing.referrerHost,
+    at: first ? first.at : visit.startedAt,
+    from: first ? first.from : visit.landing.referrerHost,
     pages: pages.map(({ page }) => page),
     clicks,
     questions,
     interacted: secondsOf(visit) > 0 || clicks.length > 0 || questions.length > 0 || usedADemo,
   };
+}
+
+function newestFirst(a: VisitStory, b: VisitStory): number {
+  return b.at.getTime() - a.at.getTime();
 }
 
 function outcomeOf(named: boolean, candidates: number): Outcome {
@@ -165,12 +169,13 @@ export function applicationsOf(
         appliedOn: dayOf(application.appliedOn),
         visits: coded
           .filter((each) => each.application.id === application.id)
-          .map(({ visit }) => storyOf(visit, labels, asked, demos)),
+          .map(({ visit }) => storyOf(visit, labels, asked, demos))
+          .toSorted(newestFirst),
         days: rolled
           .filter(({ applicationId }) => applicationId === application.id)
           .toSorted((a, b) => b.day.getTime() - a.day.getTime())
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
-        guesses: guessesOf.get(application.id) ?? [],
+        guesses: (guessesOf.get(application.id) ?? []).toSorted(newestFirst),
       })),
     score: scoreOf(coded, guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({

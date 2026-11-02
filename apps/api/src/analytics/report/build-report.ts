@@ -243,6 +243,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
   const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
+  const demos = [...demoSites(content).values()];
   const visits = startedBetween(everyVisit, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
@@ -270,7 +271,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), content),
+    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), demos),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),
@@ -281,7 +282,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       rows.rolledApplications,
       labels,
       askedIn(rows.questions),
-      new Map([...demoSites(content).values()].map((demo) => [demo.slug, demo])),
+      new Map(demos.map((demo) => [demo.slug, demo])),
     ),
   };
 }

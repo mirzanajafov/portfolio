@@ -1,5 +1,4 @@
-import type { Content } from '@portfolio/content';
-import { demoSites } from '@portfolio/content/analytics';
+import type { DemoSite } from '@portfolio/content/analytics';
 import type { Report } from '@portfolio/content/report';
 import type { DayTotals } from '../day-totals.js';
 import { demoTotals, touched } from '../demos.js';
@@ -9,7 +8,7 @@ import type { VisitRow } from '../visits.js';
 export function demosOf(
   rows: readonly VisitRow[],
   { visits, openedDemo, didDemoStep }: DayTotals,
-  content: Content,
+  demos: readonly DemoSite[],
 ): Report['demos'] {
   return {
     visits,
@@ -17,7 +16,7 @@ export function demosOf(
     didStep: didDemoStep,
     demoOnly: rows.filter(({ views, demoViews }) => views.length === 0 && demoViews.length > 0)
       .length,
-    list: [...demoSites(content).values()].flatMap((site) => {
+    list: demos.flatMap((site) => {
       const totals = demoTotals(rows, site);
       if (!touched(totals)) {
         return [];
