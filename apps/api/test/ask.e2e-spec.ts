@@ -161,7 +161,7 @@ describe('POST /ask against a real database', () => {
   });
 
   it.each(['https://example.com', 'null'])(
-    'refuses a question posted from %s before reading it or reaching a limit, the day key or the log',
+    'refuses a question posted from %s before checking it or reaching a limit, the day key or the log',
     async (origin) => {
       clock.current = new Date('2026-11-01T12:00:00Z');
       await prisma.visitorSalt.deleteMany({ where: { day: new Date('2026-11-01') } });
