@@ -64,7 +64,6 @@ services:
     profiles: ['app']
     environment:
       API_URL: http://portfolio-api:3201
-      SITE_ORIGIN: http://localhost:3202
       CV_RENDER_TOKEN: ${CV_RENDER_TOKEN:-local-docker-cv-token-not-for-production}
     ports:
       - '3202:3200'
