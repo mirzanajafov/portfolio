@@ -8,7 +8,7 @@ import {
 } from '@portfolio/content/report';
 import { dayOf } from '../days.js';
 import { rankedGroups } from '../statistics.js';
-import { codeOf, secondsOf, type Visit } from '../visits.js';
+import { codeOf, inOrder, secondsOf, type Visit, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
@@ -18,7 +18,7 @@ type Demos = ReadonlyMap<string, DemoSite>;
 
 type StoryPage = { at: Date; from: string | null; page: VisitStory['pages'][number] };
 
-function pagesOf(visit: Visit, demos: Demos): StoryPage[] {
+function pagesOf(visit: VisitRow, demos: Demos): StoryPage[] {
   const onTheSite = visit.views.map(({ createdAt, referrerHost, path, activeSeconds, blocks }) => ({
     at: createdAt,
     from: referrerHost,
@@ -52,7 +52,7 @@ function pagesOf(visit: Visit, demos: Demos): StoryPage[] {
 }
 
 function storyOf(
-  visit: Visit,
+  visit: VisitRow,
   labels: ReadonlyMap<string, string>,
   asked: Asked,
   demos: Demos,
@@ -68,7 +68,7 @@ function storyOf(
   );
   return {
     at: first ? first.at : visit.startedAt,
-    from: first ? first.from : visit.landing.referrerHost,
+    from: first ? first.from : null,
     pages: pages.map(({ page }) => page),
     clicks,
     questions,
@@ -109,7 +109,7 @@ function scoreOf(
 }
 
 export function applicationsOf(
-  visits: readonly Visit[],
+  rows: readonly VisitRow[],
   applications: readonly ApplicationRow[],
   rolled: readonly RolledApplicationDay[],
   labels: ReadonlyMap<string, string>,
@@ -118,14 +118,14 @@ export function applicationsOf(
 ): Report['applications'] {
   const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
-  const newest = visits.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  const newest = rows.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   const coded = newest.flatMap((visit) => {
     const code = codeOf(visit);
     const application = code === null ? undefined : byCode.get(code);
     return application ? [{ visit, application }] : [];
   });
   const guessesOf = new Map<string, GuessedVisit[]>();
-  for (const visit of newest) {
+  for (const visit of newest.flatMap(inOrder)) {
     const guessed = codeOf(visit) === null ? guess(visit) : null;
     if (!guessed) {
       continue;
@@ -177,7 +177,12 @@ export function applicationsOf(
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
         guesses: (guessesOf.get(application.id) ?? []).toSorted(newestFirst),
       })),
-    score: scoreOf(coded, guess),
+    score: scoreOf(
+      coded.flatMap(({ visit, application }) =>
+        inOrder(visit).map((onTheSite) => ({ visit: onTheSite, application })),
+      ),
+      guess,
+    ),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,

@@ -1,5 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import { content, projectsWithCaseStudy, siteUrl } from '@portfolio/content';
+import { demoSites } from '@portfolio/content/analytics';
 import { pausePunctuation, phoneNumber } from '@portfolio/content/testing';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -149,13 +150,17 @@ describe('the CV as a PDF', () => {
 });
 
 describe('a CV for one application', () => {
-  it('reads exactly like the public one, with the code on every link to the site and nowhere else', async () => {
+  it('reads exactly like the public one, with the code on every link to the site and to a demo that records visits, and nowhere else', async () => {
     const own = await buildCvPdf(content, { ref: 'memh' });
+    const coded = new Set([new URL(siteUrl).origin, ...demoSites(content).keys()]);
     expect((await textOf(own)).text).toBe(text);
     expect(urisOf(own)).toEqual(
       urisOf(pdf).map((uri) =>
-        uri.startsWith(siteUrl) ? `${new URL(uri).origin}${new URL(uri).pathname}?r=memh` : uri,
+        URL.canParse(uri) && coded.has(new URL(uri).origin)
+          ? `${new URL(uri).origin}${new URL(uri).pathname}?r=memh`
+          : uri,
       ),
     );
+    expect(urisOf(own)).toContain('https://matchium.najafov.dev/?r=memh');
   });
 });

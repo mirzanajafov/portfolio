@@ -48,6 +48,7 @@ export function aDemoView(overrides: Partial<DemoViewRow> = {}): DemoViewRow {
     createdAt: hoursAgo(1),
     path: '/',
     referrerHost: 'najafov.dev',
+    ref: null,
     activeSeconds: 20,
     actions: [],
     ...overrides,

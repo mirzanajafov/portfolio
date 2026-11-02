@@ -22,6 +22,7 @@ export type DemoViewRow = {
   createdAt: Date;
   path: string;
   referrerHost: string | null;
+  ref: string | null;
   activeSeconds: number;
   actions: string[];
 };
@@ -59,7 +60,7 @@ export function inOrder({ views, ...visit }: VisitRow): Visit[] {
   return [{ ...visit, views: sorted, landing, exit, pages, found }];
 }
 
-export function secondsOf({ views }: Visit): number {
+export function secondsOf({ views }: Pick<VisitRow, 'views'>): number {
   return views.reduce((total, { activeSeconds }) => total + activeSeconds, 0);
 }
 
@@ -69,6 +70,10 @@ export function isQuickExit(visit: Visit): boolean {
   );
 }
 
-export function codeOf(visit: Visit): string | null {
-  return visit.views.find(({ ref }) => ref !== null)?.ref ?? null;
+export function codeOf({ views, demoViews }: VisitRow): string | null {
+  return (
+    [...views, ...demoViews]
+      .toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .find(({ ref }) => ref !== null)?.ref ?? null
+  );
 }

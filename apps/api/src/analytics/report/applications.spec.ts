@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo } from '../testing.js';
-import { inOrder, type VisitRow } from '../visits.js';
+import type { VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
@@ -14,7 +14,7 @@ function sectionOf(
   rolled: RolledApplicationDay[] = [],
   asked = new Map<string, string[]>(),
 ) {
-  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels, asked, demos);
+  return applicationsOf(rows, applications, rolled, labels, asked, demos);
 }
 
 describe('applicationsOf', () => {
@@ -240,5 +240,34 @@ describe('applicationsOf', () => {
       aVisit([aView({ createdAt: hoursAgo(3), ref: 'memh' })], { startedAt: hoursAgo(3) }),
     ]);
     expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(3), hoursAgo(9)]);
+  });
+
+  it('puts a visit that went from the CV straight to a demo under its application', () => {
+    const { list, score } = sectionOf([
+      aVisit([], {
+        demoViews: [
+          aDemoView({ ref: 'memh', referrerHost: null, activeSeconds: 60, actions: ['answered'] }),
+        ],
+      }),
+    ]);
+    expect(list[0]?.visits).toEqual([
+      {
+        at: hoursAgo(1),
+        from: null,
+        pages: [
+          {
+            demo: 'tuner.najafov.dev',
+            path: '/',
+            seconds: 60,
+            read: [],
+            did: ['answered a question'],
+          },
+        ],
+        clicks: [],
+        questions: [],
+        interacted: true,
+      },
+    ]);
+    expect(score.visits).toBe(0);
   });
 });

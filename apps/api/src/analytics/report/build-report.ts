@@ -277,7 +277,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
     applications: applicationsOf(
-      everyVisit,
+      rows.visits,
       rows.applications,
       rows.rolledApplications,
       labels,
