@@ -9,7 +9,7 @@ const siteOriginOf = z.object({ environment: z.object({ SITE_ORIGIN: z.string() 
 const composeSchema = z.object({
   services: z.object({
     api: siteOriginOf,
-    web: siteOriginOf.extend({ ports: z.array(z.string()).optional() }),
+    web: siteOriginOf.extend({ ports: z.array(z.string()) }),
   }),
 });
 
@@ -27,8 +27,10 @@ describe('the origin the API and the site check requests against', () => {
 
   it('is the port the local stack publishes the site on, for both', () => {
     const { api, web } = compose('docker-compose.yml');
-    const published = web.ports?.[0]?.split(':')[0];
-    expect(api.environment.SITE_ORIGIN).toBe(`http://localhost:${String(published)}`);
+    const local = new URL(api.environment.SITE_ORIGIN);
+    expect(local.origin).toBe(api.environment.SITE_ORIGIN);
+    expect(local.hostname).toBe('localhost');
+    expect(web.ports).toContain(`${local.port}:3200`);
     expect(web.environment.SITE_ORIGIN).toBe(api.environment.SITE_ORIGIN);
   });
 });

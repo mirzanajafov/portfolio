@@ -81,6 +81,7 @@ describe('the CLI commands', () => {
     process.stdout.isTTY = false;
     vi.stubEnv('CV_RENDER_TOKEN', token);
     vi.stubEnv('WEB_URL', siteAddress);
+    vi.stubEnv('SITE_ORIGIN', 'http://localhost:3202');
     await prisma.$executeRaw`TRUNCATE "Application", "AdminLoginToken", "AdminSession", "RateLimit" CASCADE`;
   });
 
@@ -220,7 +221,6 @@ describe('the CLI commands', () => {
   });
 
   it('prints a sign-in link to the site it runs next to that starts one session', async () => {
-    vi.stubEnv('SITE_ORIGIN', 'http://localhost:3202');
     const { status, stdout, stderr } = await cli('admin', 'link');
     expect(status).toBe(0);
     expect(stderr).toBe('it signs in once, within 10 minutes\n');
