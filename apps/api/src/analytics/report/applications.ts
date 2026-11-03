@@ -62,13 +62,12 @@ function storyOf(
   );
   const questions = [...(asked.get(visit.visitor) ?? [])];
   const pages = pagesOf(visit, demos);
-  const [first] = pages;
   const usedADemo = visit.demoViews.some(
     ({ activeSeconds, actions }) => activeSeconds > 0 || actions.length > 0,
   );
   return {
     at: visit.startedAt,
-    from: first ? first.from : null,
+    from: pages[0]?.from ?? null,
     pages: pages.map(({ page }) => page),
     clicks,
     questions,
@@ -121,9 +120,9 @@ export function applicationsOf(
     const application = code === null ? undefined : byCode.get(code);
     return application ? [{ visit, application }] : [];
   });
-  const onTheSite = ({ visit }: { visit: VisitRow }) => visit.views.length > 0;
+  const sawTheSite = ({ visit }: { visit: VisitRow }) => visit.views.length > 0;
   const guessesOf = new Map<string, GuessedVisit[]>();
-  for (const { visit, code } of newest.filter(onTheSite)) {
+  for (const { visit, code } of newest.filter(sawTheSite)) {
     const guessed = code === null ? guess(visit) : null;
     if (!guessed) {
       continue;
@@ -173,7 +172,7 @@ export function applicationsOf(
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
         guesses: guessesOf.get(application.id) ?? [],
       })),
-    score: scoreOf(coded.filter(onTheSite), guess),
+    score: scoreOf(coded.filter(sawTheSite), guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,
