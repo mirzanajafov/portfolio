@@ -174,6 +174,34 @@ describe('retention against a real database', () => {
     expect(await prisma.dailyApplication.count()).toBe(0);
   });
 
+  it("counts a visit that went from the CV straight to a demo in its application's day", async () => {
+    const memh = await prisma.application.create({
+      data: {
+        code: 'memh',
+        company: 'Xsolla',
+        role: 'Developer',
+        appliedOn: new Date('2026-09-30'),
+      },
+    });
+    const fromTheDemo = { headers: { Origin: 'https://tuner.najafov.dev' } };
+    at('2026-10-02T12:00:00Z');
+    await sendEvent(
+      app,
+      { type: 'view', id: randomUUID(), path: '/', ref: 'memh' },
+      fromTheDemo,
+    ).expect(204);
+    await sendEvent(app, { type: 'view', id: randomUUID(), path: '/chats' }, fromTheDemo).expect(
+      204,
+    );
+
+    at('2026-11-02T00:00:00Z');
+    await cleanup();
+    expect(await prisma.dailyApplication.findMany()).toMatchObject([
+      { applicationId: memh.id, visits: 1, views: 2 },
+    ]);
+    expect(await prisma.dailyVisits.findMany()).toEqual([expect.objectContaining({ visits: 0 })]);
+  });
+
   it("rolls a day's demos up with the site's visits that went to them", async () => {
     const onTheSite = randomUUID();
     const onTheDemo = randomUUID();

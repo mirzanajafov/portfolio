@@ -87,10 +87,10 @@ function clicksOf(visits: readonly Visit[]): RolledDay['clicks'] {
   );
 }
 
-function applicationsOf(visits: readonly Visit[]): RolledDay['applications'] {
-  const coded = visits.flatMap((visit) => {
-    const code = codeOf(visit);
-    return code === null ? [] : [{ code, views: visit.views.length }];
+function applicationsOf(rows: readonly VisitRow[]): RolledDay['applications'] {
+  const coded = rows.flatMap((row) => {
+    const code = codeOf(row);
+    return code === null ? [] : [{ code, views: row.views.length + row.demoViews.length }];
   });
   return rankedGroups(coded, ({ code }) => code).map(([code, group]) => ({
     code,
@@ -110,7 +110,7 @@ export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): R
       visits: group.length,
     })),
     clicks: clicksOf(visits),
-    applications: applicationsOf(visits),
+    applications: applicationsOf(rows),
     demos: demos.map((demo) => demoTotals(rows, demo)).filter(touched),
   };
 }

@@ -108,12 +108,13 @@ export default function PrivacyPage() {
           network, counts as the same visit, through the same daily value as above. That is how I
           can see whether someone who read about a demo also tried it. If you came through a link I
           sent with a job application, the demos you opened that day are recorded as part of that
-          application&apos;s visit. Everything above applies to the demos too: Global Privacy
-          Control and Do Not Track record nothing, bots are only counted, and the records are
-          deleted on the same schedule. For each day I keep, for {dailyTotalsMonths} months, how
-          many visits clicked a link to each demo, opened it and from which kind of site they came,
-          how many did each step and how long they stayed. The demos are separate apps with their
-          own data, such as a Matchium account, and this page covers only what they send here.
+          application&apos;s visit, and the links to the demos in a CV I sent carry the same code.
+          Everything above applies to the demos too: Global Privacy Control and Do Not Track record
+          nothing, bots are only counted, and the records are deleted on the same schedule. For each
+          day I keep, for {dailyTotalsMonths} months, how many visits clicked a link to each demo,
+          opened it and from which kind of site they came, how many did each step and how long they
+          stayed. The demos are separate apps with their own data, such as a Matchium account, and
+          this page covers only what they send here.
         </p>
       </Part>
 

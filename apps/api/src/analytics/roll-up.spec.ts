@@ -192,4 +192,13 @@ describe('rollUp', () => {
       },
     ]);
   });
+
+  it('counts a visit that went from the CV straight to a demo for its code', () => {
+    const day = rollUp(
+      [aVisit([], { demoViews: [aDemoView({ ref: 'memh' }), aDemoView({ path: '/chats' })] })],
+      [aDemoSite()],
+    );
+    expect(day.applications).toEqual([{ code: 'memh', visits: 1, views: 2 }]);
+    expect(day.totals.visits).toBe(0);
+  });
 });

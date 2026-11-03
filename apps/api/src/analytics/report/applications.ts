@@ -8,7 +8,7 @@ import {
 } from '@portfolio/content/report';
 import { dayOf } from '../days.js';
 import { rankedGroups } from '../statistics.js';
-import { codeOf, secondsOf, type Visit } from '../visits.js';
+import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
@@ -18,7 +18,7 @@ type Demos = ReadonlyMap<string, DemoSite>;
 
 type StoryPage = { at: Date; from: string | null; page: VisitStory['pages'][number] };
 
-function pagesOf(visit: Visit, demos: Demos): StoryPage[] {
+function pagesOf(visit: VisitRow, demos: Demos): StoryPage[] {
   const onTheSite = visit.views.map(({ createdAt, referrerHost, path, activeSeconds, blocks }) => ({
     at: createdAt,
     from: referrerHost,
@@ -52,7 +52,7 @@ function pagesOf(visit: Visit, demos: Demos): StoryPage[] {
 }
 
 function storyOf(
-  visit: Visit,
+  visit: VisitRow,
   labels: ReadonlyMap<string, string>,
   asked: Asked,
   demos: Demos,
@@ -62,13 +62,12 @@ function storyOf(
   );
   const questions = [...(asked.get(visit.visitor) ?? [])];
   const pages = pagesOf(visit, demos);
-  const [first] = pages;
   const usedADemo = visit.demoViews.some(
     ({ activeSeconds, actions }) => activeSeconds > 0 || actions.length > 0,
   );
   return {
     at: visit.startedAt,
-    from: first ? first.from : visit.landing.referrerHost,
+    from: pages[0]?.from ?? null,
     pages: pages.map(({ page }) => page),
     clicks,
     questions,
@@ -84,8 +83,8 @@ function outcomeOf(named: boolean, candidates: number): Outcome {
 }
 
 function scoreOf(
-  coded: readonly { visit: Visit; application: ApplicationRow }[],
-  guess: (visit: Visit) => Guess | null,
+  coded: readonly { visit: VisitRow; application: ApplicationRow }[],
+  guess: (visit: VisitRow) => Guess | null,
 ): Report['applications']['score'] {
   const none = (): Record<Outcome, number> => ({ right: 0, wrong: 0, tied: 0 });
   const levels = { high: none(), medium: none(), low: none() };
@@ -105,7 +104,7 @@ function scoreOf(
 }
 
 export function applicationsOf(
-  visits: readonly Visit[],
+  rows: readonly VisitRow[],
   applications: readonly ApplicationRow[],
   rolled: readonly RolledApplicationDay[],
   labels: ReadonlyMap<string, string>,
@@ -114,15 +113,17 @@ export function applicationsOf(
 ): Report['applications'] {
   const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
-  const newest = visits.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
-  const coded = newest.flatMap((visit) => {
-    const code = codeOf(visit);
+  const newest = rows
+    .toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+    .map((visit) => ({ visit, code: codeOf(visit) }));
+  const coded = newest.flatMap(({ visit, code }) => {
     const application = code === null ? undefined : byCode.get(code);
     return application ? [{ visit, application }] : [];
   });
+  const sawTheSite = ({ visit }: { visit: VisitRow }) => visit.views.length > 0;
   const guessesOf = new Map<string, GuessedVisit[]>();
-  for (const visit of newest) {
-    const guessed = codeOf(visit) === null ? guess(visit) : null;
+  for (const { visit, code } of newest.filter(sawTheSite)) {
+    const guessed = code === null ? guess(visit) : null;
     if (!guessed) {
       continue;
     }
@@ -146,10 +147,9 @@ export function applicationsOf(
       }
     }
   }
-  const unknown = newest.flatMap((visit) => {
-    const code = codeOf(visit);
-    return code !== null && !byCode.has(code) ? [{ code, visit }] : [];
-  });
+  const unknown = newest.flatMap(({ visit, code }) =>
+    code !== null && !byCode.has(code) ? [{ code, visit }] : [],
+  );
   return {
     list: applications
       .toSorted(
@@ -172,7 +172,7 @@ export function applicationsOf(
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
         guesses: guessesOf.get(application.id) ?? [],
       })),
-    score: scoreOf(coded, guess),
+    score: scoreOf(coded.filter(sawTheSite), guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,

@@ -50,8 +50,8 @@ export async function findVisits(
       demo === null ? [{ ...view, blocks: blockSeconds.parse(blocks) }] : [],
     );
     const onDemos = views.flatMap(
-      ({ demo, createdAt, path, referrerHost, activeSeconds, actions }) =>
-        demo === null ? [] : [{ demo, createdAt, path, referrerHost, activeSeconds, actions }],
+      ({ demo, createdAt, path, referrerHost, ref, activeSeconds, actions }) =>
+        demo === null ? [] : [{ demo, createdAt, path, referrerHost, ref, activeSeconds, actions }],
     );
     return {
       ...visit,

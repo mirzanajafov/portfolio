@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo } from '../testing.js';
-import { inOrder, type VisitRow } from '../visits.js';
+import type { VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
@@ -14,7 +14,7 @@ function sectionOf(
   rolled: RolledApplicationDay[] = [],
   asked = new Map<string, string[]>(),
 ) {
-  return applicationsOf(rows.flatMap(inOrder), applications, rolled, labels, asked, demos);
+  return applicationsOf(rows, applications, rolled, labels, asked, demos);
 }
 
 describe('applicationsOf', () => {
@@ -226,5 +226,71 @@ describe('applicationsOf', () => {
       }),
     ]);
     expect(list[0]?.visits[0]?.from).toBeNull();
+  });
+
+  it("puts a visit that went from the CV straight to a demo under its application, outside the guesser's score", () => {
+    const { list, score } = sectionOf([
+      aVisit([], {
+        demoViews: [
+          aDemoView({ ref: 'memh', referrerHost: null, activeSeconds: 60, actions: ['answered'] }),
+        ],
+      }),
+    ]);
+    expect(list[0]?.visits).toEqual([
+      {
+        at: hoursAgo(1),
+        from: null,
+        pages: [
+          {
+            demo: 'tuner.najafov.dev',
+            path: '/',
+            seconds: 60,
+            read: [],
+            did: ['answered a question'],
+          },
+        ],
+        clicks: [],
+        questions: [],
+        interacted: true,
+      },
+    ]);
+    expect(score.visits).toBe(0);
+  });
+
+  it('takes the first code of a visit, from either kind of page', () => {
+    const { list } = sectionOf(
+      [
+        aVisit([aView({ createdAt: hoursAgo(2), ref: 'k7mpx' })], {
+          startedAt: hoursAgo(3),
+          demoViews: [aDemoView({ createdAt: hoursAgo(3), ref: 'memh' })],
+        }),
+      ],
+      [anApplication(), anApplication({ id: 'local', code: 'k7mpx', company: 'Local' })],
+    );
+    expect(list.find(({ code }) => code === 'memh')?.visits).toHaveLength(1);
+    expect(list.find(({ code }) => code === 'k7mpx')?.visits).toEqual([]);
+  });
+
+  it('never guesses a visit that saw only a demo', () => {
+    const { list } = sectionOf(
+      [aVisit([], { demoViews: [aDemoView()] })],
+      [anApplication({ city: 'Baku' })],
+    );
+    expect(list[0]?.guesses).toEqual([]);
+  });
+
+  it('lists a visit that went from the CV to a demo and on to the site under its application, and checks the guesser on it', () => {
+    const { list, score } = sectionOf(
+      [
+        aVisit([aView({ createdAt: hoursAgo(1) })], {
+          startedAt: hoursAgo(2),
+          demoViews: [aDemoView({ createdAt: hoursAgo(2), ref: 'memh' })],
+        }),
+      ],
+      [anApplication({ city: 'Baku' })],
+    );
+    expect(list[0]?.visits).toHaveLength(1);
+    expect(list[0]?.guesses).toEqual([]);
+    expect(score).toMatchObject({ visits: 1, levels: { medium: { right: 1 } } });
   });
 });

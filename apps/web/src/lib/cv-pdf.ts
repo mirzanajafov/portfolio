@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { caseStudiesIn, siteUrl, type Content, type Role } from '@portfolio/content';
+import { demoSites } from '@portfolio/content/analytics';
 import { fontPath } from './fonts';
 import { formatPeriod, languagesLine, linkText, roleKindLabel, rolePlace } from './format';
 import { palette } from './palette';
@@ -64,15 +65,16 @@ export function cvFileName({ profile }: Content): string {
 
 export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Promise<Buffer> {
   const { profile, cv, projects } = content;
-  const onSite = (path = '') => {
-    const href = `${siteUrl}${path}`;
-    if (!ref) {
+  const recorded = new Set([new URL(siteUrl).origin, ...demoSites(content).keys()]);
+  const linkFor = (href: string) => {
+    const url = new URL(href);
+    if (!ref || !recorded.has(url.origin)) {
       return href;
     }
-    const url = new URL(href);
     url.searchParams.set('r', ref);
     return url.href;
   };
+  const onSite = (path = '') => linkFor(`${siteUrl}${path}`);
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: margin, bottom: margin, left: margin, right: margin },
@@ -207,7 +209,7 @@ export function buildCvPdf(content: Content, { ref }: { ref?: string } = {}): Pr
     linkRow(
       [project.links.live, project.links.repo]
         .filter((url) => url !== undefined)
-        .map((url) => ({ text: linkText(url), href: url })),
+        .map((url) => ({ text: linkText(url), href: linkFor(url) })),
       9.5,
       muted,
     );

@@ -1,7 +1,7 @@
 import type { Confidence, Signal } from '@portfolio/content/report';
 import { inBaku } from '@portfolio/content/time';
 import { daysBetween } from '../days.js';
-import type { Visit } from '../visits.js';
+import type { VisitRow } from '../visits.js';
 import type { ApplicationRow } from './rows.js';
 
 type Candidate = { application: ApplicationRow; signals: Signal[]; daysAfter: number };
@@ -59,7 +59,7 @@ function prepare(application: ApplicationRow): Prepared {
 }
 
 function signalsOf(
-  visit: Visit,
+  visit: VisitRow,
   seen: Seen,
   { application, names, city, atsNamed }: Prepared,
 ): { confidence: Confidence; signal: Signal }[] {
@@ -83,7 +83,7 @@ function signalsOf(
   return found;
 }
 
-function matchOf(visit: Visit, seen: Seen, prepared: Prepared, daysAfter: number): Match | null {
+function matchOf(visit: VisitRow, seen: Seen, prepared: Prepared, daysAfter: number): Match | null {
   const found = signalsOf(visit, seen, prepared);
   const best = Math.max(0, ...found.map(({ confidence }) => strength[confidence]));
   const top = found.find(({ confidence }) => strength[confidence] === best);
@@ -104,7 +104,7 @@ function rank(a: Match, b: Match): number {
 
 export function guesserFor(
   applications: readonly ApplicationRow[],
-): (visit: Visit) => Guess | null {
+): (visit: VisitRow) => Guess | null {
   const prepared = applications.map(prepare);
   return (visit) => {
     const seen = {
