@@ -1,1 +1,2 @@
-ALTER TABLE "PageView" RENAME COLUMN "site" TO "demo";
+ALTER TABLE "PageView" ADD COLUMN "actions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "demo" TEXT;
