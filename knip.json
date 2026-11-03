@@ -4,6 +4,9 @@
     "apps/api": {
       "ignoreDependencies": ["@prisma/client"]
     },
+    "apps/web": {
+      "entry": ["src/analytics/visit-script.ts"]
+    },
     "content": {
       "entry": ["src/{index,ask,analytics,admin,report,report-sections,time,testing,cli}.ts"]
     }

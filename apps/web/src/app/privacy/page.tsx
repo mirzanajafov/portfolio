@@ -6,6 +6,7 @@ import {
   analyticsDays,
   backupDays,
   dailyTotalsMonths,
+  demoSites,
   geolocationCredit,
 } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
@@ -14,12 +15,13 @@ const { profile } = content;
 
 export const metadata: Metadata = {
   title: `What this site records · ${profile.name}`,
-  description: 'What najafov.dev records about visits and questions, for how long, and why.',
+  description:
+    'What najafov.dev and my demos record about visits and questions, for how long, and why.',
 };
 
-function Part({ title, children }: { title: string; children: ReactNode }) {
+function Part({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section id={id} className="flex scroll-mt-8 flex-col gap-3">
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
       {children}
     </section>
@@ -28,6 +30,7 @@ function Part({ title, children }: { title: string; children: ReactNode }) {
 
 export default function PrivacyPage() {
   const email = profile.links.email;
+  const demos = [...demoSites(content).values()];
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-10 px-4 py-16 leading-relaxed sm:px-8">
       <header className="flex flex-col gap-3">
@@ -45,7 +48,7 @@ export default function PrivacyPage() {
       <Part title="Visits">
         <p className="max-w-[65ch]">
           I record how the site is used, to see what people read, what doesn&apos;t work and whether
-          a job application led to a visit. There are no cookies, and nothing is stored in your
+          a job application led to a visit. The recording uses no cookies and stores nothing in your
           browser.
         </p>
         <p className="max-w-[65ch]">
@@ -86,6 +89,32 @@ export default function PrivacyPage() {
         </p>
       </Part>
 
+      <Part title="Demos" id="demos">
+        <p className="max-w-[65ch]">
+          The demos below load a small script from this site that records a visit to them the same
+          way: which part of the demo you opened (the first part of its address only) and the domain
+          of the site that linked to it, how long it was in front of you, how far down you scrolled,
+          and which of the demo&apos;s main steps you did. Nothing you type into a demo is sent.
+        </p>
+        <ul className="flex max-w-[65ch] list-disc flex-col gap-1 pl-5">
+          {demos.map(({ slug, name, host, actions }) => (
+            <li key={slug}>
+              {name} ({host}): {Object.values(actions).join(', ')}
+            </li>
+          ))}
+        </ul>
+        <p className="max-w-[65ch]">
+          A demo page opened on the same UTC day as a page of this site, from the same browser and
+          network, counts as the same visit, through the same daily value as above. That is how I
+          can see whether someone who read about a demo also tried it. If you came through a link I
+          sent with a job application, the demos you opened that day are recorded as part of that
+          application&apos;s visit. Everything above applies to the demos too: Global Privacy
+          Control and Do Not Track record nothing, bots are only counted, and the records are
+          deleted on the same schedule. The demos are separate apps with their own data, such as a
+          Matchium account, and this page covers only what they send here.
+        </p>
+      </Part>
+
       <Part title="Questions you ask">
         <p className="max-w-[65ch]">
           I keep questions for {askLogDays} days to see where the answers fail, then they are
@@ -109,13 +138,14 @@ export default function PrivacyPage() {
 
       <Part title="Why, and your rights">
         <p className="max-w-[65ch]">
-          I rely on my legitimate interest in knowing whether the site works for the people it is
-          for and whether my applications reach anyone (Article 6(1)(f) GDPR). You can object at any
-          time: turning on Global Privacy Control or Do Not Track stops it for every later visit (a
-          question you ask is still kept, tied to no visit), and if you email me the day and rough
-          time of a visit, I&apos;ll find and delete what was recorded. You can ask what I have
-          about you, and you can complain to a data protection authority. Nothing is sold or shared,
-          and the site loads no third-party scripts.
+          I rely on my legitimate interest in knowing whether the site and my demos work for the
+          people they are for and whether my applications reach anyone (Article 6(1)(f) GDPR). You
+          can object at any time: turning on Global Privacy Control or Do Not Track stops it for
+          every later visit (a question you ask is still kept, tied to no visit), and if you email
+          me the day and rough time of a visit, I&apos;ll find and delete what was recorded. You can
+          ask what I have about you, and you can complain to a data protection authority. Nothing is
+          sold or shared. This site loads no third-party scripts, and the demos load their recording
+          script from this site.
         </p>
       </Part>
 

@@ -1,0 +1,2 @@
+ALTER TABLE "PageView" ADD COLUMN "actions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "demo" TEXT;

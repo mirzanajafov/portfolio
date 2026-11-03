@@ -11,6 +11,7 @@ export default defineConfig(
     'apps/web/.next/',
     'apps/web/out/',
     'apps/web/next-env.d.ts',
+    'apps/web/public/visit.js',
     'apps/api/src/generated/',
     'content/src/.generated/',
   ]),

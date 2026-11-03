@@ -232,6 +232,21 @@ async function loadProjects(root: string, issues: ContentIssue[]): Promise<Proje
     }
     byOrder.set(project.order, project.slug);
   }
+  const byDemoOrigin = new Map<string, string>();
+  for (const project of projects) {
+    if (project.analytics) {
+      const { origin } = new URL(project.links.live);
+      const taken = byDemoOrigin.get(origin);
+      if (taken) {
+        issues.push({
+          file: `projects/${project.slug}/project.yaml`,
+          path: 'links.live',
+          message: `${origin} already records visits for ${taken}`,
+        });
+      }
+      byDemoOrigin.set(origin, project.slug);
+    }
+  }
   const names = new Map(projects.map((project) => [project.slug, project.name]));
   return projects
     .sort((a, b) => a.order - b.order)

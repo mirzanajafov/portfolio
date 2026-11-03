@@ -11,6 +11,10 @@ visibility: public
 links:
   live: https://portalgun.najafov.dev
   repo: https://github.com/mirzanajafov/portalgun-router
+analytics:
+  actions:
+    fired: fired 60 requests
+    broke-dimension: broke a dimension
 stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy]
 uses:
   - { project: fivefamilies, for: service discovery on its live demo }

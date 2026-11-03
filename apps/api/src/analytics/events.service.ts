@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { fromSite, visitorAgent, type Caller } from '../common/caller.js';
+import { visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
-import type { AnalyticsEvent } from './event.schema.js';
+import type { SourcedEvent } from './event.schema.js';
 import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
@@ -22,12 +22,12 @@ export class EventsService {
     @Inject(PLACE_LOOKUP) private readonly places: PlaceLookup,
   ) {}
 
-  async accept(event: AnalyticsEvent, caller: Caller): Promise<Outcome> {
+  async accept({ source, event }: SourcedEvent, caller: Caller): Promise<Outcome> {
     if (caller.optedOut) {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (!fromSite(caller.origin, this.env.SITE_ORIGIN)) {
+    if (source.kind === 'elsewhere') {
       await this.visits.countDropped('origin', now);
       return { kind: 'accepted' };
     }
@@ -57,6 +57,7 @@ export class EventsService {
       await this.visits.countDropped('limited', now);
       return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
     }
+    const demo = source.kind === 'demo' ? source.slug : null;
     if (event.type === 'view') {
       const visitor = {
         key: keys.visitor(caller.ip, userAgent),
@@ -64,9 +65,9 @@ export class EventsService {
         browser: browserOf(userAgent),
         ...this.places.placeOf(caller.ip),
       };
-      await this.visits.recordView(event, visitor, now);
+      await this.visits.recordView(event, visitor, demo, now);
     } else {
-      await this.visits.record(event, now);
+      await this.visits.record(event, demo, now);
     }
     return { kind: 'accepted' };
   }

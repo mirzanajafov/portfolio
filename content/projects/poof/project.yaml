@@ -10,6 +10,10 @@ visibility: public
 links:
   live: https://poof.najafov.dev
   repo: https://github.com/mirzanajafov/poof
+analytics:
+  actions:
+    poofed: pressed Poof
+    ran-exhibit: ran it for a minute
 stack: [NestJS, Next.js, PostgreSQL, Redis, sharp, OpenTelemetry]
 headline: pool-beats-splitting
 facts:

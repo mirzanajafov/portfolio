@@ -11,6 +11,10 @@ visibility: public
 links:
   live: https://fivefamilies.najafov.dev
   repo: https://github.com/mirzanajafov/fivefamilies
+analytics:
+  actions:
+    broke-family: broke a family
+    asked-don: asked the Don to step down
 stack: [Go, gRPC, Porcupine, Next.js]
 headline: lab-runs
 facts:

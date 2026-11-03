@@ -9,6 +9,9 @@ visibility: public
 links:
   live: https://marauder.najafov.dev
   repo: https://github.com/mirzanajafov/marauder
+analytics:
+  actions:
+    replayed: replayed the history
 stack: [NestJS, MQTT, Redis, TimescaleDB, React, ESP32]
 headline: accuracy
 facts:

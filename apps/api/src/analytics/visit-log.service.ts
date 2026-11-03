@@ -20,7 +20,12 @@ type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 export class VisitLogService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async recordView(event: EventOf<'view'>, { key, ...visit }: Visitor, at: Date): Promise<void> {
+  async recordView(
+    event: EventOf<'view'>,
+    { key, ...visit }: Visitor,
+    demo: string | null,
+    at: Date,
+  ): Promise<void> {
     await this.prisma.visit.createMany({
       data: [{ visitor: key, startedAt: at, ...visit }],
       skipDuplicates: true,
@@ -35,17 +40,18 @@ export class VisitLogService {
           notFound: event.notFound,
           referrerHost: event.referrer,
           ref: event.ref,
+          demo,
         },
       ],
       skipDuplicates: true,
     });
   }
 
-  async record(event: FollowUp, at: Date): Promise<void> {
+  async record(event: FollowUp, demo: string | null, at: Date): Promise<void> {
     switch (event.type) {
       case 'read':
         await this.prisma.pageView.updateMany({
-          where: { id: event.view, readSeq: { lt: event.seq } },
+          where: { id: event.view, demo, readSeq: { lt: event.seq } },
           data: {
             readSeq: event.seq,
             activeSeconds: event.activeSeconds,
@@ -54,15 +60,21 @@ export class VisitLogService {
           },
         });
         return;
+      case 'action':
+        await this.prisma.pageView.updateMany({
+          where: { id: event.view, demo, NOT: { actions: { has: event.name } } },
+          data: { actions: { push: event.name } },
+        });
+        return;
       case 'click':
         await ignoringUnknownView(
           this.prisma.linkClick.create({
-            data: { createdAt: at, href: event.href, view: { connect: { id: event.view } } },
+            data: { createdAt: at, href: event.href, view: { connect: { id: event.view, demo } } },
           }),
         );
         return;
       case 'vital':
-        await this.recordVital(event);
+        await this.recordVital(event, demo);
         return;
       case 'error':
         await ignoringUnknownView(
@@ -73,7 +85,7 @@ export class VisitLogService {
               source: event.source,
               line: event.line,
               column: event.column,
-              view: { connect: { id: event.view } },
+              view: { connect: { id: event.view, demo } },
             },
           }),
         );
@@ -87,12 +99,12 @@ export class VisitLogService {
       ON CONFLICT (day, reason) DO UPDATE SET count = "DroppedEvents".count + 1`;
   }
 
-  private async recordVital({ view, name, value }: EventOf<'vital'>) {
+  private async recordVital({ view, name, value }: EventOf<'vital'>, demo: string | null) {
     switch (name) {
       case 'LCP': {
         const lcpMs = Math.round(value);
         await this.prisma.pageView.updateMany({
-          where: { id: view, OR: [{ lcpMs: null }, { lcpMs: { lt: lcpMs } }] },
+          where: { id: view, demo, OR: [{ lcpMs: null }, { lcpMs: { lt: lcpMs } }] },
           data: { lcpMs },
         });
         return;
@@ -100,14 +112,14 @@ export class VisitLogService {
       case 'INP': {
         const inpMs = Math.round(value);
         await this.prisma.pageView.updateMany({
-          where: { id: view, OR: [{ inpMs: null }, { inpMs: { lt: inpMs } }] },
+          where: { id: view, demo, OR: [{ inpMs: null }, { inpMs: { lt: inpMs } }] },
           data: { inpMs },
         });
         return;
       }
       case 'CLS':
         await this.prisma.pageView.updateMany({
-          where: { id: view, OR: [{ cls: null }, { cls: { lt: value } }] },
+          where: { id: view, demo, OR: [{ cls: null }, { cls: { lt: value } }] },
           data: { cls: value },
         });
     }

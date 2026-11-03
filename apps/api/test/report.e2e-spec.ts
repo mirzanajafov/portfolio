@@ -154,10 +154,16 @@ describe('the visitor report against a real database', () => {
     expect(throughJson(report)).toEqual(report);
   });
 
-  it('gives a day the same totals before and after it is rolled up', async () => {
+  it("counts only the site's pages, before and after a day is rolled up, and deletes the demo's pages with the day", async () => {
     const reading = randomUUID();
+    const fromTheDemo = { headers: { Origin: 'https://tuner.najafov.dev' } };
     at('12:00:00');
     await send({ type: 'view', id: reading, path: '/' });
+    await send({ type: 'view', id: randomUUID(), path: '/' }, fromTheDemo);
+    await send(
+      { type: 'view', id: randomUUID(), path: '/' },
+      { ip: '198.51.100.9', ...fromTheDemo },
+    );
     await send({
       type: 'read',
       view: reading,
@@ -175,9 +181,11 @@ describe('the visitor report against a real database', () => {
 
     clock.current = new Date('2026-10-03T12:00:00Z');
     const raw = await weekOf();
+    expect((await reports.build(7)).pages.find(({ path }) => path === '/')?.views).toBe(1);
     clock.current = new Date('2026-11-02T00:00:00Z');
     await app.get(RetentionService).cleanup();
     expect(await prisma.visit.count()).toBe(0);
+    expect(await prisma.pageView.count()).toBe(0);
     const rolled = await weekOf();
 
     const totals = (week: typeof raw) => ({
@@ -195,6 +203,21 @@ describe('the visitor report against a real database', () => {
       quickExits: 1,
     });
     expect(totals(rolled)).toEqual(totals(raw));
+  });
+
+  it('starts a visit at its first page on the site, not at a demo page opened earlier that day', async () => {
+    at('00:30:00');
+    await send(
+      { type: 'view', id: randomUUID(), path: '/' },
+      { headers: { Origin: 'https://tuner.najafov.dev' } },
+    );
+    at('21:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/', ref: 'late1' });
+
+    const { unknownCodes } = (await reports.build(7)).applications;
+    expect(unknownCodes).toEqual([
+      expect.objectContaining({ code: 'late1', firstSeen: new Date('2026-10-02T21:00:00Z') }),
+    ]);
   });
 
   it('counts a day that is due but not rolled up yet from its raw rows', async () => {

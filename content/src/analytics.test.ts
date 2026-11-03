@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { backupDays, readingBlocks } from './analytics.ts';
+import { backupDays, demoSites, readingBlocks } from './analytics.ts';
 import { aCaseStudy, aProject, contentOf } from './testing.ts';
 
 describe('readingBlocks', () => {
@@ -30,6 +30,38 @@ describe('readingBlocks', () => {
         ['/', ['shown', 'told', 'listed', 'ask', 'experience']],
         ['/projects/shown', ['problem', 'demo', 'decision-1', 'decision-2', 'proof', 'next']],
         ['/projects/told', ['problem', 'decision-1', 'decision-2', 'decision-3', 'proof', 'next']],
+      ]),
+    );
+  });
+});
+
+describe('demoSites', () => {
+  it('maps the origin of each demo that records visits to its project and its actions', async () => {
+    const content = await contentOf({
+      projects: [
+        aProject({
+          slug: 'alpha',
+          name: 'Alpha',
+          links: {
+            live: 'https://alpha.najafov.dev/start',
+            repo: 'https://github.com/someone/alpha',
+          },
+          analytics: { actions: { 'ran-it': 'ran it' } },
+        }),
+        aProject({ slug: 'beta', order: 2 }),
+      ],
+    });
+    expect(demoSites(content)).toEqual(
+      new Map([
+        [
+          'https://alpha.najafov.dev',
+          {
+            slug: 'alpha',
+            name: 'Alpha',
+            host: 'alpha.najafov.dev',
+            actions: { 'ran-it': 'ran it' },
+          },
+        ],
       ]),
     );
   });

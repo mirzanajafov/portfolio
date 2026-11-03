@@ -60,6 +60,8 @@ model PageView {
   lcpMs         Int?
   inpMs         Int?
   cls           Float?
+  demo          String?
+  actions       String[]      @default([])
   clicks        LinkClick[]
   errors        ClientError[]
 

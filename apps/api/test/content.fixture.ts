@@ -7,7 +7,8 @@ export const fixtureContent = await contentOf({
       name: 'Tuner',
       hook: 'Matches people by asking fewer questions',
       summary: 'A matching service that picks the next question for each user.',
-      links: { live: 'https://tuner.example.com', repo: 'https://github.com/someone/tuner' },
+      links: { live: 'https://tuner.najafov.dev', repo: 'https://github.com/someone/tuner' },
+      analytics: { actions: { answered: 'answered a question' } },
       headline: 'fewer-questions',
       facts: [
         aFact({
