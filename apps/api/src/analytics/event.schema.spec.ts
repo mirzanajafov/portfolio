@@ -113,6 +113,10 @@ describe('siteEventSchema', () => {
       expect(schema.safeParse({ ...error, source }).success).toBe(false);
     }
   });
+
+  it('refuses an action, which only a demo sends', () => {
+    expect(schema.safeParse({ type: 'action', view, name: 'answered' }).success).toBe(false);
+  });
 });
 
 describe('demoEventSchema', () => {
@@ -132,10 +136,6 @@ describe('demoEventSchema', () => {
     expect(demo.safeParse({ type: 'error', view, message: 'x', source: '/a.js' }).success).toBe(
       false,
     );
-  });
-
-  it('is not something the site sends', () => {
-    expect(schema.safeParse({ type: 'action', view, name: 'answered' }).success).toBe(false);
   });
 });
 
