@@ -2,7 +2,7 @@ import type { VisitEvent } from '@portfolio/content/analytics';
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackVisit } from './visit';
 
-const fetchMock = vi.fn<typeof fetch>();
+const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
 
 function isEvent(value: unknown): value is VisitEvent {
   return typeof value === 'object' && value !== null && 'type' in value;
@@ -44,7 +44,6 @@ beforeEach(() => {
   setReferrer('https://najafov.dev/projects/matchium');
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
-  fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
 });
 
 afterEach(() => {
