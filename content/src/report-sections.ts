@@ -509,7 +509,7 @@ function applications({ applications }: Report, all: boolean): ReportSection {
           line('Applications, every visit kept rather than only the period, times in Baku'),
           ...listed(list, all, (application) => applicationParts(application, all), false),
           line(
-            `Guesses checked on ${counted(score.visits, 'coded visit')}: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
+            `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),
         ]),
     ...(unknownCodes.length > 0

@@ -161,7 +161,9 @@ describe('a CV for one application', () => {
           : uri,
       ),
     );
+    expect(urisOf(own)).toContain('https://najafov.dev/?r=memh');
     expect(urisOf(own)).toContain('https://matchium.najafov.dev/?r=memh');
     expect(urisOf(own)).toContain('https://github.com/mirzanajafov/matchium');
+    expect(urisOf(own)).toContain('https://www.linkedin.com/in/mirza-nacafov');
   });
 });
