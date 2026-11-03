@@ -180,6 +180,8 @@ export const someVisits = (visits: number): Totals => ({
   medianVisitSeconds: 40,
   phoneVisits: 1,
   quickExits: 0,
+  openedDemo: 0,
+  didDemoStep: 0,
 });
 
 const noOutcome = () => ({ right: 0, wrong: 0, tied: 0 });
@@ -204,6 +206,7 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     pages: [],
     reading: [],
     links: { cvViews: 0, cvPdf: [], outbound: [] },
+    demos: { opened: 0, didStep: 0, demoOnly: 0, list: [] },
     ask: { since: null, questions: 0, refused: 0, inVisits: 0, visits: 0, days: [] },
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },

@@ -1,6 +1,8 @@
 import type { ReportPart, ReportSection } from '@portfolio/content/report-sections';
 
 function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
+  const headClass = (column: number) =>
+    column === 0 ? 'text-left' : 'text-right whitespace-nowrap';
   const cellClass = (column: number) =>
     column === 0 ? 'text-left' : 'text-right tabular-nums whitespace-nowrap';
   return (
@@ -12,7 +14,7 @@ function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
               <th
                 key={column}
                 scope="col"
-                className={`px-2 py-1 font-semibold ${cellClass(column)}`}
+                className={`px-2 py-1 font-semibold ${headClass(column)}`}
               >
                 {cell}
               </th>

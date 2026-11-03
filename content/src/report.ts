@@ -43,6 +43,8 @@ const totalsSchema = z.object({
   medianVisitSeconds: z.nullable(z.number()),
   phoneVisits: z.number(),
   quickExits: z.number(),
+  openedDemo: z.number(),
+  didDemoStep: z.number(),
 });
 
 const weekSchema = z.extend(totalsSchema, { start: day, partial: z.boolean() });
@@ -61,7 +63,15 @@ const outcomesSchema = z.object({ right: z.number(), wrong: z.number(), tied: z.
 const visitStorySchema = z.object({
   at: isoDate,
   from: z.nullable(z.string()),
-  pages: z.array(z.object({ path: z.string(), seconds: z.number(), read: z.array(z.string()) })),
+  pages: z.array(
+    z.object({
+      demo: z.nullable(z.string()),
+      path: z.string(),
+      seconds: z.number(),
+      read: z.array(z.string()),
+      did: z.array(z.string()),
+    }),
+  ),
   clicks: z.array(z.string()),
   questions: z.array(z.string()),
   interacted: z.boolean(),
@@ -135,6 +145,23 @@ export const reportSchema = z.object({
     cvViews: z.number(),
     cvPdf: z.array(z.object({ from: z.string(), clicks: z.number() })),
     outbound: z.array(z.object({ label: z.string(), clicks: z.number() })),
+  }),
+  demos: z.object({
+    opened: z.number(),
+    didStep: z.number(),
+    demoOnly: z.number(),
+    list: z.array(
+      z.object({
+        name: z.string(),
+        clicked: z.number(),
+        fromSite: z.number(),
+        clickedNotOpened: z.number(),
+        demoOnly: z.array(z.object({ source: z.enum(sources), visits: z.number() })),
+        didStep: z.number(),
+        steps: z.array(z.object({ label: z.string(), visits: z.number() })),
+        medianSeconds: z.nullable(z.number()),
+      }),
+    ),
   }),
   ask: z.object({
     since: z.nullable(isoDate),

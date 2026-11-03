@@ -6,6 +6,8 @@ export type DayTotals = {
   phoneVisits: number;
   quickExits: number;
   visitSeconds: number[];
+  openedDemo: number;
+  didDemoStep: number;
 };
 
 export function dayTotals(visits: readonly Visit[]): DayTotals {
@@ -15,5 +17,9 @@ export function dayTotals(visits: readonly Visit[]): DayTotals {
     phoneVisits: visits.filter(({ device }) => device === 'phone').length,
     quickExits: visits.filter(isQuickExit).length,
     visitSeconds: visits.map(secondsOf),
+    openedDemo: visits.filter(({ demoViews }) => demoViews.length > 0).length,
+    didDemoStep: visits.filter(({ demoViews }) =>
+      demoViews.some(({ actions }) => actions.length > 0),
+    ).length,
   };
 }

@@ -1,5 +1,5 @@
 import type { Content } from '@portfolio/content';
-import { readingBlocks } from '@portfolio/content/analytics';
+import { demoSites, readingBlocks } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 import { readSeconds, type Report, type Totals, type Week } from '@portfolio/content/report';
 import { outboundLinks } from '../links.js';
@@ -11,6 +11,7 @@ import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
 import { inOrder, type Visit } from '../visits.js';
 import { applicationsOf } from './applications.js';
+import { demosOf } from './demos.js';
 import { qualityOf } from './quality.js';
 import type { ReportRows } from './rows.js';
 
@@ -31,7 +32,11 @@ export function firstReportedDay(now: Date, days: number): Date {
   return before < trend ? before : trend;
 }
 
-function startedBetween(visits: readonly Visit[], from: Date, to: Date): Visit[] {
+function startedBetween<T extends { startedAt: Date }>(
+  visits: readonly T[],
+  from: Date,
+  to: Date,
+): T[] {
   return visits.filter(({ startedAt }) => startedAt >= from && startedAt < to);
 }
 
@@ -44,6 +49,8 @@ function sumOf(days: readonly DayTotals[]): Totals {
     medianVisitSeconds: median(days.flatMap(({ visitSeconds }) => visitSeconds)),
     phoneVisits: total(({ phoneVisits }) => phoneVisits),
     quickExits: total(({ quickExits }) => quickExits),
+    openedDemo: total(({ openedDemo }) => openedDemo),
+    didDemoStep: total(({ didDemoStep }) => didDemoStep),
   };
 }
 
@@ -236,6 +243,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
   const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
+  const demos = [...demoSites(content).values()];
   const visits = startedBetween(everyVisit, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
@@ -263,6 +271,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
+    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), demos),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
     quality: qualityOf(visits),
@@ -273,6 +282,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       rows.rolledApplications,
       labels,
       askedIn(rows.questions),
+      new Map(demos.map((demo) => [demo.slug, demo])),
     ),
   };
 }

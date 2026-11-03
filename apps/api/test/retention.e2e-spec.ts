@@ -34,7 +34,7 @@ describe('retention against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyApplication", "Application" CASCADE`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo", "DailyApplication", "Application" CASCADE`;
   });
 
   it('keeps a day raw until it is 30 full days old, then rolls it up and deletes its visits with their page views, clicks and errors', async () => {
@@ -174,6 +174,46 @@ describe('retention against a real database', () => {
     expect(await prisma.dailyApplication.count()).toBe(0);
   });
 
+  it("rolls a day's demos up with the site's visits that went to them", async () => {
+    const onTheSite = randomUUID();
+    const onTheDemo = randomUUID();
+    at('2026-10-02T12:00:00Z');
+    await send({ type: 'view', id: onTheSite, path: '/projects/tuner' });
+    await send({ type: 'click', view: onTheSite, href: 'https://tuner.najafov.dev' });
+    at('2026-10-02T12:01:00Z');
+    await sendEvent(
+      app,
+      { type: 'view', id: onTheDemo, path: '/', referrer: 'najafov.dev' },
+      { headers: { Origin: 'https://tuner.najafov.dev' } },
+    ).expect(204);
+    await sendEvent(
+      app,
+      { type: 'action', view: onTheDemo, name: 'answered' },
+      { headers: { Origin: 'https://tuner.najafov.dev' } },
+    ).expect(204);
+
+    at('2026-11-02T00:00:00Z');
+    await cleanup();
+
+    expect(await prisma.pageView.count()).toBe(0);
+    expect(await prisma.dailyVisits.findMany()).toEqual([
+      expect.objectContaining({ visits: 1, openedDemo: 1, didDemoStep: 1 }),
+    ]);
+    expect(await prisma.dailyDemo.findMany()).toEqual([
+      {
+        day: new Date('2026-10-02'),
+        demo: 'tuner',
+        clicked: 1,
+        fromSite: 1,
+        clickedNotOpened: 0,
+        demoOnly: [],
+        didStep: 1,
+        steps: [{ name: 'answered', visits: 1 }],
+        activeSeconds: [0],
+      },
+    ]);
+  });
+
   it("deletes daily totals and dropped counters after 25 months, but keeps an application's", async () => {
     const memh = await prisma.application.create({
       data: {
@@ -195,6 +235,22 @@ describe('retention against a real database', () => {
     await prisma.dailySource.create({
       data: { day: oldDay, source: 'direct', host: '', visits: 1 },
     });
+    const demo = {
+      demo: 'tuner',
+      clicked: 1,
+      fromSite: 1,
+      clickedNotOpened: 0,
+      demoOnly: [],
+      didStep: 0,
+      steps: [],
+      activeSeconds: [10],
+    };
+    await prisma.dailyDemo.createMany({
+      data: [
+        { day: oldDay, ...demo },
+        { day: keptDay, ...demo },
+      ],
+    });
     await prisma.droppedEvents.create({ data: { day: oldDay, reason: 'bot', count: 3 } });
     await prisma.dailyApplication.create({
       data: { day: oldDay, applicationId: memh.id, visits: 1, views: 1 },
@@ -205,6 +261,7 @@ describe('retention against a real database', () => {
 
     expect(await daysRolled()).toEqual([['2026-09-01', 1]]);
     expect(await prisma.dailySource.count()).toBe(0);
+    expect((await prisma.dailyDemo.findMany()).map(({ day }) => day)).toEqual([keptDay]);
     expect(await prisma.droppedEvents.count()).toBe(0);
     expect(await prisma.dailyApplication.count()).toBe(1);
   });

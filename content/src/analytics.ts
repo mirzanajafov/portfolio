@@ -39,6 +39,7 @@ export type VisitEvent =
 export type DemoSite = {
   slug: string;
   name: string;
+  live: string;
   host: string;
   actions: Record<string, string>;
 };
@@ -48,7 +49,13 @@ export function demoSites({ projects }: Content): Map<string, DemoSite> {
   for (const { slug, name, links, analytics } of projects) {
     if (analytics) {
       const live = new URL(links.live);
-      demos.set(live.origin, { slug, name, host: live.host, actions: analytics.actions });
+      demos.set(live.origin, {
+        slug,
+        name,
+        live: links.live,
+        host: live.host,
+        actions: analytics.actions,
+      });
     }
   }
   return demos;

@@ -113,6 +113,8 @@ model DailyVisits {
   phoneVisits  Int
   quickExits   Int
   visitSeconds Int[]
+  openedDemo   Int      @default(0)
+  didDemoStep  Int      @default(0)
 }
 
 model DailyPage {
@@ -157,6 +159,20 @@ model DailyClick {
   clicks Int
 
   @@id([day, path, href])
+}
+
+model DailyDemo {
+  day              DateTime @db.Date
+  demo             String
+  clicked          Int
+  fromSite         Int
+  clickedNotOpened Int
+  demoOnly         Json
+  didStep          Int
+  steps            Json
+  activeSeconds    Int[]
+
+  @@id([day, demo])
 }
 
 model DailyApplication {
