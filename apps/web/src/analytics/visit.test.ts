@@ -44,7 +44,6 @@ beforeEach(() => {
   setReferrer('https://najafov.dev/projects/matchium');
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
-  fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
 });
 
 afterEach(() => {
