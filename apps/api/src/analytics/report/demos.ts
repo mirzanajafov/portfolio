@@ -7,11 +7,10 @@ import type { VisitRow } from '../visits.js';
 
 export function demosOf(
   rows: readonly VisitRow[],
-  { visits, openedDemo, didDemoStep }: DayTotals,
+  { openedDemo, didDemoStep }: DayTotals,
   demos: readonly DemoSite[],
 ): Report['demos'] {
   return {
-    visits,
     opened: openedDemo,
     didStep: didDemoStep,
     demoOnly: rows.filter(({ views, demoViews }) => views.length === 0 && demoViews.length > 0)
@@ -24,7 +23,6 @@ export function demosOf(
       return [
         {
           name: site.name,
-          host: site.host,
           clicked: totals.clicked,
           fromSite: totals.fromSite,
           clickedNotOpened: totals.clickedNotOpened,

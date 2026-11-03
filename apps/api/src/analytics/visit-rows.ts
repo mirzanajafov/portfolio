@@ -55,7 +55,6 @@ export async function findVisits(
     );
     return {
       ...visit,
-      startedAt: (onTheSite[0] ?? onDemos[0])?.createdAt ?? visit.startedAt,
       device: knownDevice.parse(device),
       browser: knownBrowser.parse(browser),
       views: onTheSite,

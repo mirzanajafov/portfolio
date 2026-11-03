@@ -147,14 +147,12 @@ export const reportSchema = z.object({
     outbound: z.array(z.object({ label: z.string(), clicks: z.number() })),
   }),
   demos: z.object({
-    visits: z.number(),
     opened: z.number(),
     didStep: z.number(),
     demoOnly: z.number(),
     list: z.array(
       z.object({
         name: z.string(),
-        host: z.string(),
         clicked: z.number(),
         fromSite: z.number(),
         clickedNotOpened: z.number(),

@@ -118,15 +118,14 @@ describe('reportText', () => {
   it('says how many site visits opened a demo, and lists each demo with its steps and where its own visits came from', () => {
     const text = reportText(
       aReport({
+        period: { ...aReport().period, visits: 80 },
         demos: {
-          visits: 80,
           opened: 12,
           didStep: 7,
           demoOnly: 5,
           list: [
             {
               name: 'Matchium',
-              host: 'matchium.najafov.dev',
               clicked: 10,
               fromSite: 9,
               clickedNotOpened: 2,
