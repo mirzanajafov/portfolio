@@ -1,21 +1,18 @@
 import type { ReportPart, ReportSection } from '@portfolio/content/report-sections';
 
+function hasWords(cell: string): boolean {
+  return /\p{L}/u.test(cell);
+}
+
 function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
-  const headClass = (column: number) =>
-    column === 0 ? 'text-left' : 'text-right whitespace-nowrap';
-  const cellClass = (column: number) =>
-    column === 0 ? 'text-left' : 'text-right tabular-nums whitespace-nowrap';
+  const alignOf = (column: number) => (column === 0 ? 'text-left' : 'text-right whitespace-nowrap');
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr>
             {head.map((cell, column) => (
-              <th
-                key={column}
-                scope="col"
-                className={`px-2 py-1 font-semibold ${headClass(column)}`}
-              >
+              <th key={column} scope="col" className={`px-2 py-1 font-semibold ${alignOf(column)}`}>
                 {cell}
               </th>
             ))}
@@ -25,7 +22,10 @@ function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
           {body.map((row, index) => (
             <tr key={index} className="border-t border-line">
               {row.map((cell, column) => (
-                <td key={column} className={`px-2 py-1 ${cellClass(column)}`}>
+                <td
+                  key={column}
+                  className={`px-2 py-1 ${alignOf(column)}${hasWords(cell) ? '' : ' tabular-nums'}`}
+                >
                   {cell}
                 </td>
               ))}
