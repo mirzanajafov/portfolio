@@ -270,57 +270,51 @@ function links({ links }: Report, all: boolean): ReportSection[] {
   ];
 }
 
-function demos({ demos }: Report): ReportSection[] {
-  const { visits, opened, didStep, demoOnly, list } = demos;
-  if (visits === 0 && demoOnly === 0) {
-    return [[line('Demos: none')]];
-  }
-  const headline = line(
-    `Demos: of ${counted(visits, 'site visit')}, ${String(opened)} opened a demo (${share(opened, visits)}) and ${String(didStep)} did a step in one (${share(didStep, visits)}). ${counted(demoOnly, 'more visit')} saw only a demo.`,
-  );
+function demos({ period: { visits }, demos }: Report): ReportSection {
+  const { opened, didStep, demoOnly, list } = demos;
   if (list.length === 0) {
-    return [[headline]];
+    return [line('Demos: none')];
   }
   return [
-    [
-      headline,
-      table([
-        [
-          'Demo',
-          'clicked',
-          'opened in a site visit',
-          'clicked, not opened',
-          'only the demo',
-          'did a step',
-          'median s',
-        ],
-        ...list.map((demo) => [
-          demo.name,
-          String(demo.clicked),
-          String(demo.fromSite),
-          String(demo.clickedNotOpened),
-          String(demo.demoOnly.reduce((total, { visits: count }) => total + count, 0)),
-          String(demo.didStep),
-          optional(demo.medianSeconds),
-        ]),
+    line(
+      `Demos: of ${counted(visits, 'site visit')}, ${String(opened)} opened a demo (${share(opened, visits)}) and ${String(didStep)} did a step in one (${share(didStep, visits)}). ${counted(demoOnly, 'more visit')} saw only a demo.`,
+    ),
+    table([
+      [
+        'Demo',
+        'clicked',
+        'opened in a site visit',
+        'clicked, not opened',
+        'only the demo',
+        'did a step',
+        'median s',
+      ],
+      ...list.map((demo) => [
+        demo.name,
+        String(demo.clicked),
+        String(demo.fromSite),
+        String(demo.clickedNotOpened),
+        String(demo.demoOnly.reduce((total, { visits: count }) => total + count, 0)),
+        String(demo.didStep),
+        optional(demo.medianSeconds),
       ]),
-      ...list.flatMap(({ name, steps, demoOnly: arrivals }) => [
-        ...(steps.length > 0
-          ? [
-              item(
-                `${name} steps: ${steps.map(({ label, visits: count }) => `${label} ${String(count)}`).join(', ')}`,
-              ),
-            ]
-          : []),
-        ...(arrivals.length > 0
-          ? [
-              item(
-                `${name} only the demo, from: ${arrivals.map(({ source, visits: count }) => `${sourceNames[source]} ${String(count)}`).join(', ')}`,
-              ),
-            ]
-          : []),
-      ]),
-    ],
+    ]),
+    ...list.flatMap(({ name, steps, demoOnly: arrivals }) => [
+      ...(steps.length > 0
+        ? [
+            item(
+              `${name} steps: ${steps.map(({ label, visits: count }) => `${label} ${String(count)}`).join(', ')}`,
+            ),
+          ]
+        : []),
+      ...(arrivals.length > 0
+        ? [
+            item(
+              `${name} only the demo, from: ${arrivals.map(({ source, visits: count }) => `${sourceNames[source]} ${String(count)}`).join(', ')}`,
+            ),
+          ]
+        : []),
+    ]),
   ];
 }
 
@@ -563,7 +557,7 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     ...traffic(report, all),
     ...reading(report),
     ...links(report, all),
-    ...demos(report),
+    demos(report),
     ask(report),
     ...audience(report, all),
     ...quality(report, all),

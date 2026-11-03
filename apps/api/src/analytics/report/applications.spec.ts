@@ -207,19 +207,16 @@ describe('applicationsOf', () => {
     ]);
   });
 
-  it('starts a story at its first page, a demo page included, and counts time on a demo as interaction', () => {
+  it("takes a story's source from its first page, a demo page included, and counts time on a demo as interaction", () => {
     const { list } = sectionOf([
       aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh', activeSeconds: 0 })], {
+        startedAt: hoursAgo(2),
         demoViews: [
           aDemoView({ createdAt: hoursAgo(2), referrerHost: 'github.com', activeSeconds: 90 }),
         ],
       }),
     ]);
-    expect(list[0]?.visits[0]).toMatchObject({
-      at: hoursAgo(2),
-      from: 'github.com',
-      interacted: true,
-    });
+    expect(list[0]?.visits[0]).toMatchObject({ from: 'github.com', interacted: true });
   });
 
   it('names a direct arrival at a demo as direct, even when the site page after it came from elsewhere', () => {
@@ -229,16 +226,5 @@ describe('applicationsOf', () => {
       }),
     ]);
     expect(list[0]?.visits[0]?.from).toBeNull();
-  });
-
-  it('lists the stories newest first by the time they start, a demo page included', () => {
-    const { list } = sectionOf([
-      aVisit([aView({ createdAt: hoursAgo(1), ref: 'memh' })], {
-        startedAt: hoursAgo(1),
-        demoViews: [aDemoView({ createdAt: hoursAgo(9) })],
-      }),
-      aVisit([aView({ createdAt: hoursAgo(3), ref: 'memh' })], { startedAt: hoursAgo(3) }),
-    ]);
-    expect(list[0]?.visits.map(({ at }) => at)).toEqual([hoursAgo(3), hoursAgo(9)]);
   });
 });

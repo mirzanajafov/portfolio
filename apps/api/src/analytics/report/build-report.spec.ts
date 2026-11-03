@@ -412,7 +412,7 @@ describe('buildReport', () => {
         aVisit([aView()]),
         aVisit([], { demoViews: [aDemoView({ referrerHost: 'github.com' })] }),
       ]);
-      expect(demos).toMatchObject({ visits: 3, opened: 2, didStep: 1, demoOnly: 1 });
+      expect(demos).toMatchObject({ opened: 2, didStep: 1, demoOnly: 1 });
       expect(overview.today).toMatchObject({ visits: 3, openedDemo: 2, didDemoStep: 1 });
     });
 
@@ -426,7 +426,6 @@ describe('buildReport', () => {
       expect(demos.list).toEqual([
         {
           name: 'Tuner',
-          host: 'tuner.najafov.dev',
           clicked: 2,
           fromSite: 1,
           clickedNotOpened: 1,
@@ -445,7 +444,7 @@ describe('buildReport', () => {
       expect(reportOf([aVisit([aView()])]).demos.list).toEqual([]);
     });
 
-    it('does not take a visit that went on to a demo for a quick exit', () => {
+    it('does not take a visit that also opened a demo for a quick exit', () => {
       const { overview } = reportOf([
         aVisit([aView({ activeSeconds: 3 })], { demoViews: [aDemoView()] }),
         aVisit([aView({ activeSeconds: 3 })]),
