@@ -1,11 +1,11 @@
 import type { ReportPart, ReportSection } from '@portfolio/content/report-sections';
 
-function hasWords(cell: string): boolean {
-  return /\p{L}/u.test(cell);
-}
+const letter = /\p{L}/u;
 
 function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
   const alignOf = (column: number) => (column === 0 ? 'text-left' : 'text-right whitespace-nowrap');
+  const cellClass = (column: number, cell: string) =>
+    column === 0 || letter.test(cell) ? alignOf(column) : `${alignOf(column)} tabular-nums`;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -22,10 +22,7 @@ function Table({ rows: [head = [], ...body] }: { rows: string[][] }) {
           {body.map((row, index) => (
             <tr key={index} className="border-t border-line">
               {row.map((cell, column) => (
-                <td
-                  key={column}
-                  className={`px-2 py-1 ${alignOf(column)}${hasWords(cell) ? '' : ' tabular-nums'}`}
-                >
+                <td key={column} className={`px-2 py-1 ${cellClass(column, cell)}`}>
                   {cell}
                 </td>
               ))}
