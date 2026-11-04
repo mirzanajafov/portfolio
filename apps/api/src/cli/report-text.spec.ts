@@ -13,6 +13,20 @@ const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   ...overrides,
 });
 
+type DemoEntry = Report['demos']['list'][number];
+
+const aDemo = (overrides: Partial<DemoEntry> = {}): DemoEntry => ({
+  name: 'Matchium',
+  clicked: 0,
+  fromSite: 0,
+  clickedNotOpened: 0,
+  demoOnly: [],
+  didStep: 0,
+  steps: [],
+  medianSeconds: null,
+  ...overrides,
+});
+
 describe('reportText', () => {
   it('heads the report with the UTC days of the period and the time in Baku', () => {
     expect(reportText(aReport(), { all: false })).toMatch(
@@ -115,7 +129,7 @@ describe('reportText', () => {
     expect(text).toMatch(/^2026-10-30 +3 +1 +5$/m);
   });
 
-  it('says how many site visits opened a demo, and lists each demo with its steps and where its own visits came from', () => {
+  it('says how many site visits opened a demo, and lists each demo with its steps, each count before its label, and where its own visits came from', () => {
     const text = reportText(
       aReport({
         period: { ...aReport().period, visits: 80 },
@@ -124,8 +138,7 @@ describe('reportText', () => {
           didStep: 7,
           demoOnly: 5,
           list: [
-            {
-              name: 'Matchium',
+            aDemo({
               clicked: 10,
               fromSite: 9,
               clickedNotOpened: 2,
@@ -133,20 +146,15 @@ describe('reportText', () => {
               didStep: 6,
               steps: [{ label: 'answered a question', visits: 6 }],
               medianSeconds: 140,
-            },
-            {
+            }),
+            aDemo({
               name: 'PortalGun',
-              clicked: 3,
-              fromSite: 3,
-              clickedNotOpened: 0,
-              demoOnly: [],
               didStep: 1,
               steps: [
                 { label: 'fired 60 requests', visits: 1 },
                 { label: 'put a fault on a dimension', visits: 0 },
               ],
-              medianSeconds: 95,
-            },
+            }),
           ],
         },
       }),
