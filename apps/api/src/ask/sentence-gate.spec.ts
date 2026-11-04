@@ -114,13 +114,17 @@ describe('gateSentence', () => {
 
   it('does not count markup toward the answer length', () => {
     const marked = sourced(`<prosody rate="slow">${'x'.repeat(50)}</prosody>`);
-    expect(gateSentence(marked, 'q', answerMaxLength - 50)).toEqual({
+    expect(gateSentence(marked, 'q', answerMaxLength - 60)).toEqual({
       ok: true,
       text: 'x'.repeat(50),
     });
   });
 
-  it('stops an answer one character past its limit', () => {
+  it('lets an answer reach its limit and stops it one character past', () => {
+    expect(gateSentence(sourced('x'.repeat(50)), 'q', answerMaxLength - 50)).toEqual({
+      ok: true,
+      text: 'x'.repeat(50),
+    });
     expect(gateSentence(sourced('x'.repeat(50)), 'q', answerMaxLength - 49)).toEqual({
       ok: false,
       reason: 'too-long',
