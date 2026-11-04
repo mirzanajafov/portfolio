@@ -139,6 +139,7 @@ describe('reportText', () => {
           demoOnly: 5,
           list: [
             aDemo({
+              name: 'Matchium',
               clicked: 10,
               fromSite: 9,
               clickedNotOpened: 2,
