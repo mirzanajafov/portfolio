@@ -4,7 +4,7 @@ import { buildKnowledge } from './knowledge.js';
 import { gateSentence } from './sentence-gate.js';
 
 describe('the knowledge built from the real content', () => {
-  it('has no document the gate would withhold or change as the first sentence of an answer to a question it does not echo', () => {
+  it('lets every document through the gate unchanged as the first sentence of an answer', () => {
     const { documents } = buildKnowledge(content);
     expect(
       documents.map((document) => [

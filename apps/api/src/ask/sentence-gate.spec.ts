@@ -114,7 +114,7 @@ describe('gateSentence', () => {
 
   it('does not count markup toward the answer length', () => {
     const marked = sourced(`<prosody rate="slow">${'x'.repeat(50)}</prosody>`);
-    expect(gateSentence(marked, 'q', answerMaxLength - 60)).toEqual({
+    expect(gateSentence(marked, 'q', answerMaxLength - 50)).toEqual({
       ok: true,
       text: 'x'.repeat(50),
     });
