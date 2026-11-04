@@ -51,13 +51,13 @@ decisions:
     facts: [witness-catch, tamper-signed, audit-scale, browser-verify]
 proof: >-
   The evidence is a chaos harness. One container runs Postgres, Kafka, Toxiproxy, the simulated
-  provider, two API processes, the worker and the witness. Clients run payment journeys with real
-  retries as the harness kills processes at random and at 15 named points, crashes Postgres and
-  Kafka, breaks the network, and has the bank time out, misstate amounts and forge webhooks. An
-  independent checker reads it all after each run, and a mutant per guard shows a violation would be
-  seen. The runs found real bugs: a dead pooled connection crashing Node, the unfenced lease, a
-  deadlock with an exhausted pool, consumers holding partitions for 45 s after a crash. CI runs a
-  three-run smoke on every push.
+  bank, two API processes, the worker and the witness. Clients run payment journeys with real
+  retries as the harness kills processes at random and at 15 named points in the code, crashes
+  Postgres and Kafka, breaks the network, and has the bank time out, misstate amounts and forge
+  webhooks. An independent checker reads it all after each run, and a mutant per guard shows a
+  violation is seen. It found real bugs: a dead pooled connection crashing Node, the unfenced lease,
+  a deadlock with an exhausted pool, consumers holding partitions for 45 s after a crash. CI runs a
+  three-run chaos smoke on every push.
 next: >-
   One Postgres without a replica, one Kafka broker and backups on the same disk are fine for a demo
   and not for money. The witness should sign somewhere I don't control, like a public transparency
