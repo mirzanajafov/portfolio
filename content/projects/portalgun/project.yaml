@@ -14,7 +14,7 @@ links:
 analytics:
   actions:
     fired: fired 60 requests
-    broke-dimension: broke a dimension
+    broke-dimension: put a fault on a dimension
 stack: [Go, Redis, PostgreSQL, Next.js, Toxiproxy]
 uses:
   - { project: fivefamilies, for: service discovery on its live demo }

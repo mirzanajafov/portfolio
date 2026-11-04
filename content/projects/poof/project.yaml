@@ -13,7 +13,7 @@ links:
 analytics:
   actions:
     poofed: sent a batch that was taken
-    ran-exhibit: ran it for a minute
+    ran-exhibit: ran a policy for a minute
 stack: [NestJS, Next.js, PostgreSQL, Redis, sharp, OpenTelemetry]
 headline: pool-beats-splitting
 facts:
