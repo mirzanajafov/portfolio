@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { questionMaxLength } from './ask.ts';
+import { answerMaxLength, questionMaxLength } from './ask.ts';
 import { siteUrl } from './site.ts';
 
 export const slugSchema = z
@@ -173,13 +173,13 @@ export const caseStudySchema = z.strictObject({
     .array(
       z.strictObject({
         title: z.string().min(1).max(80),
-        body: z.string().min(1).max(900),
+        body: z.string().min(1).max(answerMaxLength),
         facts: z.array(slugSchema).default([]),
       }),
     )
     .min(2)
     .max(4),
-  proof: z.string().min(1).max(900),
+  proof: z.string().min(1).max(answerMaxLength),
   next: z.string().min(1).max(600),
 });
 

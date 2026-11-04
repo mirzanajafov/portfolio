@@ -1,6 +1,7 @@
 import * as z from 'zod/mini';
 
 export const questionMaxLength = 300;
+export const answerMaxLength = 700;
 export const askLogDays = 30;
 
 const gateReasonSchema = z.enum(['unsupported', 'empty', 'echo', 'denied', 'too-long']);

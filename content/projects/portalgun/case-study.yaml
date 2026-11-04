@@ -15,15 +15,14 @@ demoCaption: >-
 decisions:
   - title: Build on the standard library, measure what it costs
     body: >-
-      The proxy is Go's httputil.ReverseProxy with my own Transport, which picks the dimension per
+      The proxy is Go's httputil.ReverseProxy with my own Transport, which picks a dimension per
       attempt, so a retry moves to another dimension without ReverseProxy knowing. Hop-by-hop
-      headers, streaming and upgrades are where subtle bugs live, and the standard library has had
-      years of them fixed. Against nginx, HAProxy, Envoy and Caddy on one vCPU each, my own code
-      costs a few percent over the bare ReverseProxy, and nginx and HAProxy hold about twice the
-      rate, which is roughly what C event loops without a garbage collector should do. Past their
-      maximum the Go proxies queued in memory until they swapped, so the gateway now refuses work
-      past 256 requests in flight. I had to measure that number: I guessed 20-40 KB per request in
-      flight, and it was about 145.
+      headers, streaming and upgrades hide subtle bugs, and the standard library has had years of
+      them fixed. Against nginx, HAProxy, Envoy and Caddy on one vCPU each, my code costs a few
+      percent over the bare ReverseProxy, and nginx and HAProxy hold about twice the rate, roughly
+      what C event loops without garbage collection should do. Past their maximum the Go proxies
+      queued in memory until they swapped, so the gateway refuses work past 256 requests in flight.
+      I guessed 20-40 KB per request in flight. It was about 145.
     facts: [proxy-overhead, own-code-cost, admission-cap, in-flight-memory]
   - title: One quota, four designs, one referee
     body: >-
