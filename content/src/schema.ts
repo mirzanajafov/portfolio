@@ -86,7 +86,13 @@ export const projectSchema = z
     analytics: z
       .strictObject({
         actions: z
-          .record(z.string().regex(/^[a-z][a-z0-9-]{0,39}$/), z.string().min(1).max(40))
+          .record(
+            z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+            z
+              .string()
+              .max(40)
+              .regex(/^[a-z][^,]*$/, 'a step label starts with a lowercase word and has no comma'),
+          )
           .refine((actions) => {
             const count = Object.keys(actions).length;
             return count >= 1 && count <= 3;
