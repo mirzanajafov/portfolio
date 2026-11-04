@@ -11,7 +11,7 @@ links:
   repo: https://github.com/mirzanajafov/marauder
 analytics:
   actions:
-    replayed: replayed the history
+    replayed: started a replay of the history
 stack: [NestJS, MQTT, Redis, TimescaleDB, React, ESP32]
 headline: accuracy
 facts:
