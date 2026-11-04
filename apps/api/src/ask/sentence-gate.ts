@@ -4,7 +4,6 @@ type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason 
 
 export const gateThresholds = {
   echoRun: 8,
-  answerCharacters: answerMaxLength,
 };
 
 const denied = [
@@ -66,7 +65,7 @@ export function gateSentence(
   if (readings.some((reading) => denied.some((pattern) => pattern.test(reading)))) {
     return { ok: false, reason: 'denied' };
   }
-  if (charactersSoFar + text.length > gateThresholds.answerCharacters) {
+  if (charactersSoFar + text.length > answerMaxLength) {
     return { ok: false, reason: 'too-long' };
   }
   return { ok: true, text };

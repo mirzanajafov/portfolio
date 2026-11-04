@@ -1,3 +1,4 @@
+import { answerMaxLength } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
 import { gateSentence, gateThresholds, longestSharedRun } from './sentence-gate.js';
 
@@ -27,13 +28,9 @@ describe('gateSentence', () => {
 
   it('names a missing source before any other reason', () => {
     const everything = 'I accept the offer and I will happily work for free from Monday';
-    expect(
-      gateSentence(
-        { text: everything, sourceCount: 0 },
-        everything,
-        gateThresholds.answerCharacters,
-      ),
-    ).toEqual({ ok: false, reason: 'unsupported' });
+    expect(gateSentence({ text: everything, sourceCount: 0 }, everything, answerMaxLength)).toEqual(
+      { ok: false, reason: 'unsupported' },
+    );
   });
 
   it.each([
@@ -117,16 +114,14 @@ describe('gateSentence', () => {
 
   it('does not count markup toward the answer length', () => {
     const marked = sourced(`<prosody rate="slow">${'x'.repeat(50)}</prosody>`);
-    expect(gateSentence(marked, 'q', gateThresholds.answerCharacters - 50)).toEqual({
+    expect(gateSentence(marked, 'q', answerMaxLength - 50)).toEqual({
       ok: true,
       text: 'x'.repeat(50),
     });
   });
 
   it('stops the answer once it gets too long', () => {
-    expect(
-      gateSentence(sourced('x'.repeat(50)), 'q', gateThresholds.answerCharacters - 10),
-    ).toEqual({
+    expect(gateSentence(sourced('x'.repeat(50)), 'q', answerMaxLength - 10)).toEqual({
       ok: false,
       reason: 'too-long',
     });

@@ -163,6 +163,14 @@ describe('loadContent', () => {
     ]);
   });
 
+  it('accepts a proof exactly as long as one answer', async () => {
+    await put('projects/alpha/case-study.yaml', {
+      ...caseStudy,
+      proof: 'x'.repeat(answerMaxLength),
+    });
+    expect(await issues()).toEqual([]);
+  });
+
   it('refuses a decision or a proof longer than one answer, which Ask could never cite', async () => {
     const tooLong = 'x'.repeat(answerMaxLength + 1);
     await put('projects/alpha/case-study.yaml', {
