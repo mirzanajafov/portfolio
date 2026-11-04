@@ -143,7 +143,7 @@ describe('reportText', () => {
       'Demos: of 80 site visits, 12 opened a demo (15%) and 7 did a step in one (9%). 5 more visits saw only a demo.',
     );
     expect(text).toMatch(/^Matchium +10 +9 +2 +3 +6 +140$/m);
-    expect(text).toContain('Matchium steps: answered a question 6');
+    expect(text).toContain('Matchium steps: 6 answered a question');
     expect(text).toContain('Matchium only the demo, from: GitHub 3');
   });
 
