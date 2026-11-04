@@ -2,9 +2,7 @@ import { answerMaxLength, type GateReason } from '@portfolio/content/ask';
 
 type GateVerdict = { ok: true; text: string } | { ok: false; reason: GateReason };
 
-export const gateThresholds = {
-  echoRun: 8,
-};
+export const echoRun = 8;
 
 const denied = [
   /\b(salary|salaries|compensation|hourly rate|day rate|pay(ing)? me)\b/i,
@@ -59,7 +57,7 @@ export function gateSentence(
     return { ok: false, reason: 'empty' };
   }
   const readings = [text, withoutMarkup(sentence.text, '')];
-  if (readings.some((reading) => longestSharedRun(reading, question) >= gateThresholds.echoRun)) {
+  if (readings.some((reading) => longestSharedRun(reading, question) >= echoRun)) {
     return { ok: false, reason: 'echo' };
   }
   if (readings.some((reading) => denied.some((pattern) => pattern.test(reading)))) {

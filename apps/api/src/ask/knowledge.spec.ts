@@ -1,13 +1,14 @@
 import { content } from '@portfolio/content';
-import { answerMaxLength } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
 import { buildKnowledge } from './knowledge.js';
+import { gateSentence } from './sentence-gate.js';
 
 describe('the knowledge built from the real content', () => {
-  it('has no document longer than one answer, so Ask can cite every one', () => {
-    const tooLong = buildKnowledge(content)
-      .documents.filter((document) => document.text.length > answerMaxLength)
-      .map((document) => `${document.id} (${String(document.text.length)})`);
-    expect(tooLong).toEqual([]);
+  it('has no document the gate would withhold, so Ask can cite every one', () => {
+    const withheld = buildKnowledge(content).documents.flatMap((document) => {
+      const verdict = gateSentence({ text: document.text, sourceCount: 1 }, '', 0);
+      return verdict.ok ? [] : [`${document.id}: ${verdict.reason}`];
+    });
+    expect(withheld).toEqual([]);
   });
 });

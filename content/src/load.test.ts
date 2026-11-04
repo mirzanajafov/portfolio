@@ -163,26 +163,23 @@ describe('loadContent', () => {
     ]);
   });
 
-  it('accepts a proof exactly as long as one answer', async () => {
-    await put('projects/alpha/case-study.yaml', {
-      ...caseStudy,
-      proof: 'x'.repeat(answerMaxLength),
-    });
-    expect(await issues()).toEqual([]);
-  });
-
-  it('refuses a decision or a proof longer than one answer, which Ask could never cite', async () => {
-    const tooLong = 'x'.repeat(answerMaxLength + 1);
-    await put('projects/alpha/case-study.yaml', {
-      ...caseStudy,
-      decisions: [
-        { title: 'Make it fast', body: tooLong, facts: ['fast'] },
-        { title: 'Keep it small', body: 'I kept it small.', facts: ['small'] },
-      ],
-      proof: tooLong,
-    });
-    expect((await issues()).map((issue) => issue.path)).toEqual(['decisions.0.body', 'proof']);
-  });
+  it.each([
+    ['accepts', answerMaxLength, []],
+    ['refuses', answerMaxLength + 1, ['decisions.0.body', 'proof']],
+  ])(
+    '%s a decision and a proof of %i characters, the length of one Ask answer',
+    async (_, length, paths) => {
+      const passage = 'x'.repeat(length);
+      await put('projects/alpha/case-study.yaml', {
+        ...caseStudy,
+        decisions: caseStudy.decisions.map((decision, index) =>
+          index === 0 ? { ...decision, body: passage } : decision,
+        ),
+        proof: passage,
+      });
+      expect((await issues()).map((issue) => issue.path)).toEqual(paths);
+    },
+  );
 
   it('wants a caption for every demo, so nothing moves on the page without an explanation', async () => {
     const { demoCaption: _, ...withoutCaption } = caseStudy;
