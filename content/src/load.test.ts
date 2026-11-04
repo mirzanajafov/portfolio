@@ -167,7 +167,7 @@ describe('loadContent', () => {
     ['accepts', answerMaxLength, []],
     ['refuses', answerMaxLength + 1, ['decisions.0.body', 'proof']],
   ])(
-    `%s a decision and a proof of %i characters, when an Ask answer holds ${String(answerMaxLength)}`,
+    '%s a decision and a proof of %i characters, at the length of one Ask answer and one past',
     async (_, length, paths) => {
       const passage = 'x'.repeat(length);
       await put('projects/alpha/case-study.yaml', {
