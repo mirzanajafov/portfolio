@@ -164,22 +164,23 @@ describe('loadContent', () => {
   });
 
   it.each([
-    ['accepts', answerMaxLength, []],
-    ['refuses', answerMaxLength + 1, ['decisions.0.body', 'proof']],
-  ])(
-    '%s a decision and a proof of %i characters, at the length of one Ask answer and one past',
-    async (_, length, paths) => {
-      const passage = 'x'.repeat(length);
-      await put('projects/alpha/case-study.yaml', {
-        ...caseStudy,
-        decisions: caseStudy.decisions.map((decision, index) =>
-          index === 0 ? { ...decision, body: passage } : decision,
-        ),
-        proof: passage,
-      });
-      expect((await issues()).map((issue) => issue.path)).toEqual(paths);
-    },
-  );
+    ['accepts a decision and a proof as long as one Ask answer', answerMaxLength, []],
+    [
+      'refuses a decision and a proof one character longer than an Ask answer',
+      answerMaxLength + 1,
+      ['decisions.0.body', 'proof'],
+    ],
+  ])('%s', async (_, length, paths) => {
+    const passage = 'x'.repeat(length);
+    await put('projects/alpha/case-study.yaml', {
+      ...caseStudy,
+      decisions: caseStudy.decisions.map((decision, index) =>
+        index === 0 ? { ...decision, body: passage } : decision,
+      ),
+      proof: passage,
+    });
+    expect((await issues()).map((issue) => issue.path)).toEqual(paths);
+  });
 
   it('wants a caption for every demo, so nothing moves on the page without an explanation', async () => {
     const { demoCaption: _, ...withoutCaption } = caseStudy;

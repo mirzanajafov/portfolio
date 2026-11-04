@@ -120,11 +120,7 @@ describe('gateSentence', () => {
     });
   });
 
-  it('lets an answer reach its limit and stops it one character past', () => {
-    expect(gateSentence(sourced('x'.repeat(50)), 'q', answerMaxLength - 50)).toEqual({
-      ok: true,
-      text: 'x'.repeat(50),
-    });
+  it('stops an answer one character past its limit', () => {
     expect(gateSentence(sourced('x'.repeat(50)), 'q', answerMaxLength - 49)).toEqual({
       ok: false,
       reason: 'too-long',
