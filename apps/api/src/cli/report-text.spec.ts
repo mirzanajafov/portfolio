@@ -134,6 +134,19 @@ describe('reportText', () => {
               steps: [{ label: 'answered a question', visits: 6 }],
               medianSeconds: 140,
             },
+            {
+              name: 'PortalGun',
+              clicked: 3,
+              fromSite: 3,
+              clickedNotOpened: 0,
+              demoOnly: [],
+              didStep: 1,
+              steps: [
+                { label: 'fired 60 requests', visits: 1 },
+                { label: 'put a fault on a dimension', visits: 0 },
+              ],
+              medianSeconds: 95,
+            },
           ],
         },
       }),
@@ -144,6 +157,7 @@ describe('reportText', () => {
     );
     expect(text).toMatch(/^Matchium +10 +9 +2 +3 +6 +140$/m);
     expect(text).toContain('Matchium steps: 6 answered a question');
+    expect(text).toContain('PortalGun steps: 1 fired 60 requests, 0 put a fault on a dimension');
     expect(text).toContain('Matchium only the demo, from: GitHub 3');
   });
 
