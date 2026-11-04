@@ -172,11 +172,10 @@ describe('loadContent', () => {
     ],
   ])('%s', async (_, length, paths) => {
     const passage = 'x'.repeat(length);
+    const [first, ...rest] = caseStudy.decisions;
     await put('projects/alpha/case-study.yaml', {
       ...caseStudy,
-      decisions: caseStudy.decisions.map((decision, index) =>
-        index === 0 ? { ...decision, body: passage } : decision,
-      ),
+      decisions: [{ ...first, body: passage }, ...rest],
       proof: passage,
     });
     expect((await issues()).map((issue) => issue.path)).toEqual(paths);
