@@ -303,7 +303,7 @@ function demos({ period: { visits }, demos }: Report): ReportSection {
       ...(steps.length > 0
         ? [
             item(
-              `${name} steps: ${steps.map(({ label, visits: count }) => `${label} ${String(count)}`).join(', ')}`,
+              `${name} steps: ${steps.map(({ label, visits: count }) => `${String(count)} ${label}`).join(', ')}`,
             ),
           ]
         : []),

@@ -13,6 +13,20 @@ const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   ...overrides,
 });
 
+type DemoEntry = Report['demos']['list'][number];
+
+const aDemo = (overrides: Partial<DemoEntry> = {}): DemoEntry => ({
+  name: 'Matchium',
+  clicked: 0,
+  fromSite: 0,
+  clickedNotOpened: 0,
+  demoOnly: [],
+  didStep: 0,
+  steps: [],
+  medianSeconds: null,
+  ...overrides,
+});
+
 describe('reportText', () => {
   it('heads the report with the UTC days of the period and the time in Baku', () => {
     expect(reportText(aReport(), { all: false })).toMatch(
@@ -115,7 +129,7 @@ describe('reportText', () => {
     expect(text).toMatch(/^2026-10-30 +3 +1 +5$/m);
   });
 
-  it('says how many site visits opened a demo, and lists each demo with its steps and where its own visits came from', () => {
+  it('says how many site visits opened a demo, and lists each demo with its steps, each count before its label, and where its own visits came from', () => {
     const text = reportText(
       aReport({
         period: { ...aReport().period, visits: 80 },
@@ -124,7 +138,7 @@ describe('reportText', () => {
           didStep: 7,
           demoOnly: 5,
           list: [
-            {
+            aDemo({
               name: 'Matchium',
               clicked: 10,
               fromSite: 9,
@@ -133,7 +147,15 @@ describe('reportText', () => {
               didStep: 6,
               steps: [{ label: 'answered a question', visits: 6 }],
               medianSeconds: 140,
-            },
+            }),
+            aDemo({
+              name: 'PortalGun',
+              didStep: 1,
+              steps: [
+                { label: 'fired 60 requests', visits: 1 },
+                { label: 'put a fault on a dimension', visits: 0 },
+              ],
+            }),
           ],
         },
       }),
@@ -143,7 +165,8 @@ describe('reportText', () => {
       'Demos: of 80 site visits, 12 opened a demo (15%) and 7 did a step in one (9%). 5 more visits saw only a demo.',
     );
     expect(text).toMatch(/^Matchium +10 +9 +2 +3 +6 +140$/m);
-    expect(text).toContain('Matchium steps: answered a question 6');
+    expect(text).toContain('Matchium steps: 6 answered a question');
+    expect(text).toContain('PortalGun steps: 1 fired 60 requests, 0 put a fault on a dimension');
     expect(text).toContain('Matchium only the demo, from: GitHub 3');
   });
 
