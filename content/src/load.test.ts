@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
-import { questionMaxLength } from './ask.ts';
+import { answerMaxLength, questionMaxLength } from './ask.ts';
 import { ContentError, loadContent, type ContentIssue } from './load.ts';
 import { renderGenerated } from './generate.ts';
 
@@ -161,6 +161,19 @@ describe('loadContent', () => {
         message: '"award" is not a fact of this project',
       },
     ]);
+  });
+
+  it('refuses a decision or a proof longer than one answer, which Ask could never cite', async () => {
+    const tooLong = 'x'.repeat(answerMaxLength + 1);
+    await put('projects/alpha/case-study.yaml', {
+      ...caseStudy,
+      decisions: [
+        { title: 'Make it fast', body: tooLong, facts: ['fast'] },
+        { title: 'Keep it small', body: 'I kept it small.', facts: ['small'] },
+      ],
+      proof: tooLong,
+    });
+    expect((await issues()).map((issue) => issue.path)).toEqual(['decisions.0.body', 'proof']);
   });
 
   it('wants a caption for every demo, so nothing moves on the page without an explanation', async () => {

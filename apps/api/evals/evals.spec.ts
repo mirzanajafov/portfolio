@@ -7,11 +7,24 @@ import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskService } from '../src/ask/ask.service.js';
 import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
+import { gateSentence } from '../src/ask/sentence-gate.js';
 import { adversarial } from './adversarial.js';
 import { runEvals, type EvalReport } from './evals.js';
 import published from './keyword.json' with { type: 'json' };
 
 const knowledge = buildKnowledge(content);
+
+describe('the real knowledge', () => {
+  it('has no passage too long for an answer, so every one can be cited', () => {
+    const tooLong = knowledge.documents
+      .filter((document) => {
+        const verdict = gateSentence({ text: document.text, sourceCount: 1 }, '', 0);
+        return !verdict.ok && verdict.reason === 'too-long';
+      })
+      .map((document) => document.id);
+    expect(tooLong).toEqual([]);
+  });
+});
 
 describe('the keyword baseline on the real eval set', () => {
   let report: EvalReport;
