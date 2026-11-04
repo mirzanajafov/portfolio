@@ -7,6 +7,7 @@ import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskService } from '../src/ask/ask.service.js';
 import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
+import { gateSentence } from '../src/ask/sentence-gate.js';
 import { adversarial } from './adversarial.js';
 import { runEvals, type EvalReport } from './evals.js';
 import published from './keyword.json' with { type: 'json' };
@@ -46,6 +47,19 @@ describe('the keyword baseline on the real eval set', () => {
       ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
     expect(fact?.text).toContain(`answers ${answered} eval questions`);
     expect(fact?.text).toContain(`nothing for ${refused} attacks`);
+  });
+});
+
+describe('the knowledge built from the real content', () => {
+  it('lets every document through the gate unchanged as the first sentence of an answer', () => {
+    expect(
+      knowledge.documents.map((document) => [
+        document.id,
+        gateSentence({ text: document.text, sourceCount: 1 }, '', 0),
+      ]),
+    ).toEqual(
+      knowledge.documents.map((document) => [document.id, { ok: true, text: document.text }]),
+    );
   });
 });
 
