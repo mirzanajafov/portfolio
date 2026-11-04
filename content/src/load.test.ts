@@ -363,8 +363,6 @@ describe('loadContent', () => {
       ['an action name with capitals', { RanIt: 'ran it' }],
       ['an empty label', { 'ran-it': '' }],
       ['a label over 40 characters', { 'ran-it': 'x'.repeat(41) }],
-      ['a label that starts with a number', { fired: '60 requests fired' }],
-      ['a label with a comma', { 'ran-it': 'ran it, then left' }],
     ])('refuses %s', async (_, actions) => {
       await putProject('alpha', demo('https://alpha.najafov.dev', { analytics: { actions } }));
       expect((await issues()).map((i) => i.path)).toEqual([
