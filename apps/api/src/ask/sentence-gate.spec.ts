@@ -1,6 +1,6 @@
 import { answerMaxLength } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
-import { echoRun, gateSentence, longestSharedRun } from './sentence-gate.js';
+import { echoRunWords, gateSentence, longestSharedRun } from './sentence-gate.js';
 
 const sourced = (text: string) => ({ text, sourceCount: 1 });
 
@@ -46,7 +46,7 @@ describe('gateSentence', () => {
     const question = 'How does Matchium decide which questions to ask each user?';
     const answer = sourced('Matchium decides which questions to ask by expected information gain.');
     expect(gateSentence(answer, question, 0).ok).toBe(true);
-    expect(longestSharedRun(answer.text, question)).toBeLessThan(echoRun);
+    expect(longestSharedRun(answer.text, question)).toBeLessThan(echoRunWords);
   });
 
   it.each([
