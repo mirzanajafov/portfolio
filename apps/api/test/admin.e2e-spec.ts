@@ -549,10 +549,11 @@ describe('admin sign-in against a real database', () => {
       expect(await history()).toEqual([['status', 'sent', 'withdrawn']]);
     });
 
-    it('refuses an answer day before the day I applied or after today in Baku', async () => {
+    it('refuses an answer day before the day I applied or after today in Baku, and names it when the applied day comes along unchanged', async () => {
       const token = await signedInWithAcme();
 
       const early = await write('patch', '/memh', token, {
+        appliedOn: '2026-10-01',
         status: 'screening',
         answeredOn: '2026-09-30',
       }).expect(400);
