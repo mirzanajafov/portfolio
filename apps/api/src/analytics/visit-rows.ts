@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { Prisma } from '../generated/prisma/client.js';
 import { daysAfter, utcDay } from '../common/days.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { firstRawDay } from './retention.js';
 import { browsers, devices } from './user-agent.js';
 import type { VisitRow } from './visits.js';
