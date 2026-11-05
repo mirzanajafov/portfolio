@@ -8,6 +8,9 @@ const labels = new Map([['/cv.pdf', 'CV PDF']]);
 
 const demos = new Map([['tuner', aDemoSite()]]);
 
+const applied = (code: string, overrides: Partial<ApplicationRow> = {}) =>
+  anApplication({ id: code, code, ...overrides });
+
 function sectionOf(
   rows: VisitRow[],
   applications: ApplicationRow[] = [anApplication()],
@@ -315,9 +318,6 @@ describe('applicationsOf', () => {
   });
 
   it('tallies by channel and by variant, counting answers and their median only among applications past the guess window', () => {
-    const applied = (code: string, overrides: Partial<ApplicationRow>) =>
-      anApplication({ id: code, code, ...overrides });
-
     const { byChannel, byVariant } = sectionOf(
       [],
       [
@@ -352,13 +352,14 @@ describe('applicationsOf', () => {
   });
 
   it('counts the 14 days in Baku days, so an application turns old enough at 20:00 UTC', () => {
-    const applied = (code: string, appliedOn: string) =>
-      anApplication({ id: code, code, appliedOn: new Date(appliedOn) });
     const lateEvening = new Date('2026-10-29T21:00:00Z');
 
     const { byChannel } = applicationsOf(
       [],
-      [applied('kxqtz', '2026-10-15'), applied('mpw7r', '2026-10-16')],
+      [
+        applied('kxqtz', { appliedOn: new Date('2026-10-15') }),
+        applied('mpw7r', { appliedOn: new Date('2026-10-16') }),
+      ],
       [],
       labels,
       new Map(),
