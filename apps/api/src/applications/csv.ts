@@ -1,5 +1,6 @@
-import { dayOf, daysBetween } from '../common/days.js';
+import { dayOf } from '../common/days.js';
 import type { Application } from '../generated/prisma/client.js';
+import { daysToAnswer } from './days-to-answer.js';
 
 const header = [
   'company',
@@ -28,7 +29,7 @@ function rowOf(application: Application): string[] {
     channel,
     code,
     status,
-    answeredOn === null ? '' : String(daysBetween(appliedOn, answeredOn)),
+    daysToAnswer({ appliedOn, answeredOn })?.toString() ?? '',
     notes,
   ];
 }

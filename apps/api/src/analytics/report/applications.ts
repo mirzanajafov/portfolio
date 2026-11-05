@@ -8,7 +8,8 @@ import {
   type Report,
   type VisitStory,
 } from '@portfolio/content/report';
-import { bakuDay, dayOf, dayOrNull, daysAfter, daysBetween } from '../../common/days.js';
+import { daysToAnswer } from '../../applications/days-to-answer.js';
+import { bakuDay, dayOf, dayOrNull, daysAfter } from '../../common/days.js';
 import { median, rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
@@ -105,10 +106,6 @@ function scoreOf(
     levels[guessed.confidence][outcomeOf(named, guessed.candidates.length)] += 1;
   }
   return { visits: coded.length, unplaced, levels };
-}
-
-function daysToAnswer({ appliedOn, answeredOn }: ApplicationRow): number | null {
-  return answeredOn ? daysBetween(appliedOn, answeredOn) : null;
 }
 
 function tallyBy(
