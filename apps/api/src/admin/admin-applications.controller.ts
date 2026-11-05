@@ -11,6 +11,7 @@ import {
   Param,
   Patch,
   Post,
+  PreconditionFailedException,
   Req,
   Res,
   UseGuards,
@@ -126,7 +127,7 @@ export class AdminApplicationsController {
       throw new BadRequestException(outcome.reason);
     }
     if (outcome.kind === 'out of date') {
-      throw new ConflictException(changedSinceLoaded);
+      throw new PreconditionFailedException(changedSinceLoaded);
     }
     if (outcome.kind === 'refused') {
       throw new ConflictException({
@@ -151,7 +152,7 @@ export class AdminApplicationsController {
       throw new NotFoundException();
     }
     if (outcome.kind === 'out of date') {
-      throw new ConflictException(changedSinceLoaded);
+      throw new PreconditionFailedException(changedSinceLoaded);
     }
     if (outcome.kind === 'nothing to undo') {
       throw new ConflictException('there is no status change to undo');

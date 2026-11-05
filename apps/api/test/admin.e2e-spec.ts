@@ -618,8 +618,8 @@ describe('admin sign-in against a real database', () => {
       const { version } = applicationViewSchema.parse(loaded.body);
       await write('patch', '/memh', token, { version, notes: 'From the phone.' }).expect(200);
 
-      const edit = await write('patch', '/memh', token, { version, role: 'Lead' }).expect(409);
-      const undo = await write('post', '/memh/undo', token, { version }).expect(409);
+      const edit = await write('patch', '/memh', token, { version, role: 'Lead' }).expect(412);
+      const undo = await write('post', '/memh/undo', token, { version }).expect(412);
 
       expect([edit.body, undo.body]).toMatchObject([
         { message: 'the application changed since that page loaded' },
@@ -641,6 +641,7 @@ describe('admin sign-in against a real database', () => {
 
       expect(changed.body).toMatchObject({ notes: 'x', version: 1 });
     });
+
     it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
       const token = await signedInWithAcme();
       await write('patch', '/memh', token, {

@@ -148,16 +148,13 @@ export class ApplicationsService {
     return this.prisma.application.findUnique({ where: { code } });
   }
 
-  findWithUndo(code: string): Promise<{ application: Application; undoTo: Status | null } | null> {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const application = await tx.application.findUnique({ where: { code } });
-        return application
-          ? { application, undoTo: await statusBeforeLastMove(tx, application.id) }
-          : null;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+  async findWithUndo(
+    code: string,
+  ): Promise<{ application: Application; undoTo: Status | null } | null> {
+    const application = await this.find(code);
+    return application
+      ? { application, undoTo: await statusBeforeLastMove(this.prisma, application.id) }
+      : null;
   }
 
   list(): Promise<Application[]> {
