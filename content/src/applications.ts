@@ -1,7 +1,5 @@
 export const channels = ['referral', 'direct', 'recruiter'] as const;
 
-export type Channel = (typeof channels)[number];
-
 export const statuses = [
   'sent',
   'screening',
@@ -13,9 +11,6 @@ export const statuses = [
 ] as const;
 
 export type Status = (typeof statuses)[number];
-
-export const cvVariantMaxLength = 100;
-export const notesMaxLength = 2000;
 
 export const nextStatuses: Record<Status, readonly Status[]> = {
   sent: ['screening', 'interview', 'offer', 'rejected', 'withdrawn'],

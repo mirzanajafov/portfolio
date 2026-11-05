@@ -1,10 +1,5 @@
 import { hostName, refCode } from '@portfolio/content/analytics';
-import {
-  channels,
-  cvVariantMaxLength,
-  notesMaxLength,
-  statuses,
-} from '@portfolio/content/applications';
+import { channels, statuses } from '@portfolio/content/applications';
 import { z } from 'zod';
 
 const day = z.iso.date().transform((value) => new Date(value));
@@ -16,7 +11,7 @@ export const newApplicationSchema = z.strictObject({
   role: text(200),
   appliedOn: day,
   channel: z.enum(channels),
-  cvVariant: text(cvVariantMaxLength),
+  cvVariant: text(100),
   code: z.string().regex(refCode).optional(),
   country: z
     .string()
@@ -38,7 +33,7 @@ export const applicationEditSchema = newApplicationSchema
   .extend({
     status: z.enum(statuses),
     answeredOn: day,
-    notes: z.string().trim().max(notesMaxLength),
+    notes: z.string().trim().max(2000),
   })
   .partial()
   .refine((edit) => Object.keys(edit).length > 0, 'an edit changes at least one field');
