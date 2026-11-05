@@ -58,23 +58,23 @@ export async function signOut(): Promise<void> {
   redirect('/admin');
 }
 
-const fieldNames = [
+const sharedFields = [
   'company',
   'role',
   'appliedOn',
   'channel',
   'cvVariant',
-  'code',
-  'status',
-  'answeredOn',
-  'notes',
   'country',
   'city',
   'atsHost',
   'networks',
 ] as const;
 
-type FieldName = (typeof fieldNames)[number];
+const addFields = [...sharedFields, 'code'] as const;
+
+const editFields = [...sharedFields, 'status', 'answeredOn', 'notes'] as const;
+
+type FieldName = (typeof addFields)[number] | (typeof editFields)[number];
 
 export type FormValues = Partial<Record<FieldName, string>>;
 
@@ -111,10 +111,10 @@ function linesIn(form: FormData, name: FieldName): string[] {
     .filter((line) => line !== '');
 }
 
-function refused(failure: string, form: FormData): FormState {
+function refused(failure: string, form: FormData, fields: readonly FieldName[]): FormState {
   return {
     failure,
-    values: Object.fromEntries(fieldNames.map((name) => [name, textIn(form, name)])),
+    values: Object.fromEntries(fields.map((name) => [name, textIn(form, name)])),
   };
 }
 
@@ -136,7 +136,7 @@ function newApplicationIn(form: FormData): NewApplicationBody {
 
 function editIn(form: FormData): ApplicationEditBody | null {
   const changed = (name: FieldName) => textIn(form, name) !== shownIn(form, name);
-  if (!fieldNames.some(changed)) {
+  if (!editFields.some(changed)) {
     return null;
   }
   const text = (name: FieldName) => (changed(name) ? textIn(form, name) : undefined);
@@ -171,13 +171,13 @@ export async function addApplication(_state: FormState, form: FormData): Promise
   await headersFromSite();
   const token = await tokenIn(sessionCookie);
   if (token === undefined) {
-    return refused(sessionEnded, form);
+    return refused(sessionEnded, form, addFields);
   }
   const outcome = await createApplication(apiUrl(), token, newApplicationIn(form));
   if (outcome.kind === 'done') {
     redirect(`/admin/applications/${outcome.application.code}`);
   }
-  return refused(failureOf(outcome, sessionEnded), form);
+  return refused(failureOf(outcome, sessionEnded), form, addFields);
 }
 
 export async function editApplication(
@@ -189,7 +189,7 @@ export async function editApplication(
   const target = validCode(code);
   const token = await tokenIn(sessionCookie);
   if (token === undefined) {
-    return refused(sessionEnded, form);
+    return refused(sessionEnded, form, editFields);
   }
   const edit = editIn(form);
   if (!edit) {
@@ -200,7 +200,7 @@ export async function editApplication(
     revalidatePath(`/admin/applications/${target}`);
     return null;
   }
-  return refused(failureOf(outcome, applicationGone), form);
+  return refused(failureOf(outcome, applicationGone), form, editFields);
 }
 
 export async function undoStatus(code: string): Promise<string | null> {
