@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuessedVisit, Report, VisitStory } from '@portfolio/content/report';
-import { aReport, anEntry, someApplications, someVisits } from '@portfolio/content/testing';
+import { aReport, aTally, anEntry, someApplications, someVisits } from '@portfolio/content/testing';
 import { reportText } from './report-text.js';
 
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
@@ -525,33 +525,30 @@ describe('reportText', () => {
     const report = aReport({
       applications: someApplications({
         byChannel: [
-          {
-            name: 'referral',
+          aTally('referral', {
             applications: 3,
             opened: 2,
             oldEnough: 3,
             answered: 2,
             medianDays: 4,
-          },
-          {
-            name: 'direct',
+          }),
+          aTally('direct', {
             applications: 12,
             opened: 5,
             oldEnough: 10,
             answered: 3,
             medianDays: 5,
-          },
+          }),
         ],
         byVariant: [
-          { name: 'base', applications: 15, opened: 7, oldEnough: 13, answered: 5, medianDays: 6 },
-          {
-            name: 'payments',
-            applications: 1,
-            opened: 0,
-            oldEnough: 0,
-            answered: 0,
-            medianDays: null,
-          },
+          aTally('base', {
+            applications: 15,
+            opened: 7,
+            oldEnough: 13,
+            answered: 5,
+            medianDays: 6,
+          }),
+          aTally('payments'),
         ],
         list: [
           anEntry({
@@ -582,14 +579,7 @@ describe('reportText', () => {
   });
 
   it('cuts a tally at ten rows like every other table unless asked for all', () => {
-    const variants = Array.from({ length: 12 }, (_, index) => ({
-      name: `variant${String(index)}`,
-      applications: 1,
-      opened: 0,
-      oldEnough: 0,
-      answered: 0,
-      medianDays: null,
-    }));
+    const variants = Array.from({ length: 12 }, (_, index) => aTally(`variant${String(index)}`));
     const report = aReport({
       applications: someApplications({ list: [anEntry()], byVariant: variants }),
     });
