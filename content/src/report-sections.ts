@@ -1,9 +1,11 @@
 import { alertHours, geolocationCredit } from './analytics.ts';
+import { guessWindowDays } from './applications.ts';
 import {
   quickExitSeconds,
   readSeconds,
   vitalBars,
   type ApplicationEntry,
+  type ApplicationTally,
   type Confidence,
   type GuessedVisit,
   type Outcome,
@@ -27,6 +29,7 @@ export type ReportSection = ReportPart[];
 const listLength = 10;
 const candidateLength = 3;
 const questionsInStory = 3;
+const fewestForShare = 10;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -478,8 +481,12 @@ function guessText(guess: GuessedVisit, all: boolean): string {
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
+  const answer =
+    application.daysToAnswer === null
+      ? ''
+      : `, first answer after ${counted(application.daysToAnswer, 'day')}`;
   const firstOpened = application.firstSeenOn ? `, first opened ${application.firstSeenOn}` : '';
-  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}${firstOpened}`;
+  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${answer}${firstOpened}`;
   const parts = [
     ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [
@@ -496,6 +503,32 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
     : [applicationLine(heading, code), ...parts];
 }
 
+function answeredText({ answered, oldEnough }: ApplicationTally): string {
+  return oldEnough < fewestForShare
+    ? `${String(answered)} of ${String(oldEnough)}`
+    : share(answered, oldEnough);
+}
+
+function tallyTable(title: string, tallies: readonly ApplicationTally[]): ReportPart[] {
+  const header = [
+    title,
+    'applications',
+    'link opened',
+    `applied ${String(guessWindowDays)}+ days ago`,
+    'answered, of those',
+    'median days to an answer',
+  ];
+  const rows = tallies.map((tally) => [
+    tally.name,
+    String(tally.applications),
+    String(tally.opened),
+    String(tally.oldEnough),
+    answeredText(tally),
+    optional(tally.medianDays),
+  ]);
+  return rows.length === 0 ? [] : [table([header, ...rows])];
+}
+
 function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
   return `${confidence} ${String(outcomes.right)} right, ${String(outcomes.wrong)} wrong, ${String(outcomes.tied)} tied`;
 }
@@ -509,6 +542,8 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
       : [
           line('Applications, every visit kept rather than only the period, times in Baku'),
           ...listed(list, all, (application) => applicationParts(application, all), false),
+          ...tallyTable('By channel', applications.byChannel),
+          ...tallyTable('By CV variant', applications.byVariant),
           line(
             `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),

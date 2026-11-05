@@ -376,7 +376,7 @@ describe('reportText', () => {
     expect(text).toContain(
       [
         'Applications, every visit kept rather than only the period, times in Baku',
-        'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
+        'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent',
         '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > tuner.najafov.dev/ 140 s (answered a question) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
@@ -509,7 +509,7 @@ describe('reportText', () => {
     const short = reportText(report, { all: false });
     expect(short).toContain('  low guesses not shown: 1, --all shows them');
     expect(short).toContain(
-      'Wolt, Backend Engineer, applied 2026-10-29, code k7mpx: no visits yet',
+      'Wolt, Backend Engineer, applied 2026-10-29, code k7mpx, direct, variant base, sent: no visits yet',
     );
     expect(reportText(report, { all: true })).toContain(
       '  possibly Xsolla, low (AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
@@ -534,10 +534,60 @@ describe('reportText', () => {
     });
     const text = reportText(report, { all: false });
     expect(text).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened 2026-10-30',
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent, first opened 2026-10-30',
     );
     expect(text).toContain('Telegram alerts given up in the period, not sent within 24 h: 2');
     expect(reportText(aReport(), { all: false })).not.toContain('given up');
+  });
+
+  it('says how each application went out and when it was answered, and tallies them with counts below ten applications', () => {
+    const report = aReport({
+      applications: {
+        byChannel: [
+          {
+            name: 'referral',
+            applications: 3,
+            opened: 2,
+            oldEnough: 3,
+            answered: 2,
+            medianDays: 4,
+          },
+          {
+            name: 'direct',
+            applications: 12,
+            opened: 5,
+            oldEnough: 10,
+            answered: 3,
+            medianDays: null,
+          },
+        ],
+        byVariant: [
+          { name: 'base', applications: 15, opened: 7, oldEnough: 13, answered: 5, medianDays: 6 },
+        ],
+        list: [
+          anEntry({
+            channel: 'referral',
+            cvVariant: 'payments',
+            status: 'interview',
+            daysToAnswer: 3,
+          }),
+        ],
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+        unknownCodes: [],
+      },
+    });
+
+    const text = reportText(report, { all: false });
+
+    expect(text).toContain(
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, referral, variant payments, interview, first answer after 3 days',
+    );
+    expect(text).toMatch(
+      /By channel\s+applications\s+link opened\s+applied 14\+ days ago\s+answered, of those/,
+    );
+    expect(text).toMatch(/referral\s+3\s+2\s+3\s+2 of 3\s+4/);
+    expect(text).toMatch(/direct\s+12\s+5\s+10\s+30%\s+-/);
+    expect(text).toMatch(/base\s+15\s+7\s+13\s+38%\s+6/);
   });
 
   it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {

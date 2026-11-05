@@ -116,7 +116,7 @@ describe('admin page', () => {
 
     expect(
       screen.getByText(
-        'Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet',
+        'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent: no visits yet',
       ),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open memh' })).toHaveAttribute(
