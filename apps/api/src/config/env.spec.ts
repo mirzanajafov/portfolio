@@ -71,6 +71,22 @@ describe('parseEnv for Telegram alerts', () => {
     },
   );
 
+  it.each([
+    { TELEGRAM_BOT_TOKEN: '123:abc ', TELEGRAM_CHAT_ID: '42' },
+    { TELEGRAM_BOT_TOKEN: 'abc', TELEGRAM_CHAT_ID: '42' },
+    { TELEGRAM_BOT_TOKEN: '123:abc', TELEGRAM_CHAT_ID: '@me' },
+  ])('refuses a token or chat id that Telegram would never accept: %j', (pair) => {
+    expect(() => parseEnv({ ...base, ...pair })).toThrow(/TELEGRAM_(BOT_TOKEN|CHAT_ID)/);
+  });
+
+  it('wants the API address over https in production, since the token is in its path', () => {
+    const production = { ...base, NODE_ENV: 'production', CLIENT_HASH_SECRET: 'x'.repeat(32) };
+    expect(() => parseEnv({ ...production, TELEGRAM_API_URL: 'http://api.telegram.org' })).toThrow(
+      /TELEGRAM_API_URL/,
+    );
+    expect(() => parseEnv(production)).not.toThrow();
+  });
+
   it('refuses an API address with a path or a trailing slash, which would break the bot URL', () => {
     expect(() => parseEnv({ ...base, TELEGRAM_API_URL: 'https://api.telegram.org/' })).toThrow(
       /TELEGRAM_API_URL/,

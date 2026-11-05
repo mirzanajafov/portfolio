@@ -33,7 +33,7 @@ const aCodedView = (overrides: Record<string, unknown> = {}) =>
   aView({ path: '/cv', ref: 'memh', ...overrides });
 
 const message = (text: string) => ({
-  path: '/bottest-token/sendMessage',
+  path: '/bot123:test-token/sendMessage',
   body: { chat_id: '42', text },
 });
 
@@ -77,7 +77,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     const url = await listenLocally(bot.server);
     ({ app, clock, prisma } = await startApp({
       TELEGRAM_API_URL: url,
-      TELEGRAM_BOT_TOKEN: 'test-token',
+      TELEGRAM_BOT_TOKEN: '123:test-token',
       TELEGRAM_CHAT_ID: '42',
     }));
     await sender().onModuleDestroy();
