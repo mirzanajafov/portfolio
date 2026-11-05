@@ -6,6 +6,7 @@ import { signOut } from '@/admin/actions';
 import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
+import { pill } from '@/admin/styles';
 import { ReportView } from '@/admin/report-view';
 import { apiUrl } from '@/lib/forward-to-api';
 
@@ -30,8 +31,6 @@ function viewOf({ days, all }: Query): { days: number | undefined; all: boolean 
 function hrefOf(days: number, all: boolean) {
   return { pathname: '/admin', query: all ? { days, all: 1 } : { days } };
 }
-
-const pill = 'rounded-full border border-line px-4 py-2 hover:border-accent';
 
 export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   const token = await tokenIn(sessionCookie);

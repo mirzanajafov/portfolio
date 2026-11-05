@@ -9,6 +9,7 @@ import {
 import { useActionState, type ReactNode } from 'react';
 import { addApplication, editApplication, undoStatus, type FormState } from './actions';
 import { shownValues, type FormValues } from './application-fields';
+import { pill } from './styles';
 
 const input =
   'w-full min-w-0 rounded-lg border border-line bg-transparent px-3 py-2 outline-none focus:border-accent';
@@ -162,7 +163,7 @@ export function UndoForm({
   return (
     <form action={action} className="flex flex-col items-start gap-2">
       <input type="hidden" name="version" value={version} />
-      <button type="submit" disabled={pending} className="rounded-full border border-line px-4 py-2 hover:border-accent disabled:opacity-50">
+      <button type="submit" disabled={pending} className={`${pill} disabled:opacity-50`}>
         Undo the last move, back to {undoTo}
       </button>
       <Failure failure={failure} />
