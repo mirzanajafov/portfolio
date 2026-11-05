@@ -400,11 +400,12 @@ describe('admin sign-in against a real database', () => {
       await write('post', '/memh/undo', token).expect(409);
     });
 
-    it('is a 404 for a code nobody registered, and a 400 for an empty edit', async () => {
+    it('is a 404 for a code nobody registered, and a 400 for an empty edit or a field it does not know', async () => {
       const token = await signedIn();
 
       await write('patch', '/kxqtz', token, { notes: 'x' }).expect(404);
       await write('patch', '/memh', token, {}).expect(400);
+      await write('patch', '/memh', token, { notes: 'x', salary: 1 }).expect(400);
     });
 
     it('takes 60 changes in ten minutes from one session, then says when to come back', async () => {

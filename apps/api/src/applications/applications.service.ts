@@ -1,11 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  isAnswer,
-  nextStatuses,
-  statuses,
-  type Channel,
-  type Status,
-} from '@portfolio/content/applications';
+import { isAnswer, nextStatuses, statuses, type Status } from '@portfolio/content/applications';
 import { inBaku } from '@portfolio/content/time';
 import { dayOrNull, utcDay } from '../common/days.js';
 import {
@@ -15,30 +9,8 @@ import {
   type ApplicationChange,
 } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { ApplicationEdit, NewApplication } from './application.schema.js';
 import { newCode } from './code.js';
-
-export type NewApplication = {
-  company: string;
-  role: string;
-  appliedOn: Date;
-  channel: Channel;
-  cvVariant: string;
-  code?: string;
-  country?: string;
-  city?: string;
-  atsHost?: string;
-  networks: string[];
-};
-
-export type ApplicationEdit = Partial<{
-  company: string;
-  role: string;
-  channel: Channel;
-  cvVariant: string;
-  status: Status;
-  answeredOn: Date;
-  notes: string;
-}>;
 
 export type EditOutcome =
   | { kind: 'edited'; application: Application }

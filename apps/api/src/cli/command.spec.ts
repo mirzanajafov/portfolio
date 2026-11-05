@@ -99,7 +99,7 @@ describe('parseCommand', () => {
     expect(parseCommand(['admin', 'revoke'])).toEqual({ name: 'admin revoke' });
   });
 
-  it('names the flag that is wrong', () => {
+  it('names the field that is wrong', () => {
     expect(() =>
       parseCommand([
         'application',

@@ -1,9 +1,9 @@
-import { analyticsDays, hostName, refCode } from '@portfolio/content/analytics';
-import { channels, cvVariantMaxLength } from '@portfolio/content/applications';
+import { analyticsDays, refCode } from '@portfolio/content/analytics';
+import { channels } from '@portfolio/content/applications';
 import { reportDaysSchema } from '@portfolio/content/report';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import type { NewApplication } from '../applications/applications.service.js';
+import { newApplicationSchema, type NewApplication } from '../applications/application.schema.js';
 
 export type Command =
   | { name: 'report'; days: number; all: boolean }
@@ -48,36 +48,6 @@ const addOptions = {
   network: { type: 'string', multiple: true },
 } as const;
 
-const newApplication = z
-  .strictObject({
-    company: z.string().trim().min(1),
-    role: z.string().trim().min(1),
-    applied: z.iso.date().transform((day) => new Date(day)),
-    channel: z.enum(channels),
-    variant: z.string().trim().min(1).max(cvVariantMaxLength),
-    code: z.string().regex(refCode).optional(),
-    country: z
-      .string()
-      .regex(/^[A-Z]{2}$/)
-      .optional(),
-    city: z.string().trim().min(1).optional(),
-    ats: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .transform((value) => value.replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/[/?#].*$/, ''))
-      .pipe(z.string().regex(hostName))
-      .optional(),
-    network: z.array(z.string().trim().min(1)).default([]),
-  })
-  .transform(({ applied, variant, ats, network, ...fields }): NewApplication => ({
-    ...fields,
-    appliedOn: applied,
-    cvVariant: variant,
-    atsHost: ats,
-    networks: network,
-  }));
-
 function valid<T>(schema: z.ZodType<T>, values: unknown): T {
   const parsed = schema.safeParse(values);
   if (!parsed.success) {
@@ -93,8 +63,17 @@ export function parseCommand(args: readonly string[]): Command {
     return { name: 'report', ...valid(reportRequest, values) };
   }
   if (area === 'application' && name === 'add') {
-    const { values } = parseArgs({ args: rest, options: addOptions });
-    return { name: 'application add', application: valid(newApplication, values) };
+    const {
+      values: { applied, variant, ats, network, ...flags },
+    } = parseArgs({ args: rest, options: addOptions });
+    const application = {
+      ...flags,
+      appliedOn: applied,
+      cvVariant: variant,
+      atsHost: ats,
+      networks: network,
+    };
+    return { name: 'application add', application: valid(newApplicationSchema, application) };
   }
   if (area === 'application' && (name === 'list' || name === 'export')) {
     if (rest.length > 0) {
