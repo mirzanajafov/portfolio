@@ -3,7 +3,7 @@ import { inBaku } from '@portfolio/content/time';
 import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dayOf, utcDay } from './days.js';
+import { dayOf, utcDay } from '../common/days.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';

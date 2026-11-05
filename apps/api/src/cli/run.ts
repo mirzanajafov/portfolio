@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { siteUrl } from '@portfolio/content';
 import { adminLinkMinutes } from '@portfolio/content/admin';
 import { AdminSessionsService } from '../admin/admin-sessions.service.js';
-import { dayOf } from '../analytics/days.js';
+import { dayOf } from '../common/days.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
 import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';

@@ -6,7 +6,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { alertHours } from '@portfolio/content/analytics';
-import { dayOf } from '../analytics/days.js';
+import { dayOf } from '../common/days.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import { PrismaService } from '../prisma/prisma.service.js';

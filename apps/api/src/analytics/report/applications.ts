@@ -6,7 +6,7 @@ import {
   type Report,
   type VisitStory,
 } from '@portfolio/content/report';
-import { dayOf } from '../days.js';
+import { dayOf } from '../../common/days.js';
 import { rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';

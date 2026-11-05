@@ -1,7 +1,7 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import type { DayTotals } from '../day-totals.js';
-import { utcDay } from '../days.js';
+import { utcDay } from '../../common/days.js';
 import { aDemoView, anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';

@@ -1,5 +1,5 @@
 import { analyticsDays, dailyTotalsMonths } from '@portfolio/content/analytics';
-import { daysAfter, utcDay } from './days.js';
+import { daysAfter, utcDay } from '../common/days.js';
 
 export function firstRawDay(now: Date): Date {
   return daysAfter(utcDay(now), -analyticsDays);
