@@ -207,7 +207,7 @@ describe('the application writes', () => {
     });
     expect(
       await updateApplication(api, session, 'memh', {}, answering(409, { message: 'no move' })),
-    ).toEqual({ kind: 'refused', message: 'no move' });
+    ).toEqual({ kind: 'conflict', message: 'no move' });
     expect(
       await createApplication(api, session, acme, answering(400, { message: 'bad day' })),
     ).toEqual({

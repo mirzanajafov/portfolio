@@ -281,6 +281,34 @@ describe('the application actions', () => {
     expect(state?.values).toMatchObject({ notes: 'Called back', status: 'offer', company: '' });
   });
 
+  it('says to reload when an edit or an undo met an application that had changed, but not when a new code is taken', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({
+      kind: 'conflict',
+      message: "an application that is rejected can't become screening",
+    });
+    api.undoStatusChange.mockResolvedValue({
+      kind: 'conflict',
+      message: 'the application is interview now, not screening, so that undo is out of date',
+    });
+    api.createApplication.mockResolvedValue({
+      kind: 'conflict',
+      message: 'code memh already belongs to another application',
+    });
+
+    const edited = await editApplication('memh', null, editFormOf({ status: 'screening' }));
+    const undone = await undoStatus('memh', null, formOf({ from: 'screening', to: 'sent' }));
+    const added = await addApplication(null, formOf({ company: 'Acme' }));
+
+    expect(edited?.failure).toBe(
+      "an application that is rejected can't become screening. Reload the page to see the application as it is now.",
+    );
+    expect(undone).toBe(
+      'the application is interview now, not screening, so that undo is out of date. Reload the page to see the application as it is now.',
+    );
+    expect(added?.failure).toBe('code memh already belongs to another application');
+  });
+
   it('says how long to wait after too many changes', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 600 });
