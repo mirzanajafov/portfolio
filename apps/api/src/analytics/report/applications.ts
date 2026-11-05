@@ -17,8 +17,6 @@ import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 type Asked = ReadonlyMap<string, readonly string[]>;
 
-const fewestAnswersForMedian = 3;
-
 type Demos = ReadonlyMap<string, DemoSite>;
 
 type StoryPage = { at: Date; from: string | null; page: VisitStory['pages'][number] };
@@ -113,17 +111,17 @@ function tallyBy(
   keyOf: (application: ApplicationRow) => string,
   now: Date,
 ): ApplicationTally[] {
-  const lastOldEnough = daysAfter(bakuDay(now), -guessWindowDays);
+  const windowStart = daysAfter(bakuDay(now), -guessWindowDays);
   return rankedGroups(applications, keyOf).map(([name, group]) => {
-    const oldEnough = group.filter(({ appliedOn }) => appliedOn <= lastOldEnough);
-    const answerDays = group.flatMap((application) => daysToAnswer(application) ?? []);
+    const oldEnough = group.filter(({ appliedOn }) => appliedOn < windowStart);
+    const answerDays = oldEnough.flatMap((application) => daysToAnswer(application) ?? []);
     return {
       name,
       applications: group.length,
       opened: group.filter(({ firstSeenOn }) => firstSeenOn !== null).length,
       oldEnough: oldEnough.length,
-      answered: oldEnough.filter(({ answeredOn }) => answeredOn !== null).length,
-      medianDays: answerDays.length >= fewestAnswersForMedian ? median(answerDays) : null,
+      answered: answerDays.length,
+      medianDays: median(answerDays),
     };
   });
 }

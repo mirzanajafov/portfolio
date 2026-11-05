@@ -30,6 +30,7 @@ const listLength = 10;
 const candidateLength = 3;
 const questionsInStory = 3;
 const fewestForShare = 10;
+const fewestAnswersForMedian = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -523,7 +524,7 @@ function tallyTable(title: string, tallies: readonly ApplicationTally[]): Report
     title,
     'applications',
     'link opened',
-    `applied ${String(guessWindowDays)}+ days ago`,
+    `applied over ${String(guessWindowDays)} days ago`,
     'answered, of those',
     'median days to an answer',
   ];
@@ -533,7 +534,7 @@ function tallyTable(title: string, tallies: readonly ApplicationTally[]): Report
     String(tally.opened),
     String(tally.oldEnough),
     answeredText(tally),
-    optional(tally.medianDays),
+    tally.answered < fewestAnswersForMedian ? '-' : optional(tally.medianDays),
   ]);
   return rows.length === 0 ? [] : [table([header, ...rows])];
 }

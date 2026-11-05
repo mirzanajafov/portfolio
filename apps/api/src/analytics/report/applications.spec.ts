@@ -314,7 +314,7 @@ describe('applicationsOf', () => {
     });
   });
 
-  it('tallies by channel and by variant, counting answers only among applications past the guess window', () => {
+  it('tallies by channel and by variant, counting answers and their median only among applications past the guess window', () => {
     const applied = (code: string, overrides: Partial<ApplicationRow>) =>
       anApplication({ id: code, code, ...overrides });
 
@@ -327,7 +327,12 @@ describe('applicationsOf', () => {
           answeredOn: new Date('2026-10-03'),
           firstSeenOn: new Date('2026-10-02'),
         }),
-        applied('mpw7r', { channel: 'referral', appliedOn: new Date('2026-10-16') }),
+        applied('mpw7r', { channel: 'referral', appliedOn: new Date('2026-10-15') }),
+        applied('k7mpx', {
+          channel: 'referral',
+          appliedOn: new Date('2026-10-16'),
+          answeredOn: new Date('2026-10-17'),
+        }),
         applied('memh', {
           cvVariant: 'payments',
           appliedOn: new Date('2026-10-25'),
@@ -337,29 +342,12 @@ describe('applicationsOf', () => {
     );
 
     expect(byChannel).toEqual([
-      { name: 'referral', applications: 2, opened: 1, oldEnough: 2, answered: 1, medianDays: null },
+      { name: 'referral', applications: 3, opened: 1, oldEnough: 2, answered: 1, medianDays: 2 },
       { name: 'direct', applications: 1, opened: 0, oldEnough: 0, answered: 0, medianDays: null },
     ]);
     expect(byVariant.map(({ name, applications }) => [name, applications])).toEqual([
-      ['base', 2],
+      ['base', 3],
       ['payments', 1],
     ]);
-  });
-
-  it('gives the median days to an answer from three answers on', () => {
-    const answered = (code: string, answeredOn: string) =>
-      anApplication({
-        id: code,
-        code,
-        appliedOn: new Date('2026-10-01'),
-        answeredOn: new Date(answeredOn),
-      });
-    const two = [answered('kxqtz', '2026-10-03'), answered('mpw7r', '2026-10-10')];
-
-    const fromTwo = sectionOf([], two);
-    const fromThree = sectionOf([], [...two, answered('memh', '2026-10-05')]);
-
-    expect(fromTwo.byChannel[0]?.medianDays).toBeNull();
-    expect(fromThree.byChannel[0]?.medianDays).toBe(4);
   });
 });
