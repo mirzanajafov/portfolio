@@ -15,13 +15,14 @@ type AddOutcome =
 type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
+  | { kind: 'out of date' }
   | { kind: 'refused'; from: Status; to: Status; allowed: readonly Status[] }
   | { kind: 'invalid'; reason: string };
 
 type UndoOutcome =
   | { kind: 'undone'; application: Application }
   | { kind: 'missing' }
-  | { kind: 'out of date'; reason: string }
+  | { kind: 'out of date' }
   | { kind: 'nothing to undo' };
 
 type Tracked = Pick<Application, ApplicationField>;
@@ -165,12 +166,15 @@ export class ApplicationsService {
     });
   }
 
-  edit(code: string, edit: ApplicationEdit): Promise<EditOutcome> {
+  edit(code: string, { version, ...edit }: ApplicationEdit): Promise<EditOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
         return { kind: 'missing' };
+      }
+      if (version !== undefined && version !== current.version) {
+        return { kind: 'out of date' };
       }
       const status = edit.status ?? current.status;
       const allowed = nextStatuses[current.status];
@@ -194,25 +198,19 @@ export class ApplicationsService {
     });
   }
 
-  undo(code: string, { from, to }: Undo): Promise<UndoOutcome> {
+  undo(code: string, { version }: Undo): Promise<UndoOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
         return { kind: 'missing' };
       }
-      if (current.status !== from) {
-        return {
-          kind: 'out of date',
-          reason: `the application is ${current.status} now, not ${from}`,
-        };
+      if (version !== undefined && version !== current.version) {
+        return { kind: 'out of date' };
       }
       const restored = await statusBeforeLastMove(tx, current.id);
       if (!restored) {
         return { kind: 'nothing to undo' };
-      }
-      if (restored !== to) {
-        return { kind: 'out of date', reason: `an undo goes back to ${restored} now, not ${to}` };
       }
       const next: Tracked = {
         ...trackedOf(current),
@@ -269,5 +267,8 @@ async function record(
     return current;
   }
   await tx.applicationChange.createMany({ data: changes });
-  return tx.application.update({ where: { id: current.id }, data: next });
+  return tx.application.update({
+    where: { id: current.id },
+    data: { ...next, version: { increment: 1 } },
+  });
 }

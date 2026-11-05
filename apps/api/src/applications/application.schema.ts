@@ -23,6 +23,8 @@ const atsHost = z
 
 const networks = z.array(text(100)).max(10);
 
+const version = z.number().int().min(0);
+
 export const codeSchema = z.string().regex(refCode);
 
 export const newApplicationSchema = z.strictObject({
@@ -50,9 +52,13 @@ export const applicationEditSchema = newApplicationSchema
     networks,
   })
   .partial()
-  .refine((edit) => Object.keys(edit).length > 0, 'an edit changes at least one field');
+  .extend({ version: version.optional() })
+  .refine(
+    ({ version: _, ...changes }) => Object.keys(changes).length > 0,
+    'an edit changes at least one field',
+  );
 
-export const undoSchema = z.strictObject({ from: z.enum(statuses), to: z.enum(statuses) });
+export const undoSchema = z.strictObject({ version: version.optional() });
 
 export type NewApplication = z.infer<typeof newApplicationSchema>;
 

@@ -205,6 +205,7 @@ export function anApplicationView(overrides: Partial<ApplicationView> = {}): App
     city: null,
     atsHost: null,
     networks: [],
+    version: 0,
     ...overrides,
   };
 }

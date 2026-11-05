@@ -43,6 +43,7 @@ export const applicationViewSchema = z.object({
   city: z.nullable(z.string()),
   atsHost: z.nullable(z.string()),
   networks: z.array(z.string()),
+  version: z.number(),
 });
 
 export type ApplicationView = z.infer<typeof applicationViewSchema>;

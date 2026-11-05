@@ -203,6 +203,7 @@ model Application {
   status      ApplicationStatus   @default(sent)
   answeredOn  DateTime?           @db.Date
   notes       String              @default("")
+  version     Int                 @default(0)
   days        DailyApplication[]
   changes     ApplicationChange[]
 }

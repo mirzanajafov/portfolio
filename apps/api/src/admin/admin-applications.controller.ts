@@ -33,6 +33,8 @@ import type { AdminSession, Application } from '../generated/prisma/client.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
 
+const changedSinceLoaded = 'the application changed since that page loaded';
+
 function viewOf({
   code,
   company,
@@ -48,6 +50,7 @@ function viewOf({
   city,
   atsHost,
   networks,
+  version,
 }: Application): ApplicationView {
   return {
     code,
@@ -64,6 +67,7 @@ function viewOf({
     city,
     atsHost,
     networks,
+    version,
   };
 }
 
@@ -121,6 +125,9 @@ export class AdminApplicationsController {
     if (outcome.kind === 'invalid') {
       throw new BadRequestException(outcome.reason);
     }
+    if (outcome.kind === 'out of date') {
+      throw new ConflictException(changedSinceLoaded);
+    }
     if (outcome.kind === 'refused') {
       throw new ConflictException({
         message: `an application that is ${outcome.from} can't become ${outcome.to}`,
@@ -144,7 +151,7 @@ export class AdminApplicationsController {
       throw new NotFoundException();
     }
     if (outcome.kind === 'out of date') {
-      throw new ConflictException(`${outcome.reason}, so that undo is out of date`);
+      throw new ConflictException(changedSinceLoaded);
     }
     if (outcome.kind === 'nothing to undo') {
       throw new ConflictException('there is no status change to undo');

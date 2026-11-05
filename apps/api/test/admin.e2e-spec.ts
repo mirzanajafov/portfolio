@@ -1,6 +1,10 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
-import { applicationListSchema, applicationPageSchema } from '@portfolio/content/applications';
+import {
+  applicationListSchema,
+  applicationPageSchema,
+  applicationViewSchema,
+} from '@portfolio/content/applications';
 import { reportSchema } from '@portfolio/content/report';
 import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
@@ -301,6 +305,7 @@ describe('admin sign-in against a real database', () => {
         city: null,
         atsHost: null,
         networks: [],
+        version: 0,
       });
     });
 
@@ -515,10 +520,7 @@ describe('admin sign-in against a real database', () => {
       await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
       clock.current = later(minutes(5));
 
-      const undone = await write('post', '/memh/undo', token, {
-        from: 'rejected',
-        to: 'sent',
-      }).expect(200);
+      const undone = await write('post', '/memh/undo', token, {}).expect(200);
 
       expect(undone.body).toMatchObject({ status: 'sent', answeredOn: null });
       expect(await history()).toEqual([
@@ -534,67 +536,50 @@ describe('admin sign-in against a real database', () => {
       await write('patch', '/memh', token, { status: 'screening' }).expect(200);
       await write('patch', '/memh', token, { status: 'interview' }).expect(200);
 
-      const once = await write('post', '/memh/undo', token, {
-        from: 'interview',
-        to: 'screening',
-      }).expect(200);
-      const twice = await write('post', '/memh/undo', token, {
-        from: 'screening',
-        to: 'sent',
-      }).expect(200);
+      const once = await write('post', '/memh/undo', token, {}).expect(200);
+      const twice = await write('post', '/memh/undo', token, {}).expect(200);
 
       expect(once.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-02' });
       expect(twice.body).toMatchObject({ status: 'sent', answeredOn: null });
-      await write('post', '/memh/undo', token, { from: 'sent', to: 'sent' }).expect(409);
+      await write('post', '/memh/undo', token, {}).expect(409);
     });
 
-    it('refuses an undo whose move was replaced by others that ended on the same status', async () => {
+    it('refuses an edit or an undo from a page that loaded an older version, and changes nothing', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
-      await write('post', '/memh/undo', token, { from: 'withdrawn', to: 'sent' }).expect(200);
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
-      await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
+      const loaded = await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      const { version } = applicationViewSchema.parse(loaded.body);
+      await write('patch', '/memh', token, { version, notes: 'From the phone.' }).expect(200);
 
-      const stale = await write('post', '/memh/undo', token, {
-        from: 'withdrawn',
-        to: 'sent',
-      }).expect(409);
+      const edit = await write('patch', '/memh', token, { version, role: 'Lead' }).expect(409);
+      const undo = await write('post', '/memh/undo', token, { version }).expect(409);
 
-      expect(stale.body).toMatchObject({
-        message: 'an undo goes back to screening now, not sent, so that undo is out of date',
-      });
-    });
-
-    it('refuses an undo made for a status the application has left, and changes nothing', async () => {
-      const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
-      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
-      await write('post', '/memh/undo', token, { from: 'interview', to: 'screening' }).expect(200);
-
-      const stale = await write('post', '/memh/undo', token, {
-        from: 'interview',
-        to: 'screening',
-      }).expect(409);
-
-      expect(stale.body).toMatchObject({
-        message: 'the application is screening now, not interview, so that undo is out of date',
-      });
+      expect([edit.body, undo.body]).toMatchObject([
+        { message: 'the application changed since that page loaded' },
+        { message: 'the application changed since that page loaded' },
+      ]);
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
+        role: 'Backend Engineer',
         status: 'screening',
-        answeredOn: new Date('2026-10-02'),
+        notes: 'From the phone.',
+        version: version + 1,
       });
     });
 
+    it('counts a version only for a write that changed something', async () => {
+      const token = await signedInWithAcme();
+
+      await write('patch', '/memh', token, { version: 0, notes: '' }).expect(200);
+      const changed = await write('patch', '/memh', token, { version: 0, notes: 'x' }).expect(200);
+
+      expect(changed.body).toMatchObject({ notes: 'x', version: 1 });
+    });
     it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
       const token = await signedInWithAcme();
       await write('patch', '/memh', token, { status: 'screening' }).expect(200);
       await write('patch', '/memh', token, { answeredOn: '2026-10-01' }).expect(200);
       await write('patch', '/memh', token, { status: 'interview' }).expect(200);
 
-      const undone = await write('post', '/memh/undo', token, {
-        from: 'interview',
-        to: 'screening',
-      }).expect(200);
+      const undone = await write('post', '/memh/undo', token, {}).expect(200);
 
       expect(undone.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-01' });
     });
@@ -645,7 +630,7 @@ describe('admin sign-in against a real database', () => {
       const token = await signedInWithAcme();
       await write('patch', '/memh', token, { notes: 'Applied through the form.' }).expect(200);
 
-      await write('post', '/memh/undo', token, { from: 'sent', to: 'sent' }).expect(409);
+      await write('post', '/memh/undo', token, {}).expect(409);
     });
 
     it('is a 404 for a code nobody registered, and a 400 for an empty edit or a field it does not know', async () => {

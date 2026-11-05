@@ -19,6 +19,7 @@ const anApplicationRow = (overrides: Partial<Application> = {}): Application => 
   status: 'sent',
   answeredOn: null,
   notes: '',
+  version: 0,
   ...overrides,
 });
 
