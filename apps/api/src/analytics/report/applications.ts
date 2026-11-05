@@ -154,13 +154,13 @@ export function applicationsOf(
       company,
       role,
     }));
-    for (const { application, signals, daysAfter } of guessed.candidates) {
+    for (const { application, signals, daysAfter: afterApplying } of guessed.candidates) {
       const entry = {
         ...storyOf(visit, labels, asked, demos),
         confidence: guessed.confidence,
         candidates,
         signals,
-        daysAfter,
+        daysAfter: afterApplying,
       };
       const list = guessesOf.get(application.id);
       if (list) {
