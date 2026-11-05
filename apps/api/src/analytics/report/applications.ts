@@ -6,7 +6,7 @@ import {
   type Report,
   type VisitStory,
 } from '@portfolio/content/report';
-import { dayOf } from '../../common/days.js';
+import { dayOf, dayOrNull } from '../../common/days.js';
 import { rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
@@ -163,7 +163,7 @@ export function applicationsOf(
         company: application.company,
         role: application.role,
         appliedOn: dayOf(application.appliedOn),
-        firstSeenOn: application.firstSeenOn === null ? null : dayOf(application.firstSeenOn),
+        firstSeenOn: dayOrNull(application.firstSeenOn),
         visits: coded
           .filter((each) => each.application.id === application.id)
           .map(({ visit }) => storyOf(visit, labels, asked, demos)),
