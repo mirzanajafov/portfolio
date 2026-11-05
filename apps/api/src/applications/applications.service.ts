@@ -29,6 +29,8 @@ type Tracked = Pick<Application, ApplicationField>;
 
 const maxDraws = 5;
 
+const newestFirst = { orderBy: { id: 'desc' }, select: { before: true, undo: true } } as const;
+
 function isCodeTaken(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
@@ -151,10 +153,17 @@ export class ApplicationsService {
   async findWithUndo(
     code: string,
   ): Promise<{ application: Application; undoTo: Status | null } | null> {
-    const application = await this.find(code);
-    return application
-      ? { application, undoTo: await statusBeforeLastMove(this.prisma, application.id) }
-      : null;
+    const [application, changes] = await this.prisma.$transaction(
+      [
+        this.prisma.application.findUnique({ where: { code } }),
+        this.prisma.applicationChange.findMany({
+          where: { application: { code }, field: 'status' },
+          ...newestFirst,
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return application ? { application, undoTo: statusBeforeLastMove(changes) } : null;
   }
 
   list(): Promise<Application[]> {
@@ -205,7 +214,12 @@ export class ApplicationsService {
       if (version !== current.version) {
         return { kind: 'out of date' };
       }
-      const restored = await statusBeforeLastMove(tx, current.id);
+      const restored = statusBeforeLastMove(
+        await tx.applicationChange.findMany({
+          where: { applicationId: current.id, field: 'status' },
+          ...newestFirst,
+        }),
+      );
       if (!restored) {
         return { kind: 'nothing to undo' };
       }
@@ -227,15 +241,7 @@ async function lockedApplication(
   return tx.application.findUnique({ where: { code } });
 }
 
-async function statusBeforeLastMove(
-  tx: Prisma.TransactionClient,
-  applicationId: string,
-): Promise<Status | null> {
-  const changes = await tx.applicationChange.findMany({
-    where: { applicationId, field: 'status' },
-    orderBy: { id: 'desc' },
-    select: { before: true, undo: true },
-  });
+function statusBeforeLastMove(changes: { before: string | null; undo: boolean }[]): Status | null {
   let undoneSince = 0;
   for (const { before, undo } of changes) {
     if (undo) {
