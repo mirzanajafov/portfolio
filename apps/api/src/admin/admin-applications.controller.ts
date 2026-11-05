@@ -24,11 +24,7 @@ import {
   type ApplicationEdit,
   type NewApplication,
 } from '../applications/application.schema.js';
-import {
-  ApplicationsService,
-  CodeTakenError,
-  FutureApplicationError,
-} from '../applications/applications.service.js';
+import { ApplicationsService } from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
@@ -88,17 +84,14 @@ export class AdminApplicationsController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    try {
-      return viewOf(await this.applications.add(application));
-    } catch (error) {
-      if (error instanceof CodeTakenError) {
-        throw new ConflictException(error.message);
-      }
-      if (error instanceof FutureApplicationError) {
-        throw new BadRequestException(error.message);
-      }
-      throw error;
+    const outcome = await this.applications.add(application);
+    if (outcome.kind === 'code taken') {
+      throw new ConflictException(outcome.reason);
     }
+    if (outcome.kind === 'invalid') {
+      throw new BadRequestException(outcome.reason);
+    }
+    return viewOf(outcome.application);
   }
 
   @Patch(':code')

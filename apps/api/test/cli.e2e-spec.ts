@@ -183,6 +183,17 @@ describe('the CLI commands', () => {
     });
   });
 
+  it('registers nothing applied after today in Baku, and asks the site for no CV', async () => {
+    const later = addAcme.map((arg) => (arg === '2026-10-30' ? '2999-01-01' : arg));
+    expect(await cli(...later)).toEqual({
+      status: 1,
+      stdout: '',
+      stderr: 'appliedOn 2999-01-01 is after today in Baku\n',
+    });
+    expect(await registeredCodes()).toEqual([]);
+    expect(asked).toEqual([]);
+  });
+
   it('registers nothing when the token is missing', async () => {
     vi.stubEnv('CV_RENDER_TOKEN', undefined);
     expect((await cli(...addAcme)).status).toBe(1);

@@ -13,6 +13,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { ApplicationEdit, NewApplication } from './application.schema.js';
 import { newCode } from './code.js';
 
+export type AddOutcome =
+  | { kind: 'added'; application: Application }
+  | { kind: 'code taken'; reason: string }
+  | { kind: 'invalid'; reason: string };
+
 export type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
@@ -46,18 +51,6 @@ function textOf(value: string | Date | null): string | null {
   return typeof value === 'string' ? value : dayOrNull(value);
 }
 
-export class CodeTakenError extends Error {
-  constructor(code: string) {
-    super(`code ${code} already belongs to another application`);
-  }
-}
-
-export class FutureApplicationError extends Error {
-  constructor(appliedOn: Date) {
-    super(`appliedOn ${dayOf(appliedOn)} is after today in Baku`);
-  }
-}
-
 @Injectable()
 export class ApplicationsService {
   constructor(
@@ -65,21 +58,28 @@ export class ApplicationsService {
     private readonly clock: ClockService,
   ) {}
 
-  async add({ code, ...application }: NewApplication): Promise<Application> {
+  async add({ code, ...application }: NewApplication): Promise<AddOutcome> {
     if (application.appliedOn > utcDay(inBaku(this.clock.now()))) {
-      throw new FutureApplicationError(application.appliedOn);
+      return {
+        kind: 'invalid',
+        reason: `appliedOn ${dayOf(application.appliedOn)} is after today in Baku`,
+      };
     }
     const tries = code === undefined ? maxDraws : 1;
     for (let attempt = 1; ; attempt += 1) {
       const candidate = code ?? newCode();
       try {
-        return await this.prisma.application.create({ data: { ...application, code: candidate } });
+        const data = { ...application, code: candidate };
+        return { kind: 'added', application: await this.prisma.application.create({ data }) };
       } catch (error) {
         if (!isCodeTaken(error)) {
           throw error;
         }
         if (attempt === tries) {
-          throw new CodeTakenError(candidate);
+          return {
+            kind: 'code taken',
+            reason: `code ${candidate} already belongs to another application`,
+          };
         }
       }
     }

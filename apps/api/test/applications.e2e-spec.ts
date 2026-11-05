@@ -2,9 +2,11 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { refCode } from '@portfolio/content/analytics';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NewApplication } from '../src/applications/application.schema.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { newCode } from '../src/applications/code.js';
 import { CliModule } from '../src/cli/cli.module.js';
+import type { Application } from '../src/generated/prisma/client.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { anApplication } from './applications.js';
 
@@ -34,8 +36,16 @@ describe('applications against a real database', () => {
     await prisma.$executeRaw`TRUNCATE "Application" CASCADE`;
   });
 
+  async function added(application: NewApplication): Promise<Application> {
+    const outcome = await applications.add(application);
+    if (outcome.kind !== 'added') {
+      throw new Error(outcome.reason);
+    }
+    return outcome.application;
+  }
+
   it('gives a new application a fresh code a link can carry', async () => {
-    const application = await applications.add(
+    const application = await added(
       anApplication({ country: 'NL', city: 'Amsterdam', networks: ['ACME-NET'] }),
     );
     expect(application.code).toMatch(refCode);
@@ -49,7 +59,7 @@ describe('applications against a real database', () => {
   });
 
   it('registers a code that already went out, as it is', async () => {
-    const application = await applications.add(
+    const application = await added(
       anApplication({ company: 'Globex', code: 'kxqt', country: 'AZ', city: 'Baku' }),
     );
     expect(application.code).toBe('kxqt');
@@ -57,23 +67,25 @@ describe('applications against a real database', () => {
 
   it('refuses a code another application already has', async () => {
     await applications.add(anApplication({ code: 'memh' }));
-    await expect(
-      applications.add(anApplication({ company: 'Other', code: 'memh' })),
-    ).rejects.toThrow('code memh already belongs to another application');
+    expect(await applications.add(anApplication({ company: 'Other', code: 'memh' }))).toEqual({
+      kind: 'code taken',
+      reason: 'code memh already belongs to another application',
+    });
   });
 
   it('draws another code when the one it drew is taken', async () => {
     await applications.add(anApplication({ code: 'kxqtz' }));
     vi.mocked(newCode).mockReturnValueOnce('kxqtz').mockReturnValueOnce('mpw7r');
-    expect((await applications.add(anApplication({ company: 'Other' }))).code).toBe('mpw7r');
+    expect((await added(anApplication({ company: 'Other' }))).code).toBe('mpw7r');
   });
 
   it('gives up after five codes that are all taken', async () => {
     await applications.add(anApplication({ code: 'kxqtz' }));
     vi.mocked(newCode).mockReturnValue('kxqtz');
-    await expect(applications.add(anApplication({ company: 'Other' }))).rejects.toThrow(
-      'code kxqtz already belongs to another application',
-    );
+    expect(await applications.add(anApplication({ company: 'Other' }))).toEqual({
+      kind: 'code taken',
+      reason: 'code kxqtz already belongs to another application',
+    });
     expect(newCode).toHaveBeenCalledTimes(5);
   });
 
