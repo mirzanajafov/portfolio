@@ -231,6 +231,11 @@ enum ApplicationField {
   notes
   company
   role
+  appliedOn
+  country
+  city
+  atsHost
+  networks
 }
 
 model ApplicationChange {

@@ -15,6 +15,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import type { ApplicationPage, ApplicationView } from '@portfolio/content/applications';
 import type { Response } from 'express';
 import {
   applicationEditSchema,
@@ -41,7 +42,11 @@ function viewOf({
   answeredOn,
   notes,
   firstSeenOn,
-}: Application) {
+  country,
+  city,
+  atsHost,
+  networks,
+}: Application): ApplicationView {
   return {
     code,
     company,
@@ -53,10 +58,12 @@ function viewOf({
     answeredOn: dayOrNull(answeredOn),
     notes,
     firstSeenOn: dayOrNull(firstSeenOn),
+    country,
+    city,
+    atsHost,
+    networks,
   };
 }
-
-type ApplicationView = ReturnType<typeof viewOf>;
 
 @Controller('admin/applications')
 @UseGuards(SignedInGuard)
@@ -66,12 +73,18 @@ export class AdminApplicationsController {
     private readonly applications: ApplicationsService,
   ) {}
 
+  @Get()
+  async list(): Promise<ApplicationView[]> {
+    return (await this.applications.list()).map(viewOf);
+  }
+
   @Get(':code')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<void> {
-    if (!(await this.applications.find(code))) {
+  async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<ApplicationPage> {
+    const application = await this.applications.find(code);
+    if (!application) {
       throw new NotFoundException();
     }
+    return { ...viewOf(application), undoTo: await this.applications.undoTo(application) };
   }
 
   @Post()

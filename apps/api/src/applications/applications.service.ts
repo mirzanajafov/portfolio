@@ -32,17 +32,59 @@ function isCodeTaken(error: unknown): boolean {
 function trackedOf({
   company,
   role,
+  appliedOn,
   channel,
   cvVariant,
   status,
   answeredOn,
   notes,
+  country,
+  city,
+  atsHost,
+  networks,
 }: Application): Tracked {
-  return { company, role, channel, cvVariant, status, answeredOn, notes };
+  return {
+    company,
+    role,
+    appliedOn,
+    channel,
+    cvVariant,
+    status,
+    answeredOn,
+    notes,
+    country,
+    city,
+    atsHost,
+    networks,
+  };
 }
 
-function textOf(value: string | Date | null): string | null {
+function textOf(value: string | string[] | Date | null): string | null {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
   return typeof value === 'string' ? value : dayOrNull(value);
+}
+
+function appliedDayRefusal(
+  day: Date | undefined,
+  answeredOn: Date | null,
+  firstSeenOn: Date | null,
+  today: Date,
+): string | undefined {
+  if (!day) {
+    return undefined;
+  }
+  if (day > today) {
+    return `appliedOn ${dayOf(day)} is after today in Baku`;
+  }
+  if (answeredOn && day > answeredOn) {
+    return `appliedOn ${dayOf(day)} is after answeredOn ${dayOf(answeredOn)}`;
+  }
+  if (firstSeenOn && day > firstSeenOn) {
+    return `appliedOn ${dayOf(day)} is after the first visit on ${dayOf(firstSeenOn)}`;
+  }
+  return undefined;
 }
 
 function answerDayRefusal(
@@ -74,11 +116,9 @@ export class ApplicationsService {
   ) {}
 
   async add({ code, ...application }: NewApplication): Promise<AddOutcome> {
-    if (application.appliedOn > bakuDay(this.clock.now())) {
-      return {
-        kind: 'invalid',
-        reason: `appliedOn ${dayOf(application.appliedOn)} is after today in Baku`,
-      };
+    const refusal = appliedDayRefusal(application.appliedOn, null, null, bakuDay(this.clock.now()));
+    if (refusal) {
+      return { kind: 'invalid', reason: refusal };
     }
     const tries = code === undefined ? maxDraws : 1;
     for (let attempt = 1; ; attempt += 1) {
@@ -104,6 +144,10 @@ export class ApplicationsService {
     return this.prisma.application.findUnique({ where: { code } });
   }
 
+  async undoTo({ id }: Application): Promise<Status | null> {
+    return (await statusBeforeLastMove(this.prisma, id)) ?? null;
+  }
+
   list(): Promise<Application[]> {
     return this.prisma.application.findMany({
       orderBy: [{ appliedOn: 'desc' }, { createdAt: 'desc' }],
@@ -124,15 +168,17 @@ export class ApplicationsService {
       }
       const today = bakuDay(at);
       const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);
-      const refusal = answerDayRefusal(edit.answeredOn, answered, current.appliedOn, today);
-      if (refusal) {
-        return { kind: 'invalid', reason: refusal };
-      }
       const next: Tracked = {
         ...trackedOf(current),
         ...edit,
         answeredOn: edit.answeredOn ?? answered,
       };
+      const refusal =
+        appliedDayRefusal(edit.appliedOn, next.answeredOn, current.firstSeenOn, today) ??
+        answerDayRefusal(edit.answeredOn, answered, next.appliedOn, today);
+      if (refusal) {
+        return { kind: 'invalid', reason: refusal };
+      }
       return { kind: 'edited', application: await record(tx, current, next, at, false) };
     });
   }

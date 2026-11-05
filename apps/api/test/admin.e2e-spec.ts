@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
+import { applicationListSchema, applicationPageSchema } from '@portfolio/content/applications';
 import { reportSchema } from '@portfolio/content/report';
 import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
@@ -233,7 +234,7 @@ describe('admin sign-in against a real database', () => {
       .expect(404);
   });
 
-  it('says whether an application with the code is registered', async () => {
+  it('answers a registered application with nothing to undo yet, and a 404 for a code nobody has', async () => {
     const token = await sessionFrom(await sessions.link());
     await prisma.application.create({
       data: { ...anApplication({ appliedOn: start }), code: 'memh' },
@@ -243,8 +244,10 @@ describe('admin sign-in against a real database', () => {
         .get(`/admin/applications/${code}`)
         .set('Authorization', `Bearer ${token}`);
 
-    await ask('memh').expect(204);
+    const memh = await ask('memh').expect(200);
     await ask('memj').expect(404);
+
+    expect(applicationPageSchema.parse(memh.body)).toMatchObject({ code: 'memh', undoTo: null });
     await ask('Memh!').expect(400);
   });
 
@@ -294,7 +297,114 @@ describe('admin sign-in against a real database', () => {
         answeredOn: null,
         notes: '',
         firstSeenOn: null,
+        country: null,
+        city: null,
+        atsHost: null,
+        networks: [],
       });
+    });
+
+    it('keeps only the lowercase host of an ATS link pasted whole', async () => {
+      const token = await sessionFrom(await sessions.link());
+
+      const added = await write('post', '', token, {
+        ...acme,
+        atsHost: 'https://Boards.Greenhouse.io/acme/jobs/1',
+      }).expect(201);
+
+      expect(added.body).toMatchObject({ atsHost: 'boards.greenhouse.io' });
+    });
+
+    it('lists the applications newest first, in the shape /admin reads', async () => {
+      const token = await signedInWithAcme();
+      await write('post', '', token, {
+        ...acme,
+        code: 'kxqtz',
+        company: 'Wolt',
+        appliedOn: '2026-10-02',
+      }).expect(201);
+
+      const listed = await request(app.getHttpServer())
+        .get('/admin/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      const companies = applicationListSchema.parse(listed.body).map(({ company }) => company);
+      expect(companies).toEqual(['Wolt', 'Acme']);
+    });
+
+    it('says which status an undo would restore', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+
+      const page = await request(app.getHttpServer())
+        .get('/admin/applications/memh')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(page.body).toMatchObject({ status: 'screening', undoTo: 'sent' });
+    });
+
+    it('corrects the day I applied and the hints, clears a hint with null, and keeps each change in the history', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { country: 'AZ', city: 'Baku' }).expect(200);
+
+      const edited = await write('patch', '/memh', token, {
+        appliedOn: '2026-09-30',
+        city: null,
+        atsHost: 'jobs.lever.co',
+        networks: ['ACME-NET'],
+      }).expect(200);
+
+      expect(edited.body).toMatchObject({
+        appliedOn: '2026-09-30',
+        country: 'AZ',
+        city: null,
+        atsHost: 'jobs.lever.co',
+        networks: ['ACME-NET'],
+      });
+      expect(await history()).toEqual([
+        ['country', null, 'AZ'],
+        ['city', null, 'Baku'],
+        ['appliedOn', '2026-10-01', '2026-09-30'],
+        ['city', 'Baku', null],
+        ['atsHost', null, 'jobs.lever.co'],
+        ['networks', '[]', '["ACME-NET"]'],
+      ]);
+    });
+
+    it('refuses an applied day after today in Baku, after the answer, or after the first visit', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await prisma.application.update({
+        where: { code: 'memh' },
+        data: { firstSeenOn: new Date('2026-10-01') },
+      });
+
+      const future = await write('patch', '/memh', token, { appliedOn: '2026-10-03' }).expect(400);
+      const afterAnswer = await write('patch', '/memh', token, {
+        appliedOn: '2026-10-02',
+        answeredOn: '2026-10-01',
+      }).expect(400);
+      const afterVisit = await write('patch', '/memh', token, { appliedOn: '2026-10-02' }).expect(
+        400,
+      );
+
+      expect(future.body).toMatchObject({ message: 'appliedOn 2026-10-03 is after today in Baku' });
+      expect(afterAnswer.body).toMatchObject({
+        message: 'appliedOn 2026-10-02 is after answeredOn 2026-10-01',
+      });
+      expect(afterVisit.body).toMatchObject({
+        message: 'appliedOn 2026-10-02 is after the first visit on 2026-10-01',
+      });
+    });
+
+    it('refuses a hint it would refuse on registration', async () => {
+      const token = await signedInWithAcme();
+
+      await write('patch', '/memh', token, { country: 'az' }).expect(400);
+      await write('patch', '/memh', token, { atsHost: 'my ats' }).expect(400);
+      await write('patch', '/memh', token, { networks: [''] }).expect(400);
     });
 
     it('refuses an application with a channel the CSV has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
