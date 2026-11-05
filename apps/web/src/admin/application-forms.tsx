@@ -3,7 +3,7 @@
 import {
   channels,
   nextStatuses,
-  type ApplicationPage,
+  type ApplicationView,
   type Status,
 } from '@portfolio/content/applications';
 import { useActionState, type ReactNode } from 'react';
@@ -39,7 +39,7 @@ function Failure({ failure }: { failure: string | null }) {
   );
 }
 
-function storedValues(application: ApplicationPage): FormValues {
+function storedValues(application: ApplicationView): FormValues {
   return {
     company: application.company,
     role: application.role,
@@ -60,16 +60,10 @@ function Fields({ values, choosing }: { values: FormValues; choosing: boolean })
   return (
     <>
       <Field label="Company">
-        <input
-          name="company"
-          required
-          maxLength={200}
-          defaultValue={values.company}
-          className={input}
-        />
+        <input name="company" required defaultValue={values.company} className={input} />
       </Field>
       <Field label="Role">
-        <input name="role" required maxLength={200} defaultValue={values.role} className={input} />
+        <input name="role" required defaultValue={values.role} className={input} />
       </Field>
       <Field label="Applied on">
         <input
@@ -93,25 +87,13 @@ function Fields({ values, choosing }: { values: FormValues; choosing: boolean })
         </select>
       </Field>
       <Field label="CV variant">
-        <input
-          name="cvVariant"
-          required
-          maxLength={100}
-          defaultValue={values.cvVariant}
-          className={input}
-        />
+        <input name="cvVariant" required defaultValue={values.cvVariant} className={input} />
       </Field>
       <Field label="Country, as two capital letters">
-        <input
-          name="country"
-          pattern="[A-Z]{2}"
-          maxLength={2}
-          defaultValue={values.country}
-          className={input}
-        />
+        <input name="country" defaultValue={values.country} className={input} />
       </Field>
       <Field label="City">
-        <input name="city" maxLength={100} defaultValue={values.city} className={input} />
+        <input name="city" defaultValue={values.city} className={input} />
       </Field>
       <Field label="ATS host, or a link to the job">
         <input name="atsHost" defaultValue={values.atsHost} className={input} />
@@ -130,13 +112,7 @@ export function AddApplicationForm() {
     <form key={JSON.stringify(values)} action={action} className="grid gap-4 sm:grid-cols-2">
       <Fields values={values} choosing />
       <Field label="Code, only for one that already went out">
-        <input
-          name="code"
-          pattern="[a-z0-9]{3,16}"
-          maxLength={16}
-          defaultValue={values.code}
-          className={input}
-        />
+        <input name="code" defaultValue={values.code} className={input} />
       </Field>
       <div className="flex flex-col items-start gap-4 sm:col-span-2">
         <button type="submit" disabled={pending} className={submit}>
@@ -148,7 +124,7 @@ export function AddApplicationForm() {
   );
 }
 
-export function EditApplicationForm({ application }: { application: ApplicationPage }) {
+export function EditApplicationForm({ application }: { application: ApplicationView }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     editApplication.bind(null, application.code),
     null,
@@ -174,13 +150,7 @@ export function EditApplicationForm({ application }: { application: ApplicationP
         />
       </Field>
       <Field label="Notes" wide>
-        <textarea
-          name="notes"
-          rows={4}
-          maxLength={2000}
-          defaultValue={values.notes}
-          className={input}
-        />
+        <textarea name="notes" rows={4} defaultValue={values.notes} className={input} />
       </Field>
       <Fields values={values} choosing={false} />
       <div className="flex flex-col items-start gap-4 sm:col-span-2">
