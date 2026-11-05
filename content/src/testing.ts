@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stringify } from 'yaml';
 import type { z } from 'zod';
+import type { ApplicationPage, ApplicationView } from './applications.ts';
 import { caseStudiesIn } from './case-studies.ts';
 import type * as ContentModule from './index.ts';
 import { loadContent } from './load.ts';
@@ -187,6 +188,31 @@ export const someVisits = (visits: number): Totals => ({
 const noOutcome = () => ({ right: 0, wrong: 0, tied: 0 });
 
 export const noOutcomes = () => ({ high: noOutcome(), medium: noOutcome(), low: noOutcome() });
+
+export function anApplicationView(overrides: Partial<ApplicationView> = {}): ApplicationView {
+  return {
+    code: 'memh',
+    company: 'Acme',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-30',
+    channel: 'direct',
+    cvVariant: 'base',
+    status: 'sent',
+    answeredOn: null,
+    notes: '',
+    firstSeenOn: null,
+    country: null,
+    city: null,
+    atsHost: null,
+    networks: [],
+    version: 0,
+    ...overrides,
+  };
+}
+
+export function anApplicationPage(overrides: Partial<ApplicationPage> = {}): ApplicationPage {
+  return { ...anApplicationView(), undoTo: null, ...overrides };
+}
 
 export function aReport(overrides: Partial<Report> = {}): Report {
   return {

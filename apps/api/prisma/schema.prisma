@@ -203,6 +203,7 @@ model Application {
   status      ApplicationStatus   @default(sent)
   answeredOn  DateTime?           @db.Date
   notes       String              @default("")
+  version     Int                 @default(0)
   days        DailyApplication[]
   changes     ApplicationChange[]
 }
@@ -231,6 +232,11 @@ enum ApplicationField {
   notes
   company
   role
+  appliedOn
+  country
+  city
+  atsHost
+  networks
 }
 
 model ApplicationChange {

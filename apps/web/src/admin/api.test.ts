@@ -1,6 +1,17 @@
-import { aReport } from '@portfolio/content/testing';
+import { anApplicationPage, anApplicationView, aReport } from '@portfolio/content/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { endSession, fetchReport, isRegistered, sessionExpiry, startSession } from './api';
+import {
+  createApplication,
+  updateApplication,
+  endSession,
+  fetchApplication,
+  fetchApplications,
+  fetchReport,
+  sessionExpiry,
+  startSession,
+  undoStatusChange,
+  type NewApplicationBody,
+} from './api';
 
 const api = 'http://api:3201';
 const link = 'l'.repeat(43);
@@ -126,20 +137,119 @@ describe('fetchReport', () => {
   });
 });
 
-describe('isRegistered', () => {
-  it('asks for the code with the session as a bearer, and reads 204 as yes and 404 as no', async () => {
-    const fetchImpl = answering(204);
-    expect(await isRegistered(api, session, 'memh', fetchImpl)).toBe(true);
+describe('fetchApplications', () => {
+  it('asks with the session as a bearer and reads the list, or null for a session the API refused', async () => {
+    const view = anApplicationView();
+    const fetchImpl = answering(200, [view]);
+    expect(await fetchApplications(api, session, fetchImpl)).toEqual([view]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api:3201/admin/applications',
+      expect.objectContaining({ headers: { authorization: `Bearer ${session}` } }),
+    );
+    expect(await fetchApplications(api, session, answering(404))).toBeNull();
+  });
+});
+
+describe('fetchApplication', () => {
+  it('reads the application and what an undo would restore, or null for a code nobody has', async () => {
+    const page = anApplicationPage({ status: 'screening', undoTo: 'sent' });
+    const fetchImpl = answering(200, page);
+    expect(await fetchApplication(api, session, 'memh', fetchImpl)).toEqual(page);
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://api:3201/admin/applications/memh',
       expect.objectContaining({ headers: { authorization: `Bearer ${session}` } }),
     );
-    expect(await isRegistered(api, session, 'memh', answering(404))).toBe(false);
+    expect(await fetchApplication(api, session, 'memh', answering(404))).toBeNull();
   });
 
   it('fails on any other answer', async () => {
-    await expect(isRegistered(api, session, 'memh', answering(500))).rejects.toThrow(
-      'the API answered 500 to an application check',
+    await expect(fetchApplication(api, session, 'memh', answering(500))).rejects.toThrow(
+      'the API answered 500 to an application',
+    );
+  });
+});
+
+describe('the application writes', () => {
+  const view = anApplicationView();
+  const undo = { version: 3 };
+  const acme: NewApplicationBody = {
+    company: 'Acme',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-30',
+    channel: 'direct',
+    cvVariant: 'base',
+    networks: [],
+  };
+
+  it('sends the fields as JSON with the session as a bearer, to the route of each write', async () => {
+    const fetchImpl = answering(200, view);
+
+    await createApplication(api, session, acme, fetchImpl);
+    await updateApplication(api, session, 'memh', { version: 3, notes: 'Called back' }, fetchImpl);
+    await undoStatusChange(api, session, 'memh', undo, fetchImpl);
+
+    const calls = fetchImpl.mock.calls.map(([url, init]) => [url, init?.method, init?.body]);
+    expect(calls).toEqual([
+      ['http://api:3201/admin/applications', 'POST', JSON.stringify(acme)],
+      ['http://api:3201/admin/applications/memh', 'PATCH', '{"version":3,"notes":"Called back"}'],
+      ['http://api:3201/admin/applications/memh/undo', 'POST', JSON.stringify(undo)],
+    ]);
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toEqual({
+      authorization: `Bearer ${session}`,
+      'content-type': 'application/json',
+    });
+  });
+
+  it('reads the written application, the reason for a 400, a 409 or a 412, the wait of a 429, and a 404', async () => {
+    expect(await createApplication(api, session, acme, answering(201, view))).toEqual({
+      kind: 'done',
+      application: view,
+    });
+    expect(
+      await updateApplication(api, session, 'memh', undo, answering(409, { message: 'no move' })),
+    ).toEqual({ kind: 'refused', message: 'no move' });
+    expect(
+      await undoStatusChange(api, session, 'memh', undo, answering(412, { message: 'changed' })),
+    ).toEqual({ kind: 'stale', message: 'changed' });
+    expect(
+      await createApplication(api, session, acme, answering(400, { message: 'bad day' })),
+    ).toEqual({
+      kind: 'refused',
+      message: 'bad day',
+    });
+    expect(
+      await undoStatusChange(
+        api,
+        session,
+        'memh',
+        undo,
+        answering(429, {}, { 'retry-after': '600' }),
+      ),
+    ).toEqual({ kind: 'limited', retryAfterSeconds: 600 });
+    expect(await undoStatusChange(api, session, 'memh', undo, answering(404))).toEqual({
+      kind: 'missing',
+    });
+  });
+
+  it('waits a minute after a 429 that names no wait, or one it cannot read', async () => {
+    expect(await undoStatusChange(api, session, 'memh', undo, answering(429))).toEqual({
+      kind: 'limited',
+      retryAfterSeconds: 60,
+    });
+    expect(
+      await undoStatusChange(
+        api,
+        session,
+        'memh',
+        undo,
+        answering(429, {}, { 'retry-after': 'soon' }),
+      ),
+    ).toEqual({ kind: 'limited', retryAfterSeconds: 60 });
+  });
+
+  it('fails on any other answer', async () => {
+    await expect(undoStatusChange(api, session, 'memh', undo, answering(500))).rejects.toThrow(
+      'the API answered 500 to an undo',
     );
   });
 });

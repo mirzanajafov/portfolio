@@ -11,3 +11,5 @@ export const adminSignInSchema = z.object({
   token: z.string().check(z.regex(adminToken)),
   expiresAt: isoDate,
 });
+
+export const adminRefusalSchema = z.object({ message: z.string() });

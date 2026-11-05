@@ -4,7 +4,7 @@ import { ClockService } from '../common/clock.service.js';
 import { bakuDay, dayOf, dayOrNull } from '../common/days.js';
 import { ApplicationField, Prisma, type Application } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { ApplicationEdit, NewApplication } from './application.schema.js';
+import type { ApplicationEdit, NewApplication, Undo } from './application.schema.js';
 import { newCode } from './code.js';
 
 type AddOutcome =
@@ -15,15 +15,21 @@ type AddOutcome =
 type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
+  | { kind: 'out of date' }
   | { kind: 'refused'; from: Status; to: Status; allowed: readonly Status[] }
   | { kind: 'invalid'; reason: string };
 
 type UndoOutcome =
-  { kind: 'undone'; application: Application } | { kind: 'missing' } | { kind: 'nothing to undo' };
+  | { kind: 'undone'; application: Application }
+  | { kind: 'missing' }
+  | { kind: 'out of date' }
+  | { kind: 'nothing to undo' };
 
 type Tracked = Pick<Application, ApplicationField>;
 
 const maxDraws = 5;
+
+const newestFirst = { orderBy: { id: 'desc' }, select: { before: true, undo: true } } as const;
 
 function isCodeTaken(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
@@ -32,17 +38,59 @@ function isCodeTaken(error: unknown): boolean {
 function trackedOf({
   company,
   role,
+  appliedOn,
   channel,
   cvVariant,
   status,
   answeredOn,
   notes,
+  country,
+  city,
+  atsHost,
+  networks,
 }: Application): Tracked {
-  return { company, role, channel, cvVariant, status, answeredOn, notes };
+  return {
+    company,
+    role,
+    appliedOn,
+    channel,
+    cvVariant,
+    status,
+    answeredOn,
+    notes,
+    country,
+    city,
+    atsHost,
+    networks,
+  };
 }
 
-function textOf(value: string | Date | null): string | null {
+function textOf(value: string | string[] | Date | null): string | null {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
   return typeof value === 'string' ? value : dayOrNull(value);
+}
+
+function appliedDayRefusal(
+  day: Date | undefined,
+  answeredOn: Date | null,
+  firstSeenOn: Date | null,
+  today: Date,
+): string | undefined {
+  if (!day) {
+    return undefined;
+  }
+  if (day > today) {
+    return `appliedOn ${dayOf(day)} is after today in Baku`;
+  }
+  if (answeredOn && day > answeredOn) {
+    return `appliedOn ${dayOf(day)} is after answeredOn ${dayOf(answeredOn)}`;
+  }
+  if (firstSeenOn && day > firstSeenOn) {
+    return `appliedOn ${dayOf(day)} is after the first visit on ${dayOf(firstSeenOn)}`;
+  }
+  return undefined;
 }
 
 function answerDayRefusal(
@@ -74,11 +122,9 @@ export class ApplicationsService {
   ) {}
 
   async add({ code, ...application }: NewApplication): Promise<AddOutcome> {
-    if (application.appliedOn > bakuDay(this.clock.now())) {
-      return {
-        kind: 'invalid',
-        reason: `appliedOn ${dayOf(application.appliedOn)} is after today in Baku`,
-      };
+    const refusal = appliedDayRefusal(application.appliedOn, null, null, bakuDay(this.clock.now()));
+    if (refusal) {
+      return { kind: 'invalid', reason: refusal };
     }
     const tries = code === undefined ? maxDraws : 1;
     for (let attempt = 1; ; attempt += 1) {
@@ -104,18 +150,37 @@ export class ApplicationsService {
     return this.prisma.application.findUnique({ where: { code } });
   }
 
+  async findWithUndo(
+    code: string,
+  ): Promise<{ application: Application; undoTo: Status | null } | null> {
+    const [application, changes] = await this.prisma.$transaction(
+      [
+        this.prisma.application.findUnique({ where: { code } }),
+        this.prisma.applicationChange.findMany({
+          where: { application: { code }, field: 'status' },
+          ...newestFirst,
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return application ? { application, undoTo: statusBeforeLastMove(changes) } : null;
+  }
+
   list(): Promise<Application[]> {
     return this.prisma.application.findMany({
       orderBy: [{ appliedOn: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
-  edit(code: string, edit: ApplicationEdit): Promise<EditOutcome> {
+  edit(code: string, { version, ...edit }: ApplicationEdit): Promise<EditOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
         return { kind: 'missing' };
+      }
+      if (version !== current.version) {
+        return { kind: 'out of date' };
       }
       const status = edit.status ?? current.status;
       const allowed = nextStatuses[current.status];
@@ -124,27 +189,37 @@ export class ApplicationsService {
       }
       const today = bakuDay(at);
       const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);
-      const refusal = answerDayRefusal(edit.answeredOn, answered, current.appliedOn, today);
-      if (refusal) {
-        return { kind: 'invalid', reason: refusal };
-      }
       const next: Tracked = {
         ...trackedOf(current),
         ...edit,
         answeredOn: edit.answeredOn ?? answered,
       };
+      const refusal =
+        appliedDayRefusal(edit.appliedOn, next.answeredOn, current.firstSeenOn, today) ??
+        answerDayRefusal(edit.answeredOn, answered, next.appliedOn, today);
+      if (refusal) {
+        return { kind: 'invalid', reason: refusal };
+      }
       return { kind: 'edited', application: await record(tx, current, next, at, false) };
     });
   }
 
-  undo(code: string): Promise<UndoOutcome> {
+  undo(code: string, { version }: Undo): Promise<UndoOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
         return { kind: 'missing' };
       }
-      const restored = await statusBeforeLastMove(tx, current.id);
+      if (version !== current.version) {
+        return { kind: 'out of date' };
+      }
+      const restored = statusBeforeLastMove(
+        await tx.applicationChange.findMany({
+          where: { applicationId: current.id, field: 'status' },
+          ...newestFirst,
+        }),
+      );
       if (!restored) {
         return { kind: 'nothing to undo' };
       }
@@ -166,15 +241,7 @@ async function lockedApplication(
   return tx.application.findUnique({ where: { code } });
 }
 
-async function statusBeforeLastMove(
-  tx: Prisma.TransactionClient,
-  applicationId: string,
-): Promise<Status | undefined> {
-  const changes = await tx.applicationChange.findMany({
-    where: { applicationId, field: 'status' },
-    orderBy: { id: 'desc' },
-    select: { before: true, undo: true },
-  });
+function statusBeforeLastMove(changes: { before: string | null; undo: boolean }[]): Status | null {
   let undoneSince = 0;
   for (const { before, undo } of changes) {
     if (undo) {
@@ -182,10 +249,10 @@ async function statusBeforeLastMove(
     } else if (undoneSince > 0) {
       undoneSince -= 1;
     } else {
-      return statuses.find((status) => status === before);
+      return statuses.find((status) => status === before) ?? null;
     }
   }
-  return undefined;
+  return null;
 }
 
 async function record(
@@ -203,5 +270,8 @@ async function record(
     return current;
   }
   await tx.applicationChange.createMany({ data: changes });
-  return tx.application.update({ where: { id: current.id }, data: next });
+  return tx.application.update({
+    where: { id: current.id },
+    data: { ...next, version: { increment: 1 } },
+  });
 }

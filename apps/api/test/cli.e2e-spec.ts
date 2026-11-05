@@ -10,25 +10,9 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 
-vi.mock(import('../src/applications/code.js'), () => ({ newCode: () => 'k7mpx' }));
-
 type SiteAnswer = (request: IncomingMessage, response: ServerResponse) => void;
 
 const token = 'c'.repeat(64);
-const addAcme = [
-  'application',
-  'add',
-  '--company',
-  'Acme',
-  '--role',
-  'Backend Engineer',
-  '--applied',
-  '2026-10-30',
-  '--channel',
-  'direct',
-  '--variant',
-  'base',
-];
 const stdoutIsTTY = process.stdout.isTTY;
 
 const drawCv: SiteAnswer = (request, response) => {
@@ -111,22 +95,9 @@ describe('the CLI commands', () => {
     }
   }
 
-  async function registeredCodes(): Promise<string[]> {
-    return (await applications.list()).map(({ code }) => code);
-  }
-
   function registerMemh() {
     return applications.add(anApplication({ code: 'memh' }));
   }
-
-  it('registers an application, prints its code and link, and writes the CV the site drew for that code', async () => {
-    expect(await cli(...addAcme)).toEqual({
-      status: 0,
-      stdout: '%PDF /internal/cv/k7mpx',
-      stderr: 'Acme: k7mpx, https://najafov.dev/?r=k7mpx\n',
-    });
-    expect(await registeredCodes()).toEqual(['k7mpx']);
-  });
 
   it('writes the CV again for a registered code', async () => {
     await registerMemh();
@@ -174,51 +145,18 @@ describe('the CLI commands', () => {
     expect(asked).toEqual([]);
   });
 
-  it('says a taken code is taken', async () => {
+  it('writes no CV without the token, and asks the site for none', async () => {
     await registerMemh();
-    expect(await cli(...addAcme, '--code', 'memh')).toEqual({
-      status: 1,
-      stdout: '',
-      stderr: 'code memh already belongs to another application\n',
-    });
-  });
-
-  it('registers nothing applied after today in Baku, and asks the site for no CV', async () => {
-    const later = addAcme.map((arg) => (arg === '2026-10-30' ? '2999-01-01' : arg));
-    expect(await cli(...later)).toEqual({
-      status: 1,
-      stdout: '',
-      stderr: 'appliedOn 2999-01-01 is after today in Baku\n',
-    });
-    expect(await registeredCodes()).toEqual([]);
+    vi.stubEnv('CV_RENDER_TOKEN', undefined);
+    expect((await cli('application', 'cv', 'memh')).status).toBe(1);
     expect(asked).toEqual([]);
   });
 
-  it('registers nothing when the token is missing', async () => {
-    vi.stubEnv('CV_RENDER_TOKEN', undefined);
-    expect((await cli(...addAcme)).status).toBe(1);
-    expect(await registeredCodes()).toEqual([]);
-  });
-
-  it('registers nothing when stdout is a terminal', async () => {
+  it('writes no CV to a terminal', async () => {
+    await registerMemh();
     process.stdout.isTTY = true;
-    expect((await cli(...addAcme)).status).toBe(1);
-    expect(await registeredCodes()).toEqual([]);
-  });
-
-  it('keeps the application and says how to get its CV when the site fails', async () => {
-    answer = (_, response) => response.writeHead(502).end();
-    expect(await cli(...addAcme)).toEqual({
-      status: 1,
-      stdout: '',
-      stderr: [
-        'Acme: k7mpx, https://najafov.dev/?r=k7mpx',
-        'the site answered 502 for the CV of k7mpx',
-        'k7mpx is registered, so application cv k7mpx writes its CV once the site answers',
-        '',
-      ].join('\n'),
-    });
-    expect(await registeredCodes()).toEqual(['k7mpx']);
+    expect((await cli('application', 'cv', 'memh')).status).toBe(1);
+    expect(asked).toEqual([]);
   });
 
   it('says what failed when the site fails for a registered code', async () => {

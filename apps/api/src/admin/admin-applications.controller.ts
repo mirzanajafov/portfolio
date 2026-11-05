@@ -11,17 +11,21 @@ import {
   Param,
   Patch,
   Post,
+  PreconditionFailedException,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
+import type { ApplicationPage, ApplicationView } from '@portfolio/content/applications';
 import type { Response } from 'express';
 import {
   applicationEditSchema,
   codeSchema,
   newApplicationSchema,
+  undoSchema,
   type ApplicationEdit,
   type NewApplication,
+  type Undo,
 } from '../applications/application.schema.js';
 import { ApplicationsService } from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
@@ -29,6 +33,8 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
+
+const changedSinceLoaded = 'the application changed since that page loaded';
 
 function viewOf({
   code,
@@ -41,7 +47,12 @@ function viewOf({
   answeredOn,
   notes,
   firstSeenOn,
-}: Application) {
+  country,
+  city,
+  atsHost,
+  networks,
+  version,
+}: Application): ApplicationView {
   return {
     code,
     company,
@@ -53,10 +64,13 @@ function viewOf({
     answeredOn: dayOrNull(answeredOn),
     notes,
     firstSeenOn: dayOrNull(firstSeenOn),
+    country,
+    city,
+    atsHost,
+    networks,
+    version,
   };
 }
-
-type ApplicationView = ReturnType<typeof viewOf>;
 
 @Controller('admin/applications')
 @UseGuards(SignedInGuard)
@@ -66,12 +80,18 @@ export class AdminApplicationsController {
     private readonly applications: ApplicationsService,
   ) {}
 
+  @Get()
+  async list(): Promise<ApplicationView[]> {
+    return (await this.applications.list()).map(viewOf);
+  }
+
   @Get(':code')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<void> {
-    if (!(await this.applications.find(code))) {
+  async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<ApplicationPage> {
+    const found = await this.applications.findWithUndo(code);
+    if (!found) {
       throw new NotFoundException();
     }
+    return { ...viewOf(found.application), undoTo: found.undoTo };
   }
 
   @Post()
@@ -106,6 +126,9 @@ export class AdminApplicationsController {
     if (outcome.kind === 'invalid') {
       throw new BadRequestException(outcome.reason);
     }
+    if (outcome.kind === 'out of date') {
+      throw new PreconditionFailedException(changedSinceLoaded);
+    }
     if (outcome.kind === 'refused') {
       throw new ConflictException({
         message: `an application that is ${outcome.from} can't become ${outcome.to}`,
@@ -120,12 +143,16 @@ export class AdminApplicationsController {
   async undo(
     @Req() { adminSession }: SignedInRequest,
     @Param('code', new ZodPipe(codeSchema)) code: string,
+    @Body(new ZodPipe(undoSchema)) expected: Undo,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    const outcome = await this.applications.undo(code);
+    const outcome = await this.applications.undo(code, expected);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
+    }
+    if (outcome.kind === 'out of date') {
+      throw new PreconditionFailedException(changedSinceLoaded);
     }
     if (outcome.kind === 'nothing to undo') {
       throw new ConflictException('there is no status change to undo');

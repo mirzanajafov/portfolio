@@ -1,8 +1,15 @@
+import { anApplicationView } from '@portfolio/content/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { signIn, signOut } from './actions';
+import { addApplication, editApplication, signIn, signOut, undoStatus } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
 import { request } from './testing';
-import type { endSession, startSession } from './api';
+import type {
+  createApplication,
+  endSession,
+  startSession,
+  undoStatusChange,
+  updateApplication,
+} from './api';
 
 const link = 'l'.repeat(43);
 const session = 's'.repeat(43);
@@ -11,10 +18,16 @@ const ends = new Date('2026-11-29T12:00:00Z');
 const api = vi.hoisted(() => ({
   startSession: vi.fn<typeof startSession>(),
   endSession: vi.fn<typeof endSession>(),
+  createApplication: vi.fn<typeof createApplication>(),
+  updateApplication: vi.fn<typeof updateApplication>(),
+  undoStatusChange: vi.fn<typeof undoStatusChange>(),
 }));
+
+const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
 
 vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
 vi.mock('next/navigation', async () => (await import('./testing')).nextNavigation);
+vi.mock('next/cache', () => cache);
 vi.mock('./api', () => api);
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
@@ -32,6 +45,10 @@ beforeEach(() => {
   request.delete.mockClear();
   api.startSession.mockReset();
   api.endSession.mockReset();
+  api.createApplication.mockReset();
+  api.updateApplication.mockReset();
+  api.undoStatusChange.mockReset();
+  cache.revalidatePath.mockClear();
 });
 
 afterEach(() => {
@@ -141,5 +158,241 @@ describe('signOut', () => {
     await expect(signOut()).rejects.toThrow('redirect to /admin');
     expect(api.endSession).not.toHaveBeenCalled();
     expect(request.delete).toHaveBeenCalledWith(sessionCookie);
+  });
+});
+
+describe('the application actions', () => {
+  const done = { kind: 'done', application: anApplicationView() } as const;
+
+  function formOf(fields: Record<string, string>): FormData {
+    const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) {
+      form.set(name, value);
+    }
+    return form;
+  }
+
+  it('adds an application from the form, leaving out empty hints, and opens its page', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.createApplication.mockResolvedValue(done);
+    const form = formOf({
+      company: ' Acme ',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'direct',
+      cvVariant: 'base',
+      code: '',
+      country: 'AZ',
+      city: '',
+      atsHost: '',
+      networks: 'ACME-NET\n\n ACME-VPN \n',
+    });
+
+    await expect(addApplication(null, form)).rejects.toThrow(
+      'redirect to /admin/applications/memh',
+    );
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
+    expect(api.createApplication).toHaveBeenCalledWith('http://api:3201', session, {
+      company: 'Acme',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'direct',
+      cvVariant: 'base',
+      country: 'AZ',
+      networks: ['ACME-NET', 'ACME-VPN'],
+    });
+  });
+
+  const shown = {
+    company: 'Acme',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-30',
+    channel: 'direct',
+    cvVariant: 'base',
+    status: 'sent',
+    answeredOn: '',
+    notes: 'First line',
+    country: 'AZ',
+    city: '',
+    atsHost: '',
+    networks: 'ACME-NET',
+  };
+
+  function editFormOf(fields: Record<string, string>): FormData {
+    const asShown = Object.fromEntries(
+      Object.entries(shown).map(([name, value]) => [`shown.${name}`, value]),
+    );
+    return formOf({ ...shown, ...asShown, version: '4', ...fields });
+  }
+
+  it('sends only what the edit changed with the version the page loaded, clearing an emptied hint, then shows the page as it now is', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue(done);
+    const form = editFormOf({
+      channel: 'referral',
+      status: 'screening',
+      country: '',
+      city: 'Baku',
+    });
+
+    expect(await editApplication('memh', null, form)).toBeNull();
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
+    expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
+      version: 4,
+      channel: 'referral',
+      status: 'screening',
+      country: null,
+      city: 'Baku',
+    });
+  });
+
+  it('asks the API for nothing and says so when nothing changed, reading a CRLF as the LF it was shown and network lines as the list they make', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    const form = editFormOf({
+      notes: 'First line\r\nSecond line',
+      'shown.notes': 'First line\nSecond line',
+      networks: ' ACME-NET \n\n',
+    });
+
+    expect((await editApplication('memh', null, form))?.failure).toBe(
+      'Nothing changed, so there was nothing to save.',
+    );
+    expect(api.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it('says nothing changed when the API kept the stored value, as it does for a country typed in lower case', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({
+      kind: 'done',
+      application: anApplicationView({ country: 'AZ', version: 4 }),
+    });
+
+    const state = await editApplication('memh', null, editFormOf({ country: 'az' }));
+
+    expect(state?.failure).toBe('Nothing changed, so there was nothing to save.');
+    expect(cache.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('undoes the last move, clears an earlier refusal and shows the page as it now is', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.undoStatusChange.mockResolvedValue(done);
+
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBeNull();
+    expect(api.undoStatusChange).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
+      version: 4,
+    });
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
+  });
+
+  it('shows the reason the API refused a write with what was typed, so the form can keep it', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({ kind: 'refused', message: 'no move' });
+
+    const state = await editApplication(
+      'memh',
+      null,
+      formOf({ notes: ' Called back ', status: 'offer', version: '4' }),
+    );
+
+    expect(state?.failure).toBe('no move');
+    expect(state?.values).toMatchObject({ notes: 'Called back', status: 'offer', company: '' });
+  });
+
+  it('says to reload when an edit or an undo was made on an older version, and not for any other conflict', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    const stale = {
+      kind: 'stale',
+      message: 'the application changed since that page loaded',
+    } as const;
+    api.updateApplication.mockResolvedValue(stale);
+    api.undoStatusChange.mockResolvedValue(stale);
+    api.createApplication.mockResolvedValue({
+      kind: 'refused',
+      message: 'code memh already belongs to another application',
+    });
+
+    const edited = await editApplication('memh', null, editFormOf({ status: 'screening' }));
+    const undone = await undoStatus('memh', null, formOf({ version: '4' }));
+    const added = await addApplication(null, formOf({ company: 'Acme' }));
+
+    const reload =
+      'the application changed since that page loaded. Reload the page to see the application as it is now.';
+    expect([edited?.failure, undone]).toEqual([reload, reload]);
+    expect(added?.failure).toBe('code memh already belongs to another application');
+  });
+
+  it('says how long to wait after too many changes', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.undoStatusChange.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 600 });
+
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBe(
+      'Too many changes. Try again in 10 minutes.',
+    );
+  });
+
+  it('says the session has ended, keeping what was typed, when the cookie is gone or the API refuses the session', async () => {
+    arriving('https://najafov.dev', {});
+    const added = await addApplication(null, formOf({ company: 'Acme' }));
+    expect(added?.failure).toBe('The session has ended. Run admin link for a new sign-in link.');
+    expect(added?.values).toMatchObject({ company: 'Acme' });
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBe(
+      'The session has ended. Run admin link for a new sign-in link.',
+    );
+    expect(api.createApplication).not.toHaveBeenCalled();
+
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({ kind: 'missing' });
+    expect(
+      (await editApplication('memh', null, editFormOf({ notes: 'Called back' })))?.failure,
+    ).toBe(
+      'The session has ended or the application is gone. Run admin link for a new sign-in link.',
+    );
+    api.createApplication.mockResolvedValue({ kind: 'missing' });
+    expect((await addApplication(null, formOf({})))?.failure).toBe(
+      'The session has ended. Run admin link for a new sign-in link.',
+    );
+  });
+
+  it.each([
+    ['from another origin', 'https://evil.example', { [sessionCookie.name]: session }, 'memh'],
+    [
+      'for a code a link could not carry',
+      'https://najafov.dev',
+      { [sessionCookie.name]: session },
+      '../session',
+    ],
+    [
+      'for a code a link could not carry, even without a session',
+      'https://najafov.dev',
+      {},
+      'Memh!',
+    ],
+  ])('is a 404 %s, before it asks the API', async (_, origin, cookies, code) => {
+    arriving(origin, cookies);
+
+    await expect(undoStatus(code, null, formOf({ version: '4' }))).rejects.toThrow('not found');
+    await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
+    expect(api.undoStatusChange).not.toHaveBeenCalled();
+    expect(api.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it('is a 404 for an edit or an undo whose form carries no version it can read', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+
+    await expect(
+      editApplication('memh', null, editFormOf({ version: '', notes: 'Called back' })),
+    ).rejects.toThrow('not found');
+    await expect(undoStatus('memh', null, formOf({ version: 'one' }))).rejects.toThrow('not found');
+    expect(api.updateApplication).not.toHaveBeenCalled();
+    expect(api.undoStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('is a 404 for an add from another origin', async () => {
+    arriving('https://evil.example', { [sessionCookie.name]: session });
+
+    await expect(addApplication(null, formOf({}))).rejects.toThrow('not found');
+    expect(api.createApplication).not.toHaveBeenCalled();
   });
 });

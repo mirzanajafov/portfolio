@@ -1,13 +1,56 @@
-import { adminSessionSchema, adminSignInSchema } from '@portfolio/content/admin';
+import {
+  adminRefusalSchema,
+  adminSessionSchema,
+  adminSignInSchema,
+} from '@portfolio/content/admin';
+import {
+  applicationListSchema,
+  applicationPageSchema,
+  applicationViewSchema,
+  type ApplicationPage,
+  type ApplicationView,
+} from '@portfolio/content/applications';
 import { reportSchema, type Report } from '@portfolio/content/report';
+import type { editFields } from './application-fields';
 
 type SessionStart =
   | { kind: 'signed in'; token: string; expiresAt: Date }
   | { kind: 'refused' }
   | { kind: 'limited'; retryAfterSeconds: number };
 
+export type NewApplicationBody = {
+  company: string;
+  role: string;
+  appliedOn: string;
+  channel: string;
+  cvVariant: string;
+  code?: string;
+  country?: string;
+  city?: string;
+  atsHost?: string;
+  networks: string[];
+};
+
+export type ApplicationEditBody = { version: number } & Partial<
+  Record<(typeof editFields)[number], string | string[] | null>
+>;
+
+export type UndoBody = { version: number };
+
+export type ApplicationWrite =
+  | { kind: 'done'; application: ApplicationView }
+  | { kind: 'refused'; message: string }
+  | { kind: 'stale'; message: string }
+  | { kind: 'limited'; retryAfterSeconds: number }
+  | { kind: 'missing' };
+
 const timeoutMs = 5_000;
 const reportTimeoutMs = 30_000;
+
+function retryAfterOf(response: Response): number {
+  const seconds = Number(response.headers.get('retry-after'));
+  return seconds > 0 ? seconds : 60;
+}
 
 function unexpected(what: string, { status }: Response): Error {
   return new Error(`the API answered ${String(status)} to ${what}`);
@@ -32,7 +75,7 @@ export async function startSession(
     return { kind: 'refused' };
   }
   if (response.status === 429) {
-    return { kind: 'limited', retryAfterSeconds: Number(response.headers.get('retry-after')) };
+    return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };
   }
   if (response.status !== 201) {
     throw unexpected('a sign-in', response);
@@ -40,22 +83,40 @@ export async function startSession(
   return { kind: 'signed in', ...adminSignInSchema.parse(await response.json()) };
 }
 
-export async function sessionExpiry(
-  apiUrl: string,
+async function read<T>(
+  url: string,
   token: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<Date | null> {
-  const response = await fetchImpl(`${apiUrl}/admin/session`, {
+  what: string,
+  schema: { parse: (value: unknown) => T },
+  fetchImpl: typeof fetch,
+  timeout = timeoutMs,
+): Promise<T | null> {
+  const response = await fetchImpl(url, {
     headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(timeout),
   });
   if (response.status === 404) {
     return null;
   }
   if (response.status !== 200) {
-    throw unexpected('a session check', response);
+    throw unexpected(what, response);
   }
-  return adminSessionSchema.parse(await response.json()).expiresAt;
+  return schema.parse(await response.json());
+}
+
+export async function sessionExpiry(
+  apiUrl: string,
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Date | null> {
+  const session = await read(
+    `${apiUrl}/admin/session`,
+    token,
+    'a session check',
+    adminSessionSchema,
+    fetchImpl,
+  );
+  return session?.expiresAt ?? null;
 }
 
 export async function endSession(
@@ -73,41 +134,122 @@ export async function endSession(
   }
 }
 
-export async function fetchReport(
+export function fetchReport(
   apiUrl: string,
   token: string,
   days: number | undefined,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Report | null> {
   const query = days === undefined ? '' : `?days=${String(days)}`;
-  const response = await fetchImpl(`${apiUrl}/admin/report${query}`, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(reportTimeoutMs),
-  });
-  if (response.status === 404) {
-    return null;
-  }
-  if (response.status !== 200) {
-    throw unexpected('a report', response);
-  }
-  return reportSchema.parse(await response.json());
+  return read(
+    `${apiUrl}/admin/report${query}`,
+    token,
+    'a report',
+    reportSchema,
+    fetchImpl,
+    reportTimeoutMs,
+  );
 }
 
-export async function isRegistered(
+export function fetchApplications(
+  apiUrl: string,
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApplicationView[] | null> {
+  return read(
+    `${apiUrl}/admin/applications`,
+    token,
+    'a list of applications',
+    applicationListSchema,
+    fetchImpl,
+  );
+}
+
+export function fetchApplication(
   apiUrl: string,
   token: string,
   code: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<boolean> {
-  const response = await fetchImpl(`${apiUrl}/admin/applications/${code}`, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+): Promise<ApplicationPage | null> {
+  return read(
+    `${apiUrl}/admin/applications/${code}`,
+    token,
+    'an application',
+    applicationPageSchema,
+    fetchImpl,
+  );
+}
+
+const refusalKinds = new Map<number, 'refused' | 'stale'>([
+  [400, 'refused'],
+  [409, 'refused'],
+  [412, 'stale'],
+]);
+
+async function outcomeOf(what: string, response: Response): Promise<ApplicationWrite> {
+  if (response.status === 200 || response.status === 201) {
+    return { kind: 'done', application: applicationViewSchema.parse(await response.json()) };
+  }
+  const refusal = refusalKinds.get(response.status);
+  if (refusal) {
+    return { kind: refusal, message: adminRefusalSchema.parse(await response.json()).message };
+  }
+  if (response.status === 429) {
+    return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };
+  }
   if (response.status === 404) {
-    return false;
+    return { kind: 'missing' };
   }
-  if (response.status !== 204) {
-    throw unexpected('an application check', response);
-  }
-  return true;
+  throw unexpected(what, response);
+}
+
+function sending(
+  method: 'POST' | 'PATCH',
+  token: string,
+  body: NewApplicationBody | ApplicationEditBody | UndoBody,
+): RequestInit {
+  return {
+    method,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  };
+}
+
+export async function createApplication(
+  apiUrl: string,
+  token: string,
+  body: NewApplicationBody,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApplicationWrite> {
+  const response = await fetchImpl(`${apiUrl}/admin/applications`, sending('POST', token, body));
+  return outcomeOf('a new application', response);
+}
+
+export async function updateApplication(
+  apiUrl: string,
+  token: string,
+  code: string,
+  body: ApplicationEditBody,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApplicationWrite> {
+  const response = await fetchImpl(
+    `${apiUrl}/admin/applications/${code}`,
+    sending('PATCH', token, body),
+  );
+  return outcomeOf('an edit', response);
+}
+
+export async function undoStatusChange(
+  apiUrl: string,
+  token: string,
+  code: string,
+  body: UndoBody,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApplicationWrite> {
+  const response = await fetchImpl(
+    `${apiUrl}/admin/applications/${code}/undo`,
+    sending('POST', token, body),
+  );
+  return outcomeOf('an undo', response);
 }

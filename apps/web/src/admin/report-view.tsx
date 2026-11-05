@@ -1,4 +1,5 @@
 import type { ReportPart, ReportSection } from '@portfolio/content/report-sections';
+import Link from 'next/link';
 
 const letter = /\p{L}/u;
 
@@ -47,13 +48,14 @@ function Part({ part, first }: { part: ReportPart; first: boolean }) {
       return (
         <p className="flex flex-wrap items-baseline gap-x-3">
           <span>{part.text}</span>
-          <a
+          <Link
             className="text-sm underline underline-offset-4"
-            href={`/admin/applications/${encodeURIComponent(part.code)}/cv`}
-            aria-label={`Download CV for ${part.code}`}
+            href={`/admin/applications/${encodeURIComponent(part.code)}`}
+            prefetch={false}
+            aria-label={`Open ${part.code}`}
           >
-            Download CV
-          </a>
+            Open
+          </Link>
         </p>
       );
     case 'more':

@@ -3,9 +3,11 @@ import { bakuTime } from '@portfolio/content/time';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { signOut } from '@/admin/actions';
-import { fetchReport, sessionExpiry } from '@/admin/api';
+import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
+import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
 import { ReportView } from '@/admin/report-view';
+import { pill } from '@/admin/styles';
 import { apiUrl } from '@/lib/forward-to-api';
 
 export const dynamic = 'force-dynamic';
@@ -30,19 +32,18 @@ function hrefOf(days: number, all: boolean) {
   return { pathname: '/admin', query: all ? { days, all: 1 } : { days } };
 }
 
-const pill = 'rounded-full border border-line px-4 py-2 hover:border-accent';
-
 export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   const token = await tokenIn(sessionCookie);
   const view = viewOf(await searchParams);
   if (token === undefined || view === null) {
     notFound();
   }
-  const [expiresAt, report] = await Promise.all([
+  const [expiresAt, applications, report] = await Promise.all([
     sessionExpiry(apiUrl(), token),
+    fetchApplications(apiUrl(), token),
     fetchReport(apiUrl(), token, view.days),
   ]);
-  if (!expiresAt || !report) {
+  if (!expiresAt || !applications || !report) {
     notFound();
   }
   return (
@@ -74,6 +75,15 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
           </Link>
         </nav>
       </header>
+      <section className="flex flex-col gap-3 border-t border-line pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight">Applications</h2>
+          <Link href="/admin/add" prefetch={false} className={pill}>
+            Add an application
+          </Link>
+        </div>
+        <ApplicationList applications={applications} />
+      </section>
       <ReportView sections={reportSections(report, { all: view.all })} />
     </main>
   );

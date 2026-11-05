@@ -1,11 +1,29 @@
 'use server';
 
 import { siteUrl } from '@portfolio/content';
+import { refCode } from '@portfolio/content/analytics';
+import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiUrl } from '@/lib/forward-to-api';
+import {
+  addFields,
+  clearableFields,
+  editFields,
+  type FieldName,
+  type FormValues,
+} from './application-fields';
 import { linkCookie, sessionCookie, tokenIn } from './cookies';
-import { endSession, startSession } from './api';
+import {
+  createApplication,
+  endSession,
+  startSession,
+  undoStatusChange,
+  updateApplication,
+  type ApplicationEditBody,
+  type ApplicationWrite,
+  type NewApplicationBody,
+} from './api';
 
 async function headersFromSite(): Promise<Headers> {
   const incoming = await headers();
@@ -45,4 +63,168 @@ export async function signOut(): Promise<void> {
   }
   (await cookies()).delete(sessionCookie);
   redirect('/admin');
+}
+
+export type FormState = { failure: string; values: FormValues } | null;
+
+const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
+
+const nothingChanged = 'Nothing changed, so there was nothing to save.';
+
+const applicationGone =
+  'The session has ended or the application is gone. Run admin link for a new sign-in link.';
+
+function validCode(code: string): string {
+  if (!refCode.test(code)) {
+    notFound();
+  }
+  return code;
+}
+
+function cleaned(value: FormDataEntryValue | null): string {
+  return typeof value === 'string' ? value.replaceAll('\r\n', '\n').trim() : '';
+}
+
+function textIn(form: FormData, name: FieldName): string {
+  return cleaned(form.get(name));
+}
+
+function shownIn(form: FormData, name: FieldName): string {
+  return cleaned(form.get(`shown.${name}`));
+}
+
+function linesIn(form: FormData, name: FieldName): string[] {
+  return textIn(form, name)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+}
+
+function refused(failure: string, form: FormData, fields: readonly FieldName[]): FormState {
+  return {
+    failure,
+    values: Object.fromEntries(fields.map((name) => [name, textIn(form, name)])),
+  };
+}
+
+function newApplicationIn(form: FormData): NewApplicationBody {
+  const given = (name: FieldName) => textIn(form, name) || undefined;
+  return {
+    company: textIn(form, 'company'),
+    role: textIn(form, 'role'),
+    appliedOn: textIn(form, 'appliedOn'),
+    channel: textIn(form, 'channel'),
+    cvVariant: textIn(form, 'cvVariant'),
+    code: given('code'),
+    country: given('country'),
+    city: given('city'),
+    atsHost: given('atsHost'),
+    networks: linesIn(form, 'networks'),
+  };
+}
+
+function versionIn(form: FormData): number {
+  const version = cleaned(form.get('version'));
+  if (!/^\d+$/.test(version)) {
+    notFound();
+  }
+  return Number(version);
+}
+
+function editedValue(form: FormData, name: FieldName): string | string[] | null {
+  if (name === 'networks') {
+    return linesIn(form, name);
+  }
+  const value = textIn(form, name);
+  const clearable = clearableFields.some((field) => field === name);
+  return clearable && value === '' ? null : value;
+}
+
+function editIn(form: FormData): ApplicationEditBody | null {
+  const comparable = (name: FieldName) =>
+    name === 'networks' ? linesIn(form, name).join('\n') : textIn(form, name);
+  const changed = editFields.filter((name) => comparable(name) !== shownIn(form, name));
+  if (changed.length === 0) {
+    return null;
+  }
+  return {
+    version: versionIn(form),
+    ...Object.fromEntries(changed.map((name) => [name, editedValue(form, name)])),
+  };
+}
+
+function failureOf(outcome: Exclude<ApplicationWrite, { kind: 'done' }>, missing: string): string {
+  if (outcome.kind === 'missing') {
+    return missing;
+  }
+  if (outcome.kind === 'limited') {
+    return `Too many changes. Try again in ${inMinutes(outcome.retryAfterSeconds)}.`;
+  }
+  if (outcome.kind === 'stale') {
+    return `${outcome.message}. Reload the page to see the application as it is now.`;
+  }
+  return outcome.message;
+}
+
+export async function addApplication(_state: FormState, form: FormData): Promise<FormState> {
+  await headersFromSite();
+  const token = await tokenIn(sessionCookie);
+  if (token === undefined) {
+    return refused(sessionEnded, form, addFields);
+  }
+  const outcome = await createApplication(apiUrl(), token, newApplicationIn(form));
+  if (outcome.kind === 'done') {
+    revalidatePath('/admin');
+    redirect(`/admin/applications/${outcome.application.code}`);
+  }
+  return refused(failureOf(outcome, sessionEnded), form, addFields);
+}
+
+export async function editApplication(
+  code: string,
+  _state: FormState,
+  form: FormData,
+): Promise<FormState> {
+  await headersFromSite();
+  const target = validCode(code);
+  const token = await tokenIn(sessionCookie);
+  if (token === undefined) {
+    return refused(sessionEnded, form, editFields);
+  }
+  const edit = editIn(form);
+  if (!edit) {
+    return refused(nothingChanged, form, editFields);
+  }
+  const outcome = await updateApplication(apiUrl(), token, target, edit);
+  if (outcome.kind === 'done' && outcome.application.version === edit.version) {
+    return refused(nothingChanged, form, editFields);
+  }
+  if (outcome.kind === 'done') {
+    revalidatePath(`/admin/applications/${target}`);
+    revalidatePath('/admin');
+    return null;
+  }
+  return refused(failureOf(outcome, applicationGone), form, editFields);
+}
+
+export async function undoStatus(
+  code: string,
+  _failure: string | null,
+  form: FormData,
+): Promise<string | null> {
+  await headersFromSite();
+  const target = validCode(code);
+  const token = await tokenIn(sessionCookie);
+  if (token === undefined) {
+    return sessionEnded;
+  }
+  const outcome = await undoStatusChange(apiUrl(), token, target, {
+    version: versionIn(form),
+  });
+  if (outcome.kind === 'done') {
+    revalidatePath(`/admin/applications/${target}`);
+    revalidatePath('/admin');
+    return null;
+  }
+  return failureOf(outcome, applicationGone);
 }

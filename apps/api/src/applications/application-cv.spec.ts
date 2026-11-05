@@ -23,7 +23,7 @@ describe('fetchApplicationCv', () => {
   it('says which code the site refused', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 404 }));
     await expect(fetchApplicationCv('memh', site, fetchImpl)).rejects.toThrow(
-      new CvFetchError('memh', 'the site answered 404 for the CV of memh'),
+      new CvFetchError('the site answered 404 for the CV of memh'),
     );
   });
 
@@ -46,7 +46,6 @@ describe('fetchApplicationCv', () => {
     const fetchImpl = vi.fn<typeof fetch>(() => Promise.reject(failure));
     await expect(fetchApplicationCv('memh', site, fetchImpl)).rejects.toThrow(
       new CvFetchError(
-        'memh',
         `the site at http://portfolio-web:3200 did not send the CV of memh (${reason})`,
       ),
     );
@@ -61,7 +60,6 @@ describe('fetchApplicationCv', () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(body, { status: 200 }));
     await expect(fetchApplicationCv('memh', site, fetchImpl)).rejects.toThrow(
       new CvFetchError(
-        'memh',
         'the site at http://portfolio-web:3200 did not send the CV of memh (terminated)',
       ),
     );

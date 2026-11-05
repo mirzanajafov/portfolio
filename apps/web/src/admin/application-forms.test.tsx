@@ -1,0 +1,158 @@
+import { anApplicationPage } from '@portfolio/content/testing';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import type { addApplication, editApplication, undoStatus } from './actions';
+import { AddApplicationForm, EditApplicationForm, UndoForm } from './application-forms';
+
+const actions = vi.hoisted(() => ({
+  addApplication: vi.fn<typeof addApplication>(),
+  editApplication: vi.fn<typeof editApplication>(),
+  undoStatus: vi.fn<typeof undoStatus>(),
+}));
+
+vi.mock('./actions', () => actions);
+
+const optionsOf = (name: string) =>
+  within(screen.getByRole('combobox', { name }))
+    .getAllByRole('option')
+    .map(({ textContent }) => textContent);
+
+describe('AddApplicationForm', () => {
+  it('asks for the channel instead of choosing one, and needs every field the API needs', () => {
+    render(<AddApplicationForm />);
+
+    expect(screen.getByRole('combobox', { name: 'Channel' })).toHaveValue('');
+    expect(optionsOf('Channel')).toEqual(['Choose one', 'referral', 'direct', 'recruiter']);
+    for (const name of ['Company', 'Role', 'CV variant']) {
+      expect(screen.getByRole('textbox', { name })).toBeRequired();
+    }
+    expect(screen.getByRole('combobox', { name: 'Channel' })).toBeRequired();
+    expect(screen.getByLabelText('Applied on')).toBeRequired();
+    expect(screen.getByRole('textbox', { name: 'City' })).not.toBeRequired();
+  });
+
+  it('shows why the API refused it under the button, and keeps what was typed', async () => {
+    actions.addApplication.mockResolvedValue({
+      failure: 'appliedOn 2026-11-07 is after today in Baku',
+      values: {
+        company: 'Acme',
+        role: 'Backend Engineer',
+        appliedOn: '2026-11-07',
+        channel: 'referral',
+        cvVariant: 'base',
+        city: 'Baku',
+      },
+    });
+    render(<AddApplicationForm />);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Company' }), 'Acme');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Role' }), 'Backend Engineer');
+    await userEvent.type(screen.getByLabelText('Applied on'), '2026-11-07');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Channel' }), 'referral');
+    await userEvent.type(screen.getByRole('textbox', { name: 'CV variant' }), 'base');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'appliedOn 2026-11-07 is after today in Baku',
+    );
+    expect(screen.getByRole('textbox', { name: 'Company' })).toHaveValue('Acme');
+    expect(screen.getByRole('combobox', { name: 'Channel' })).toHaveValue('referral');
+    expect(screen.getByRole('textbox', { name: 'City' })).toHaveValue('Baku');
+  });
+});
+
+describe('EditApplicationForm', () => {
+  it('offers only the status it has and the ones it can move to, and fills in what it holds', () => {
+    render(
+      <EditApplicationForm
+        application={anApplicationPage({
+          status: 'interview',
+          answeredOn: '2026-11-02',
+          notes: 'Called back',
+          city: 'Baku',
+          networks: ['ACME-NET', 'ACME-VPN'],
+        })}
+      />,
+    );
+
+    expect(optionsOf('Status')).toEqual(['interview', 'offer', 'rejected', 'withdrawn']);
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('interview');
+    expect(optionsOf('Channel')).toEqual(['referral', 'direct', 'recruiter']);
+    expect(screen.getByLabelText('First answer on')).toHaveValue('2026-11-02');
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('Called back');
+    expect(screen.getByRole('textbox', { name: 'City' })).toHaveValue('Baku');
+    expect(
+      screen.getByRole('textbox', { name: 'Networks the company runs, one per line' }),
+    ).toHaveValue('ACME-NET\nACME-VPN');
+  });
+
+  it('carries the values it showed, so the action can send only what changed', () => {
+    const { container } = render(
+      <EditApplicationForm
+        application={anApplicationPage({ status: 'interview', city: 'Baku' })}
+      />,
+    );
+
+    const shown = (name: string) =>
+      container.querySelector<HTMLInputElement>(`input[type=hidden][name="shown.${name}"]`)?.value;
+    expect([shown('status'), shown('city'), shown('country')]).toEqual(['interview', 'Baku', '']);
+  });
+
+  it('leaves a final status with nowhere to go', () => {
+    render(<EditApplicationForm application={anApplicationPage({ status: 'rejected' })} />);
+
+    expect(optionsOf('Status')).toEqual(['rejected']);
+  });
+
+  it('needs an answer day once one is set, since an answer day can be corrected but not taken back', () => {
+    const { unmount } = render(<EditApplicationForm application={anApplicationPage()} />);
+    expect(screen.getByLabelText('First answer on')).not.toBeRequired();
+    unmount();
+
+    render(
+      <EditApplicationForm
+        application={anApplicationPage({ status: 'screening', answeredOn: '2026-11-02' })}
+      />,
+    );
+    expect(screen.getByLabelText('First answer on')).toBeRequired();
+  });
+
+  it('keeps the status and notes it sent when the API refuses the save', async () => {
+    actions.editApplication.mockResolvedValue({
+      failure: 'answeredOn 2026-10-01 is before appliedOn 2026-10-30',
+      values: {
+        company: 'Acme',
+        role: 'Backend Engineer',
+        appliedOn: '2026-10-30',
+        channel: 'direct',
+        cvVariant: 'base',
+        status: 'screening',
+        answeredOn: '2026-10-01',
+        notes: 'Called back',
+      },
+    });
+    render(<EditApplicationForm application={anApplicationPage()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'answeredOn 2026-10-01 is before appliedOn 2026-10-30',
+    );
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('screening');
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('Called back');
+  });
+});
+
+describe('UndoForm', () => {
+  it('says where an undo goes, sends the version it was shown, and says why it could not', async () => {
+    actions.undoStatus.mockResolvedValue('the application changed since that page loaded');
+    render(<UndoForm code="memh" version={4} undoTo="sent" />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Undo the last move, back to sent' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('changed since that page loaded');
+    const [code, , form] = actions.undoStatus.mock.calls[0] ?? [];
+    expect([code, form?.get('version')]).toEqual(['memh', '4']);
+  });
+});
