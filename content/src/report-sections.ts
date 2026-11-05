@@ -519,24 +519,30 @@ function answeredText({ answered, oldEnough }: ApplicationTally): string {
     : share(answered, oldEnough);
 }
 
-function tallyTable(title: string, tallies: readonly ApplicationTally[]): ReportPart[] {
-  const header = [
+function tallySection(
+  title: string,
+  tallies: readonly ApplicationTally[],
+  all: boolean,
+): ReportSection {
+  return section(
     title,
-    'applications',
-    'link opened',
-    `applied over ${String(guessWindowDays)} days ago`,
-    'answered, of those',
-    'median days to an answer',
-  ];
-  const rows = tallies.map((tally) => [
-    tally.name,
-    String(tally.applications),
-    String(tally.opened),
-    String(tally.oldEnough),
-    answeredText(tally),
-    tally.answered < fewestAnswersForMedian ? '-' : optional(tally.medianDays),
-  ]);
-  return rows.length === 0 ? [] : [table([header, ...rows])];
+    [
+      'applications',
+      'link opened',
+      `applied over ${String(guessWindowDays)} days ago`,
+      'answered, of those',
+      'median days to an answer',
+    ],
+    tallies.map((tally) => [
+      tally.name,
+      String(tally.applications),
+      String(tally.opened),
+      String(tally.oldEnough),
+      answeredText(tally),
+      tally.answered < fewestAnswersForMedian ? '-' : optional(tally.medianDays),
+    ]),
+    all,
+  );
 }
 
 function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
@@ -552,8 +558,8 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
       : [
           line('Applications, every visit kept rather than only the period, times in Baku'),
           ...listed(list, all, (application) => applicationParts(application, all), false),
-          ...tallyTable('By channel', applications.byChannel),
-          ...tallyTable('By CV variant', applications.byVariant),
+          ...tallySection('By channel', applications.byChannel, all),
+          ...tallySection('By CV variant', applications.byVariant, all),
           line(
             `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),
