@@ -110,12 +110,30 @@ describe('parseCommand', () => {
         'Dev',
         '--applied',
         '30.10.2026',
+        '--channel',
+        'direct',
+        '--variant',
+        'base',
       ]),
-    ).toThrow(/applied/);
+    ).toThrow(/appliedOn/);
   });
 
   it.each([
-    ['without a role', ['application', 'add', '--company', 'Acme', '--applied', '2026-10-30']],
+    [
+      'without a role',
+      [
+        'application',
+        'add',
+        '--company',
+        'Acme',
+        '--applied',
+        '2026-10-30',
+        '--channel',
+        'direct',
+        '--variant',
+        'base',
+      ],
+    ],
     [
       'without a channel',
       [
