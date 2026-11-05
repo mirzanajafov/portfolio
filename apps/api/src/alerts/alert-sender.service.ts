@@ -54,7 +54,7 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
       stop();
     }
     this.pass?.abort.abort();
-    await this.pass?.done;
+    await Promise.allSettled([this.pass?.done]);
   }
 
   sendDue(): Promise<void> {
