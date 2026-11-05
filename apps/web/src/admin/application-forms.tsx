@@ -9,12 +9,11 @@ import {
 import { useActionState, type ReactNode } from 'react';
 import { addApplication, editApplication, undoStatus, type FormState } from './actions';
 import type { editFields, FormValues } from './application-fields';
-import { pill } from './styles';
+import { Failure } from './failure';
+import { pill, submit } from './styles';
 
 const input =
   'w-full min-w-0 rounded-lg border border-line bg-transparent px-3 py-2 outline-none focus:border-accent';
-
-const submit = 'rounded-full bg-fg px-6 py-3 text-bg disabled:opacity-50';
 
 function Field({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
@@ -22,16 +21,6 @@ function Field({ label, wide, children }: { label: string; wide?: boolean; child
       <span className="text-muted">{label}</span>
       {children}
     </label>
-  );
-}
-
-function Failure({ failure }: { failure: string | null }) {
-  return (
-    failure && (
-      <p role="alert" className="max-w-[65ch] whitespace-pre-line text-muted">
-        {failure}
-      </p>
-    )
   );
 }
 
