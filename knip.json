@@ -8,7 +8,9 @@
       "entry": ["src/analytics/visit-script.ts"]
     },
     "content": {
-      "entry": ["src/{index,ask,analytics,admin,report,report-sections,time,testing,cli}.ts"]
+      "entry": [
+        "src/{index,ask,analytics,admin,applications,report,report-sections,time,testing,cli}.ts"
+      ]
     }
   }
 }

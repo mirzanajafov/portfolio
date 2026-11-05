@@ -5,7 +5,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
+import { ApplicationsService } from '../src/applications/applications.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 import { address } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
 
@@ -234,7 +236,7 @@ describe('admin sign-in against a real database', () => {
   it('says whether an application with the code is registered', async () => {
     const token = await sessionFrom(await sessions.link());
     await prisma.application.create({
-      data: { code: 'memh', company: 'Acme', role: 'Backend Engineer', appliedOn: start },
+      data: { ...anApplication({ appliedOn: start }), code: 'memh' },
     });
     const ask = (code: string) =>
       request(app.getHttpServer())
@@ -248,6 +250,242 @@ describe('admin sign-in against a real database', () => {
 
   it('is a 404 for an application check without a session, before it reads the code', async () => {
     await request(app.getHttpServer()).get('/admin/applications/Memh!').expect(404);
+  });
+
+  describe('writing applications', () => {
+    const acme = {
+      company: 'Acme',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-01',
+      channel: 'direct',
+      cvVariant: 'base 2026-10-01',
+      code: 'memh',
+    };
+
+    const write = (method: 'post' | 'patch', path: string, token: string, body?: object) => {
+      const server = request(app.getHttpServer());
+      const url = `/admin/applications${path}`;
+      const call = method === 'post' ? server.post(url) : server.patch(url);
+      return call.set('Authorization', `Bearer ${token}`).send(body);
+    };
+
+    const signedInWithAcme = async () => {
+      const token = await sessionFrom(await sessions.link());
+      await write('post', '', token, acme).expect(201);
+      return token;
+    };
+
+    const openConnections = (count: number) =>
+      Promise.all(Array.from({ length: count }, () => prisma.$executeRaw`SELECT pg_sleep(0.05)`));
+
+    const history = async () =>
+      (await prisma.applicationChange.findMany({ orderBy: { id: 'asc' } })).map(
+        ({ field, before, after }) => [field, before, after],
+      );
+
+    it('adds an application with its channel and variant, and answers it the way /admin reads it', async () => {
+      const token = await sessionFrom(await sessions.link());
+
+      const added = await write('post', '', token, acme).expect(201);
+
+      expect(added.body).toEqual({
+        ...acme,
+        status: 'sent',
+        answeredOn: null,
+        notes: '',
+        firstSeenOn: null,
+      });
+    });
+
+    it('refuses an application with a channel the CSV has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
+      const token = await signedInWithAcme();
+
+      await write('post', '', token, { ...acme, code: 'kxqtz', channel: 'friend' }).expect(400);
+      await write('post', '', token, { ...acme, code: 'kxqtz', salary: 1 }).expect(400);
+      await write('post', '', token, { ...acme, code: 'kxqtz', appliedOn: '2026-10-03' }).expect(
+        400,
+      );
+      await write('post', '', token, acme).expect(409);
+    });
+
+    it('is a 404 for every write without a session, before it reads the body', async () => {
+      await request(app.getHttpServer()).post('/admin/applications').send({}).expect(404);
+      await request(app.getHttpServer()).patch('/admin/applications/memh').send({}).expect(404);
+      await request(app.getHttpServer()).post('/admin/applications/memh/undo').expect(404);
+    });
+
+    it('moves a status forward, notes the Baku day of the first answer, and keeps each changed field in the history', async () => {
+      const token = await signedInWithAcme();
+      clock.current = new Date('2026-10-04T21:30:00Z');
+
+      const moved = await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+
+      expect(moved.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-05' });
+      expect(await history()).toEqual([
+        ['status', 'sent', 'screening'],
+        ['answeredOn', null, '2026-10-05'],
+      ]);
+    });
+
+    it('refuses a status that would go back or past an end, and says which ones it can take', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+
+      const refused = await write('patch', '/memh', token, { status: 'screening' }).expect(409);
+
+      expect(refused.body).toMatchObject({
+        message: "an application that is interview can't become screening",
+        allowed: ['offer', 'rejected', 'withdrawn'],
+      });
+      expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
+        status: 'interview',
+      });
+      await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
+      const ended = await write('patch', '/memh', token, { status: 'offer' }).expect(409);
+      expect(ended.body).toMatchObject({ allowed: [] });
+    });
+
+    it('makes a move once when eight edits ask for it at the same time', async () => {
+      await signedInWithAcme();
+      const applications = app.get(ApplicationsService);
+      await openConnections(8);
+
+      await Promise.all(
+        Array.from({ length: 8 }, () => applications.edit('memh', { status: 'rejected' })),
+      );
+
+      expect(await history()).toEqual([
+        ['status', 'sent', 'rejected'],
+        ['answeredOn', null, '2026-10-02'],
+      ]);
+    });
+
+    it('takes a day as today once it has started in Baku, four hours before UTC', async () => {
+      const token = await signedInWithAcme();
+      clock.current = new Date('2026-10-02T21:00:00Z');
+
+      await write('post', '', token, { ...acme, code: 'kxqtz', appliedOn: '2026-10-03' }).expect(
+        201,
+      );
+      await write('post', '', token, { ...acme, code: 'mpw7r', appliedOn: '2026-10-04' }).expect(
+        400,
+      );
+      await write('patch', '/memh', token, {
+        status: 'screening',
+        answeredOn: '2026-10-03',
+      }).expect(200);
+    });
+
+    it('undoes the last status change with the answer day it set, and writes the undo to the history', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
+      clock.current = later(minutes(5));
+
+      const undone = await write('post', '/memh/undo', token).expect(200);
+
+      expect(undone.body).toMatchObject({ status: 'sent', answeredOn: null });
+      expect(await history()).toEqual([
+        ['status', 'sent', 'rejected'],
+        ['answeredOn', null, '2026-10-02'],
+        ['status', 'rejected', 'sent'],
+        ['answeredOn', '2026-10-02', null],
+      ]);
+    });
+
+    it('walks back through each status change, then has nothing left to undo', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+
+      const once = await write('post', '/memh/undo', token).expect(200);
+      const twice = await write('post', '/memh/undo', token).expect(200);
+
+      expect(once.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-02' });
+      expect(twice.body).toMatchObject({ status: 'sent', answeredOn: null });
+      await write('post', '/memh/undo', token).expect(409);
+    });
+
+    it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, { answeredOn: '2026-10-01' }).expect(200);
+      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+
+      const undone = await write('post', '/memh/undo', token).expect(200);
+
+      expect(undone.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-01' });
+    });
+
+    it('leaves a sent application unanswered when only its notes change', async () => {
+      const token = await signedInWithAcme();
+
+      const edited = await write('patch', '/memh', token, {
+        notes: 'Applied through the form.',
+      }).expect(200);
+
+      expect(edited.body).toMatchObject({ status: 'sent', answeredOn: null });
+    });
+
+    it('refuses an answer day for an application nobody answered', async () => {
+      const token = await signedInWithAcme();
+
+      const sent = await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
+      await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
+      await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
+
+      expect(sent.body).toMatchObject({
+        message: 'answeredOn 2026-10-02 needs an answer, and none came',
+      });
+      expect(await history()).toEqual([['status', 'sent', 'withdrawn']]);
+    });
+
+    it('refuses an answer day before the day I applied or after today in Baku', async () => {
+      const token = await signedInWithAcme();
+
+      const early = await write('patch', '/memh', token, {
+        status: 'screening',
+        answeredOn: '2026-09-30',
+      }).expect(400);
+      const late = await write('patch', '/memh', token, {
+        status: 'screening',
+        answeredOn: '2026-10-03',
+      }).expect(400);
+
+      expect(early.body).toMatchObject({
+        message: 'answeredOn 2026-09-30 is before appliedOn 2026-10-01',
+      });
+      expect(late.body).toMatchObject({ message: 'answeredOn 2026-10-03 is after today in Baku' });
+      expect(await history()).toEqual([]);
+    });
+
+    it('says there is nothing to undo before the first status change', async () => {
+      const token = await signedInWithAcme();
+      await write('patch', '/memh', token, { notes: 'Applied through the form.' }).expect(200);
+
+      await write('post', '/memh/undo', token).expect(409);
+    });
+
+    it('is a 404 for a code nobody registered, and a 400 for an empty edit or a field it does not know', async () => {
+      const token = await signedInWithAcme();
+
+      await write('patch', '/kxqtz', token, { notes: 'x' }).expect(404);
+      await write('patch', '/memh', token, {}).expect(400);
+      await write('patch', '/memh', token, { notes: 'x', salary: 1 }).expect(400);
+    });
+
+    it('takes 60 changes in ten minutes from one session, then says when to come back', async () => {
+      const token = await signedInWithAcme();
+      for (let change = 2; change <= 60; change += 1) {
+        await write('patch', '/memh', token, { notes: String(change) }).expect(200);
+      }
+
+      const refused = await write('patch', '/memh', token, { notes: 'one too many' }).expect(429);
+
+      expect(refused.headers['retry-after']).toBe('600');
+      expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
+        notes: '60',
+      });
+    });
   });
 
   it('deletes expired links and sessions in the cleanup, and keeps the rest', async () => {

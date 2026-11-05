@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { inBaku } from '@portfolio/content/time';
 import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
-import { dayOf, utcDay } from '../common/days.js';
+import { bakuDay, dayOf, utcDay } from '../common/days.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AnalyticsEvent } from './event.schema.js';
@@ -77,7 +76,7 @@ export class VisitLogService {
     const recordedBefore = await earliestDayRecordedBefore(tx, unseen, at);
     const [application] = await tx.application.updateManyAndReturn({
       where: { id: unseen.id, firstSeenOn: null },
-      data: { firstSeenOn: recordedBefore ?? utcDay(inBaku(at)) },
+      data: { firstSeenOn: recordedBefore ?? bakuDay(at) },
       select: { company: true, role: true },
     });
     if (application && !recordedBefore) {
@@ -179,7 +178,7 @@ async function earliestDayRecordedBefore(
     orderBy: { day: 'asc' },
     select: { day: true },
   });
-  const viewDay = view ? utcDay(inBaku(view.createdAt)) : null;
+  const viewDay = view ? bakuDay(view.createdAt) : null;
   const rolledDay = rolled?.day ?? null;
   if (viewDay === null || rolledDay === null) {
     return viewDay ?? rolledDay;

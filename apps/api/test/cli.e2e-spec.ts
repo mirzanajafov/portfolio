@@ -7,6 +7,7 @@ import { ApplicationsService } from '../src/applications/applications.service.js
 import { CliModule } from '../src/cli/cli.module.js';
 import { runCli } from '../src/cli/run.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 
 vi.mock(import('../src/applications/code.js'), () => ({ newCode: () => 'k7mpx' }));
@@ -23,6 +24,10 @@ const addAcme = [
   'Backend Engineer',
   '--applied',
   '2026-10-30',
+  '--channel',
+  'direct',
+  '--variant',
+  'base',
 ];
 const stdoutIsTTY = process.stdout.isTTY;
 
@@ -111,13 +116,7 @@ describe('the CLI commands', () => {
   }
 
   function registerMemh() {
-    return applications.add({
-      company: 'Acme',
-      role: 'Backend Engineer',
-      appliedOn: new Date('2026-10-30'),
-      code: 'memh',
-      networks: [],
-    });
+    return applications.add(anApplication({ code: 'memh' }));
   }
 
   it('registers an application, prints its code and link, and writes the CV the site drew for that code', async () => {
@@ -153,6 +152,19 @@ describe('the CLI commands', () => {
     );
   });
 
+  it('exports the applications as the hand-kept CSV, in the order I applied', async () => {
+    await applications.add(
+      anApplication({ code: 'kxqtz', company: 'Wolt', appliedOn: new Date('2026-11-02') }),
+    );
+    await registerMemh();
+
+    expect((await cli('application', 'export')).stdout).toBe(
+      'company,role,date,cv_variant,channel,ref,status,days_to_first_answer,notes\n' +
+        'Acme,Backend Engineer,2026-10-30,base,direct,memh,sent,,\n' +
+        'Wolt,Backend Engineer,2026-11-02,base,direct,kxqtz,sent,,\n',
+    );
+  });
+
   it('refuses the CV of a code nobody registered, without asking the site', async () => {
     expect(await cli('application', 'cv', 'memj')).toEqual({
       status: 1,
@@ -169,6 +181,17 @@ describe('the CLI commands', () => {
       stdout: '',
       stderr: 'code memh already belongs to another application\n',
     });
+  });
+
+  it('registers nothing applied after today in Baku, and asks the site for no CV', async () => {
+    const later = addAcme.map((arg) => (arg === '2026-10-30' ? '2999-01-01' : arg));
+    expect(await cli(...later)).toEqual({
+      status: 1,
+      stdout: '',
+      stderr: 'appliedOn 2999-01-01 is after today in Baku\n',
+    });
+    expect(await registeredCodes()).toEqual([]);
+    expect(asked).toEqual([]);
   });
 
   it('registers nothing when the token is missing', async () => {

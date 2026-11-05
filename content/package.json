@@ -35,6 +35,10 @@
       "types": "./dist/admin.d.ts",
       "default": "./dist/admin.js"
     },
+    "./applications": {
+      "types": "./dist/applications.d.ts",
+      "default": "./dist/applications.js"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"

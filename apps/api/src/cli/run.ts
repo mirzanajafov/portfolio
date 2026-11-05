@@ -5,7 +5,8 @@ import { adminLinkMinutes } from '@portfolio/content/admin';
 import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
-import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
+import { ApplicationsService } from '../applications/applications.service.js';
+import { applicationsCsv } from '../applications/csv.js';
 import { dayOf } from '../common/days.js';
 import { ENV, type Env } from '../config/env.js';
 import { CliModule } from './cli.module.js';
@@ -44,6 +45,10 @@ async function runApplication(
     }
     return 0;
   }
+  if (command.name === 'application export') {
+    process.stdout.write(applicationsCsv((await applications.list()).reverse()));
+    return 0;
+  }
   if (!env.CV_RENDER_TOKEN) {
     process.stderr.write(
       'CV_RENDER_TOKEN is not set, so the CV of an application cannot be fetched\n',
@@ -59,7 +64,12 @@ async function runApplication(
     process.stdout.write(await fetchApplicationCv(command.code, site));
     return 0;
   }
-  const { company, code } = await applications.add(command.application);
+  const outcome = await applications.add(command.application);
+  if (outcome.kind !== 'added') {
+    process.stderr.write(`${outcome.reason}\n`);
+    return 1;
+  }
+  const { company, code } = outcome.application;
   process.stderr.write(`${company}: ${code}, ${siteUrl}/?r=${code}\n`);
   process.stdout.write(await fetchApplicationCv(code, site));
   return 0;
@@ -96,10 +106,6 @@ export async function runCli(args: readonly string[]): Promise<number> {
   try {
     return await run(command, app);
   } catch (error) {
-    if (error instanceof CodeTakenError) {
-      process.stderr.write(`${error.message}\n`);
-      return 1;
-    }
     if (error instanceof CvFetchError) {
       process.stderr.write(`${error.message}\n`);
       if (command.name === 'application add') {

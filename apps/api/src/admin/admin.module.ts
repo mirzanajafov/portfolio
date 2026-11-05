@@ -3,12 +3,13 @@ import { AnalyticsReportModule } from '../analytics/report/analytics-report.modu
 import { VisitorSaltModule } from '../analytics/visitor-salt.module.js';
 import { ApplicationsModule } from '../applications/applications.module.js';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
+import { AdminApplicationsController } from './admin-applications.controller.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { AdminController } from './admin.controller.js';
 
 @Module({
   imports: [RateLimitModule, VisitorSaltModule, AnalyticsReportModule, ApplicationsModule],
-  controllers: [AdminController],
+  controllers: [AdminController, AdminApplicationsController],
   providers: [AdminSessionsService],
   exports: [AdminSessionsService],
 })

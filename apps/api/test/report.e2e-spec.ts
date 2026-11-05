@@ -7,6 +7,7 @@ import { AnalyticsReportService } from '../src/analytics/report/analytics-report
 import { RetentionService } from '../src/analytics/retention.service.js';
 import { reportText } from '../src/cli/report-text.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 import { fixtureContent } from './content.fixture.js';
 import { chrome, sendEvent, type Sender } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -256,12 +257,13 @@ describe('the visitor report against a real database', () => {
   it('puts a coded visit and a guessed one under the company the application went to, with when its link was first opened, and the site reads both back', async () => {
     await prisma.application.create({
       data: {
+        ...anApplication({
+          company: 'Xsolla',
+          appliedOn: new Date('2026-10-01'),
+          country: 'AZ',
+          city: 'Baku',
+        }),
         code: 'memh',
-        company: 'Xsolla',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-01'),
-        country: 'AZ',
-        city: 'Baku',
       },
     });
     at('12:00:00');

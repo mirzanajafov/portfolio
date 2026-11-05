@@ -1,4 +1,10 @@
+import { inBaku } from '@portfolio/content/time';
+
 const dayMs = 24 * 60 * 60 * 1000;
+
+export function bakuDay(at: Date): Date {
+  return utcDay(inBaku(at));
+}
 
 export function utcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -18,4 +24,8 @@ export function mondayOf(date: Date): Date {
 
 export function dayOf(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+export function dayOrNull(date: Date | null): string | null {
+  return date === null ? null : dayOf(date);
 }

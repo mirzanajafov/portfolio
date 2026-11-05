@@ -187,18 +187,63 @@ model DailyApplication {
 }
 
 model Application {
-  id          String             @id @default(uuid(7)) @db.Uuid
-  code        String             @unique
+  id          String              @id @default(uuid(7)) @db.Uuid
+  code        String              @unique
   company     String
   role        String
-  appliedOn   DateTime           @db.Date
-  createdAt   DateTime           @default(now())
+  appliedOn   DateTime            @db.Date
+  createdAt   DateTime            @default(now())
   country     String?
   city        String?
   atsHost     String?
   networks    String[]
-  firstSeenOn DateTime?          @db.Date
+  firstSeenOn DateTime?           @db.Date
+  channel     ApplicationChannel
+  cvVariant   String
+  status      ApplicationStatus   @default(sent)
+  answeredOn  DateTime?           @db.Date
+  notes       String              @default("")
   days        DailyApplication[]
+  changes     ApplicationChange[]
+}
+
+enum ApplicationChannel {
+  referral
+  direct
+  recruiter
+}
+
+enum ApplicationStatus {
+  sent
+  screening
+  interview
+  offer
+  accepted
+  rejected
+  withdrawn
+}
+
+enum ApplicationField {
+  status
+  channel
+  cvVariant
+  answeredOn
+  notes
+  company
+  role
+}
+
+model ApplicationChange {
+  id            Int              @id @default(autoincrement())
+  applicationId String           @db.Uuid
+  application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  at            DateTime
+  field         ApplicationField
+  before        String?
+  after         String?
+  undo          Boolean          @default(false)
+
+  @@index([applicationId, id])
 }
 
 model Alert {
