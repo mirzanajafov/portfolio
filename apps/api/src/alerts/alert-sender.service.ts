@@ -78,8 +78,9 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
   async giveUpOld(): Promise<void> {
     const now = this.clock.now();
     const givenUp = await this.prisma.$transaction(async (tx) => {
+      const claimed = { gt: now, lte: new Date(now.getTime() + leaseMs) };
       const { count } = await tx.alert.deleteMany({
-        where: { createdAt: { lt: oldestSendable(now) }, nextAttemptAt: { lte: now } },
+        where: { createdAt: { lt: oldestSendable(now) }, NOT: { nextAttemptAt: claimed } },
       });
       if (count > 0) {
         await tx.$executeRaw`

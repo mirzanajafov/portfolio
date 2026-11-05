@@ -301,7 +301,7 @@ describe('first visits while alerts are off', () => {
     clock.current = new Date('2026-10-02T12:00:00Z');
   });
 
-  it('gives up an alert left from when alerts were on, but not one a send has claimed', async () => {
+  it('gives up an alert left from when alerts were on or held past its day, but not one a send has claimed', async () => {
     await startOverWithXsolla(prisma);
     const old = (nextAttemptAt: string) => ({
       text: 'Xsolla, Backend Engineer: someone opened your link',
@@ -309,12 +309,13 @@ describe('first visits while alerts are off', () => {
       nextAttemptAt: new Date(nextAttemptAt),
     });
     await prisma.alert.create({ data: old('2026-10-01T12:00:00Z') });
+    await prisma.alert.create({ data: old('2026-10-03T11:00:00Z') });
     const claimed = await prisma.alert.create({ data: old('2026-10-02T12:00:30Z') });
     await app.get(AlertSenderService).giveUpOld();
 
     expect((await prisma.alert.findMany()).map(({ id }) => id)).toEqual([claimed.id]);
     expect(await prisma.givenUpAlerts.findMany()).toEqual([
-      { day: new Date('2026-10-02'), count: 1 },
+      { day: new Date('2026-10-02'), count: 2 },
     ]);
   });
 
