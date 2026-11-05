@@ -2,6 +2,8 @@ import * as z from 'zod/mini';
 
 export const channels = ['referral', 'direct', 'recruiter'] as const;
 
+export type Channel = (typeof channels)[number];
+
 export const statuses = [
   'sent',
   'screening',

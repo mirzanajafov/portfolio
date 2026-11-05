@@ -1,5 +1,6 @@
 import * as z from 'zod/mini';
 import { analyticsDays } from './analytics.ts';
+import { channels, statuses } from './applications.ts';
 import { isoDate } from './time.ts';
 
 const sources = [
@@ -90,9 +91,9 @@ const applicationEntrySchema = z.object({
   role: z.string(),
   appliedOn: day,
   firstSeenOn: z.nullable(day),
-  channel: z.string(),
+  channel: z.enum(channels),
   cvVariant: z.string(),
-  status: z.string(),
+  status: z.enum(statuses),
   daysToAnswer: z.nullable(z.number()),
   visits: z.array(visitStorySchema),
   days: z.array(z.object({ day, visits: z.number(), views: z.number() })),
