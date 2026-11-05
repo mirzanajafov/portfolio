@@ -3,12 +3,7 @@ import { isAnswer, nextStatuses, statuses, type Status } from '@portfolio/conten
 import { inBaku } from '@portfolio/content/time';
 import { ClockService } from '../common/clock.service.js';
 import { dayOf, dayOrNull, utcDay } from '../common/days.js';
-import {
-  ApplicationField,
-  Prisma,
-  type Application,
-  type ApplicationChange,
-} from '../generated/prisma/client.js';
+import { ApplicationField, Prisma, type Application } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ApplicationEdit, NewApplication } from './application.schema.js';
 import { newCode } from './code.js';
@@ -150,8 +145,7 @@ export class ApplicationsService {
       if (!current) {
         return { kind: 'missing' };
       }
-      const undone = await lastUndoable(tx, current.id);
-      const restored = statuses.find((status) => status === undone?.before);
+      const restored = await statusBeforeLastMove(tx, current.id);
       if (!restored) {
         return { kind: 'nothing to undo' };
       }
@@ -173,22 +167,23 @@ async function lockedApplication(
   return tx.application.findUnique({ where: { code } });
 }
 
-async function lastUndoable(
+async function statusBeforeLastMove(
   tx: Prisma.TransactionClient,
   applicationId: string,
-): Promise<ApplicationChange | undefined> {
+): Promise<Status | undefined> {
   const changes = await tx.applicationChange.findMany({
     where: { applicationId, field: 'status' },
     orderBy: { id: 'desc' },
+    select: { before: true, undo: true },
   });
   let undoneSince = 0;
-  for (const change of changes) {
-    if (change.undo) {
+  for (const { before, undo } of changes) {
+    if (undo) {
       undoneSince += 1;
     } else if (undoneSince > 0) {
       undoneSince -= 1;
     } else {
-      return change;
+      return statuses.find((status) => status === before);
     }
   }
   return undefined;
