@@ -18,6 +18,8 @@ type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type:
 
 type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
+type UnseenApplication = { id: string; code: string; createdAt: Date };
+
 @Injectable()
 export class VisitLogService {
   constructor(
@@ -31,7 +33,13 @@ export class VisitLogService {
     demo: string | null,
     at: Date,
   ): Promise<void> {
-    const unseenCode = (await this.isUnseen(event.ref)) ? event.ref : undefined;
+    const unseen =
+      event.ref === undefined
+        ? null
+        : await this.prisma.application.findFirst({
+            where: { code: event.ref, firstSeenOn: null },
+            select: { id: true, code: true, createdAt: true },
+          });
     const write = async (db: Prisma.TransactionClient) => {
       await db.visit.createMany({
         data: [{ visitor: key, startedAt: at, ...visit }],
@@ -52,45 +60,29 @@ export class VisitLogService {
         ],
         skipDuplicates: true,
       });
-      if (count > 0 && unseenCode !== undefined) {
+      if (count > 0 && unseen) {
         const firstView = { path: event.path, demo, notFound: event.notFound };
-        await this.noteFirstVisit(db, unseenCode, firstView, at);
+        await this.noteFirstVisit(db, unseen, firstView, at);
       }
     };
-    await (unseenCode === undefined ? write(this.prisma) : this.prisma.$transaction(write));
-  }
-
-  private async isUnseen(code: string | undefined): Promise<boolean> {
-    if (code === undefined) {
-      return false;
-    }
-    const unseen = await this.prisma.application.count({ where: { code, firstSeenOn: null } });
-    return unseen > 0;
+    await (unseen ? this.prisma.$transaction(write) : write(this.prisma));
   }
 
   private async noteFirstVisit(
     tx: Prisma.TransactionClient,
-    code: string,
+    unseen: UnseenApplication,
     firstView: FirstView,
     at: Date,
   ): Promise<void> {
+    const recordedBefore = await earliestDayRecordedBefore(tx, unseen, at);
     const [application] = await tx.application.updateManyAndReturn({
-      where: { code, firstSeenOn: null },
-      data: { firstSeenOn: utcDay(inBaku(at)) },
-      select: { id: true, company: true, role: true, createdAt: true },
+      where: { id: unseen.id, firstSeenOn: null },
+      data: { firstSeenOn: recordedBefore ?? utcDay(inBaku(at)) },
+      select: { company: true, role: true },
     });
-    if (!application) {
-      return;
+    if (application && !recordedBefore) {
+      await this.alerts.queueFirstVisit(tx, application, firstView, at);
     }
-    const recordedBefore = await earliestDayRecordedBefore(tx, application, code, at);
-    if (recordedBefore) {
-      await tx.application.update({
-        where: { id: application.id },
-        data: { firstSeenOn: recordedBefore },
-      });
-      return;
-    }
-    await this.alerts.queueFirstVisit(tx, application, firstView, at);
   }
 
   async record(event: FollowUp, demo: string | null, at: Date): Promise<void> {
@@ -174,8 +166,7 @@ export class VisitLogService {
 
 async function earliestDayRecordedBefore(
   tx: Prisma.TransactionClient,
-  { id, createdAt }: { id: string; createdAt: Date },
-  code: string,
+  { id, code, createdAt }: UnseenApplication,
   at: Date,
 ): Promise<Date | null> {
   const view = await tx.pageView.findFirst({
@@ -188,8 +179,12 @@ async function earliestDayRecordedBefore(
     orderBy: { day: 'asc' },
     select: { day: true },
   });
-  const days = [...(view ? [utcDay(inBaku(view.createdAt))] : []), ...(rolled ? [rolled.day] : [])];
-  return days.length === 0 ? null : new Date(Math.min(...days.map((day) => day.getTime())));
+  const viewDay = view ? utcDay(inBaku(view.createdAt)) : null;
+  const rolledDay = rolled?.day ?? null;
+  if (viewDay === null || rolledDay === null) {
+    return viewDay ?? rolledDay;
+  }
+  return viewDay < rolledDay ? viewDay : rolledDay;
 }
 
 async function ignoringUnknownView(write: Promise<unknown>): Promise<void> {

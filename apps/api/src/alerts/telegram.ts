@@ -1,3 +1,4 @@
+import { alertHours } from '@portfolio/content/analytics';
 import { z } from 'zod';
 import { reasonOf } from '../common/error-reason.js';
 import type { Env } from '../config/env.js';
@@ -10,6 +11,7 @@ export type Delivery =
 export const TELEGRAM = Symbol('TELEGRAM');
 
 const sendTimeoutMs = 5_000;
+const longestWaitSeconds = alertHours * 60 * 60;
 
 const refusal = z.object({
   description: z.string().optional(),
@@ -53,6 +55,9 @@ export async function sendMessage(
   return {
     kind: 'failed',
     reason: description ? `${String(response.status)} ${description}` : String(response.status),
-    retryAfterSeconds: parameters?.retry_after ?? null,
+    retryAfterSeconds:
+      parameters?.retry_after === undefined
+        ? null
+        : Math.min(parameters.retry_after, longestWaitSeconds),
   };
 }
