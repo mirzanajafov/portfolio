@@ -391,25 +391,32 @@ describe('admin sign-in against a real database', () => {
     it('refuses an answer day for an application nobody answered', async () => {
       const token = await signedIn();
 
-      await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
+      const sent = await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
       await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
       await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
 
+      expect(sent.body).toMatchObject({
+        message: 'answeredOn 2026-10-02 needs an answer, and none came',
+      });
       expect(await history()).toEqual([['status', 'sent', 'withdrawn']]);
     });
 
     it('refuses an answer day before the day I applied or after today in Baku', async () => {
       const token = await signedIn();
 
-      await write('patch', '/memh', token, {
+      const early = await write('patch', '/memh', token, {
         status: 'screening',
         answeredOn: '2026-09-30',
       }).expect(400);
-      await write('patch', '/memh', token, {
+      const late = await write('patch', '/memh', token, {
         status: 'screening',
         answeredOn: '2026-10-03',
       }).expect(400);
 
+      expect(early.body).toMatchObject({
+        message: 'answeredOn 2026-09-30 is before appliedOn 2026-10-01',
+      });
+      expect(late.body).toMatchObject({ message: 'answeredOn 2026-10-03 is after today in Baku' });
       expect(await history()).toEqual([]);
     });
 

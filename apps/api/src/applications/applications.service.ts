@@ -51,6 +51,27 @@ function textOf(value: string | Date | null): string | null {
   return typeof value === 'string' ? value : dayOrNull(value);
 }
 
+function answerDayRefusal(
+  day: Date | undefined,
+  answered: Date | null,
+  appliedOn: Date,
+  today: Date,
+): string | undefined {
+  if (!day) {
+    return undefined;
+  }
+  if (!answered) {
+    return `answeredOn ${dayOf(day)} needs an answer, and none came`;
+  }
+  if (day < appliedOn) {
+    return `answeredOn ${dayOf(day)} is before appliedOn ${dayOf(appliedOn)}`;
+  }
+  if (day > today) {
+    return `answeredOn ${dayOf(day)} is after today in Baku`;
+  }
+  return undefined;
+}
+
 @Injectable()
 export class ApplicationsService {
   constructor(
@@ -109,14 +130,15 @@ export class ApplicationsService {
       }
       const today = utcDay(inBaku(at));
       const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);
-      const { answeredOn } = edit;
-      if (answeredOn && (!answered || answeredOn < current.appliedOn || answeredOn > today)) {
-        return {
-          kind: 'invalid',
-          reason: 'answeredOn corrects the day of an answer that came, from appliedOn to today',
-        };
+      const refusal = answerDayRefusal(edit.answeredOn, answered, current.appliedOn, today);
+      if (refusal) {
+        return { kind: 'invalid', reason: refusal };
       }
-      const next: Tracked = { ...trackedOf(current), ...edit, answeredOn: answeredOn ?? answered };
+      const next: Tracked = {
+        ...trackedOf(current),
+        ...edit,
+        answeredOn: edit.answeredOn ?? answered,
+      };
       return { kind: 'edited', application: await record(tx, current, next, at, false) };
     });
   }
