@@ -352,21 +352,21 @@ describe('applicationsOf', () => {
   });
 
   it('counts the 14 days in Baku days, so an application turns old enough at 20:00 UTC', () => {
-    const lateEvening = new Date('2026-10-29T21:00:00Z');
+    const oldEnoughAt = (time: string) =>
+      applicationsOf(
+        [],
+        [
+          applied('kxqtz', { appliedOn: new Date('2026-10-15') }),
+          applied('mpw7r', { appliedOn: new Date('2026-10-16') }),
+        ],
+        [],
+        labels,
+        new Map(),
+        demos,
+        new Date(`2026-10-29T${time}Z`),
+      ).byChannel[0]?.oldEnough;
 
-    const { byChannel } = applicationsOf(
-      [],
-      [
-        applied('kxqtz', { appliedOn: new Date('2026-10-15') }),
-        applied('mpw7r', { appliedOn: new Date('2026-10-16') }),
-      ],
-      [],
-      labels,
-      new Map(),
-      demos,
-      lateEvening,
-    );
-
-    expect(byChannel[0]?.oldEnough).toBe(1);
+    expect(oldEnoughAt('19:59:59')).toBe(0);
+    expect(oldEnoughAt('20:00:00')).toBe(1);
   });
 });
