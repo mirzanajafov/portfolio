@@ -247,7 +247,7 @@ describe('the application actions', () => {
     });
   });
 
-  it('asks the API for nothing when nothing changed, reading a CRLF as the LF it was shown and network lines as the list they make', async () => {
+  it('asks the API for nothing and says so when nothing changed, reading a CRLF as the LF it was shown and network lines as the list they make', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     const form = editFormOf({
       notes: 'First line\r\nSecond line',
@@ -255,7 +255,9 @@ describe('the application actions', () => {
       networks: ' ACME-NET \n\n',
     });
 
-    expect(await editApplication('memh', null, form)).toBeNull();
+    expect((await editApplication('memh', null, form))?.failure).toBe(
+      'Nothing changed, so there was nothing to save.',
+    );
     expect(api.updateApplication).not.toHaveBeenCalled();
   });
 

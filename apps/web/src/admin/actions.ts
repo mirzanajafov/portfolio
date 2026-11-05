@@ -191,7 +191,7 @@ export async function editApplication(
   }
   const edit = editIn(form);
   if (!edit) {
-    return null;
+    return refused('Nothing changed, so there was nothing to save.', form, editFields);
   }
   const outcome = await updateApplication(apiUrl(), token, target, edit);
   if (outcome.kind === 'done') {
