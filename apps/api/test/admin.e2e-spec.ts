@@ -251,7 +251,7 @@ describe('admin sign-in against a real database', () => {
     await ask('Memh!').expect(400);
   });
 
-  it('is a 404 for an application check without a session, before it reads the code', async () => {
+  it('is a 404 for an application without a session, before it reads the code', async () => {
     await request(app.getHttpServer()).get('/admin/applications/Memh!').expect(404);
   });
 
@@ -302,6 +302,26 @@ describe('admin sign-in against a real database', () => {
         atsHost: null,
         networks: [],
       });
+    });
+
+    it('takes the whole edit form as the site sends it and keeps only what differs', async () => {
+      const token = await signedInWithAcme();
+
+      await write('patch', '/memh', token, {
+        company: 'Acme',
+        role: 'Backend Engineer',
+        appliedOn: '2026-10-01',
+        channel: 'direct',
+        cvVariant: 'base 2026-10-01',
+        status: 'sent',
+        notes: 'Applied through the form.',
+        country: null,
+        city: null,
+        atsHost: null,
+        networks: [],
+      }).expect(200);
+
+      expect(await history()).toEqual([['notes', '', 'Applied through the form.']]);
     });
 
     it('keeps only the lowercase host of an ATS link pasted whole', async () => {
