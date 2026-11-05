@@ -522,7 +522,7 @@ describe('reportText', () => {
     });
     const text = reportText(report, { all: false });
     expect(text).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened on UTC day 2026-10-30',
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened 2026-10-30',
     );
     expect(text).toContain('Telegram alerts given up in the period, not sent within 24 h: 2');
     expect(reportText(aReport(), { all: false })).not.toContain('given up');

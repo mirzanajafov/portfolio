@@ -20,10 +20,8 @@ const longestRetrySeconds = 60 * 60;
 
 type DueAlert = { id: string; text: string; attempts: number };
 
-export function retryDelaySeconds(attempts: number, retryAfterSeconds: number | null): number {
-  return (
-    retryAfterSeconds ?? Math.min(firstRetrySeconds * 2 ** (attempts - 1), longestRetrySeconds)
-  );
+export function retryDelaySeconds(attempts: number): number {
+  return Math.min(firstRetrySeconds * 2 ** (attempts - 1), longestRetrySeconds);
 }
 
 function oldestSendable(now: Date): Date {
@@ -34,7 +32,7 @@ function oldestSendable(now: Date): Date {
 export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(AlertSenderService.name);
   private readonly stops: (() => void)[] = [];
-  private pass: Promise<void> | null = null;
+  private pass: { done: Promise<void>; abort: AbortController } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -55,14 +53,19 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     for (const stop of this.stops) {
       stop();
     }
-    await this.pass;
+    this.pass?.abort.abort();
+    await this.pass?.done;
   }
 
   sendDue(): Promise<void> {
-    this.pass ??= this.sendUntilNoneDue().finally(() => {
-      this.pass = null;
-    });
-    return this.pass;
+    if (!this.pass) {
+      const abort = new AbortController();
+      const done = this.sendUntilNoneDue(abort.signal).finally(() => {
+        this.pass = null;
+      });
+      this.pass = { done, abort };
+    }
+    return this.pass.done;
   }
 
   async giveUpOld(): Promise<void> {
@@ -83,13 +86,13 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async sendUntilNoneDue(): Promise<void> {
+  private async sendUntilNoneDue(stopped: AbortSignal): Promise<void> {
     const { telegram } = this;
     if (!telegram) {
       return;
     }
     let goOn = true;
-    while (goOn) {
+    while (goOn && !stopped.aborted) {
       goOn = await this.sendNext(telegram);
     }
   }
@@ -114,20 +117,25 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
       await this.prisma.alert.deleteMany({ where: { id: alert.id } });
       return true;
     }
-    const rateLimited = delivery.retryAfterSeconds !== null;
-    const attempts = rateLimited ? alert.attempts : alert.attempts + 1;
-    const delaySeconds = retryDelaySeconds(attempts, delivery.retryAfterSeconds);
-    const retryAt = new Date(this.clock.now().getTime() + delaySeconds * 1000);
+    const failedAt = this.clock.now().getTime();
+    const { retryAfterSeconds } = delivery;
+    if (retryAfterSeconds !== null) {
+      const heldUntil = new Date(failedAt + retryAfterSeconds * 1000);
+      await this.prisma.alert.updateMany({
+        where: { OR: [{ id: alert.id }, { nextAttemptAt: { lt: heldUntil } }] },
+        data: { nextAttemptAt: heldUntil },
+      });
+      this.log.warn(
+        `alert not sent (${delivery.reason}), holding every waiting alert for ${String(retryAfterSeconds)} s`,
+      );
+      return false;
+    }
+    const attempts = alert.attempts + 1;
+    const delaySeconds = retryDelaySeconds(attempts);
     await this.prisma.alert.updateMany({
       where: { id: alert.id },
-      data: { attempts, nextAttemptAt: retryAt },
+      data: { attempts, nextAttemptAt: new Date(failedAt + delaySeconds * 1000) },
     });
-    if (rateLimited) {
-      await this.prisma.alert.updateMany({
-        where: { nextAttemptAt: { lt: retryAt } },
-        data: { nextAttemptAt: retryAt },
-      });
-    }
     this.log.warn(`alert not sent (${delivery.reason}), next try in ${String(delaySeconds)} s`);
     return false;
   }

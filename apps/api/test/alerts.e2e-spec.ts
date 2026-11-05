@@ -42,16 +42,14 @@ const message = (text: string) => ({
 const firstCv =
   'Xsolla, Backend Engineer: someone opened your link, first /cv, at 2026-10-02 16:00 Baku time.';
 
+const register = (prisma: PrismaService, code: string, company: string) =>
+  prisma.application.create({
+    data: { code, company, role: 'Backend Engineer', appliedOn: new Date('2026-10-01') },
+  });
+
 async function startOverWithXsolla(prisma: PrismaService): Promise<void> {
   await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "Application", "Alert", "GivenUpAlerts" CASCADE`;
-  await prisma.application.create({
-    data: {
-      code: 'memh',
-      company: 'Xsolla',
-      role: 'Backend Engineer',
-      appliedOn: new Date('2026-10-01'),
-    },
-  });
+  await register(prisma, 'memh', 'Xsolla');
 }
 
 const firstSeen = (prisma: PrismaService) =>
@@ -137,14 +135,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
   });
 
   it('runs one pass at a time, so a failure ends it before a second pass tries the next alert', async () => {
-    await prisma.application.create({
-      data: {
-        code: 'k7mpx',
-        company: 'Wolt',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-01'),
-      },
-    });
+    await register(prisma, 'k7mpx', 'Wolt');
     bot.replies.push({ status: 500, body: { ok: false } });
     await sendEvent(app, aCodedView()).expect(204);
     await sendEvent(app, aCodedView({ ref: 'k7mpx' }), { ip: '198.51.100.4' }).expect(204);
@@ -168,14 +159,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
   });
 
   it('holds every waiting alert as long as Telegram asks when it is rate limited', async () => {
-    await prisma.application.create({
-      data: {
-        code: 'k7mpx',
-        company: 'Wolt',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-01'),
-      },
-    });
+    await register(prisma, 'k7mpx', 'Wolt');
     bot.replies.push({ status: 429, body: { ok: false, parameters: { retry_after: 7 } } });
     await sendEvent(app, aCodedView()).expect(204);
     await sendEvent(app, aCodedView({ ref: 'k7mpx' }), { ip: '198.51.100.4' }).expect(204);
@@ -223,14 +207,19 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
 
 describe('first visits while alerts are off', () => {
   let app: NestExpressApplication;
+  let clock: FixedClock;
   let prisma: PrismaService;
 
   beforeAll(async () => {
-    ({ app, prisma } = await startApp());
+    ({ app, clock, prisma } = await startApp());
   });
 
   afterAll(async () => {
     await app.close();
+  });
+
+  beforeEach(() => {
+    clock.current = new Date('2026-10-02T12:00:00Z');
   });
 
   it('gives up an alert left from when alerts were on, but not one a send has claimed', async () => {
@@ -248,6 +237,14 @@ describe('first visits while alerts are off', () => {
     expect(await prisma.givenUpAlerts.findMany()).toEqual([
       { day: new Date('2026-10-02'), count: 1 },
     ]);
+  });
+
+  it('notes the first visit on its day in Baku, the calendar applications are counted in', async () => {
+    await startOverWithXsolla(prisma);
+    clock.current = new Date('2026-10-02T22:30:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-03') });
   });
 
   it('still notes the first visit but writes no alert, so turning alerts on later sends no old ones', async () => {
@@ -276,7 +273,7 @@ describe('the migration that adds firstSeenOn', () => {
   );
   const backfill = migration.slice(migration.indexOf('UPDATE "Application"'));
 
-  const register = (code: string, createdAt = '2026-09-01T00:00:00Z') =>
+  const registerOn = (code: string, createdAt = '2026-09-01T00:00:00Z') =>
     prisma.application.create({
       data: {
         code,
@@ -304,10 +301,10 @@ describe('the migration that adds firstSeenOn', () => {
 
   it('sets each application already opened to the day of its earliest coded view or rolled up day since it was registered', async () => {
     await prisma.$executeRaw`TRUNCATE "Visit", "PageView", "DailyApplication", "Application" CASCADE`;
-    const rolled = await register('rolled');
-    await register('viewed');
-    await register('unopened');
-    await register('reused', '2026-10-04T12:00:00Z');
+    const rolled = await registerOn('rolled');
+    await registerOn('viewed');
+    await registerOn('unopened');
+    await registerOn('reused', '2026-10-04T12:00:00Z');
     await prisma.dailyApplication.create({
       data: { day: new Date('2026-09-20'), applicationId: rolled.id, visits: 1, views: 1 },
     });

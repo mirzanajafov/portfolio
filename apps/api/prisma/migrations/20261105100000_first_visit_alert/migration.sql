@@ -20,7 +20,7 @@ CREATE TABLE "GivenUpAlerts" (
 CREATE INDEX "Alert_nextAttemptAt_idx" ON "Alert"("nextAttemptAt");
 
 UPDATE "Application" AS a SET "firstSeenOn" = LEAST(
-    (SELECT min(p."createdAt")::date FROM "PageView" AS p
+    (SELECT (min(p."createdAt") + interval '4 hours')::date FROM "PageView" AS p
         WHERE p.ref = a.code AND p."createdAt" >= a."createdAt"),
     (SELECT min(d.day) FROM "DailyApplication" AS d
         WHERE d."applicationId" = a.id AND d.day >= a."createdAt"::date)

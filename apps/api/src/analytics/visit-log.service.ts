@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { inBaku } from '@portfolio/content/time';
 import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -65,7 +66,7 @@ export class VisitLogService {
   ): Promise<void> {
     const [application] = await tx.application.updateManyAndReturn({
       where: { code, firstSeenOn: null },
-      data: { firstSeenOn: utcDay(at) },
+      data: { firstSeenOn: utcDay(inBaku(at)) },
       select: { company: true, role: true },
     });
     if (application) {
