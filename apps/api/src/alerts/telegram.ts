@@ -13,7 +13,10 @@ const sendTimeoutMs = 5_000;
 
 const refusal = z.object({
   description: z.string().optional(),
-  parameters: z.object({ retry_after: z.number().int().positive().optional() }).optional(),
+  parameters: z
+    .object({ retry_after: z.number().nonnegative().optional() })
+    .optional()
+    .catch(undefined),
 });
 
 export function telegramOf({
