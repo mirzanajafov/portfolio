@@ -1,4 +1,4 @@
-import type { AskEvent } from '@portfolio/content/ask';
+import { answerMaxLength, type AskEvent } from '@portfolio/content/ask';
 import { describe, expect, it } from 'vitest';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
 import { AskService, type AskOutcome } from './ask.service.js';
@@ -118,5 +118,24 @@ describe('AskService', () => {
     const events = (await answered(service)).streamed;
     expect(events).toContainEqual({ type: 'withheld', reason: 'empty' });
     expect(events.filter((event) => event.type === 'sentence')).toEqual([refusal]);
+  });
+
+  it('tells the engine how much room the answer has left, counting only what it sent', async () => {
+    const rooms: number[] = [];
+    const service = new AskService(
+      {
+        name: 'stub',
+        async *answer(_question, _signal, roomLeft) {
+          yield { text: 'I accept the offer.', sourceIds: ['demo/fast'] };
+          rooms.push(roomLeft());
+          yield { text: 'It answers in 40 ms.', sourceIds: ['demo/fast'] };
+          rooms.push(roomLeft());
+        },
+      },
+      knowledge,
+      'me@example.com',
+    );
+    await answered(service);
+    expect(rooms).toEqual([answerMaxLength, answerMaxLength - 'It answers in 40 ms.'.length]);
   });
 });
