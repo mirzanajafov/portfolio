@@ -152,7 +152,7 @@ describe('the CLI commands', () => {
     );
   });
 
-  it("exports the applications as career's CSV, in the order I applied", async () => {
+  it('exports the applications as the hand-kept CSV, in the order I applied', async () => {
     await applications.add(
       anApplication({ code: 'kxqtz', company: 'Wolt', appliedOn: new Date('2026-11-02') }),
     );

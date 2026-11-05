@@ -1,5 +1,5 @@
-import type { Application } from '../generated/prisma/client.js';
 import { dayOf, daysBetween } from '../common/days.js';
+import type { Application } from '../generated/prisma/client.js';
 
 const header = [
   'company',

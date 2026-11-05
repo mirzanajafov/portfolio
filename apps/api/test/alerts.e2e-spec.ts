@@ -44,11 +44,8 @@ const firstCv =
 const register = (prisma: PrismaService, code: string, company: string) =>
   prisma.application.create({
     data: {
-      ...anApplication(),
+      ...anApplication({ company, appliedOn: new Date('2026-10-01') }),
       code,
-      company,
-      role: 'Backend Engineer',
-      appliedOn: new Date('2026-10-01'),
       createdAt: new Date('2026-10-01T00:00:00Z'),
     },
   });

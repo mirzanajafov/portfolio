@@ -154,11 +154,12 @@ describe('retention against a real database', () => {
   it("keeps an application's daily visits as long as the application, and no unregistered code", async () => {
     const memh = await prisma.application.create({
       data: {
-        ...anApplication(),
+        ...anApplication({
+          company: 'Xsolla',
+          role: 'Developer',
+          appliedOn: new Date('2026-09-30'),
+        }),
         code: 'memh',
-        company: 'Xsolla',
-        role: 'Developer',
-        appliedOn: new Date('2026-09-30'),
       },
     });
     at('2026-10-02T12:00:00Z');
@@ -179,11 +180,12 @@ describe('retention against a real database', () => {
   it("counts a visit that went from the CV straight to a demo in its application's day", async () => {
     const memh = await prisma.application.create({
       data: {
-        ...anApplication(),
+        ...anApplication({
+          company: 'Xsolla',
+          role: 'Developer',
+          appliedOn: new Date('2026-09-30'),
+        }),
         code: 'memh',
-        company: 'Xsolla',
-        role: 'Developer',
-        appliedOn: new Date('2026-09-30'),
       },
     });
     const fromTheDemo = { headers: { Origin: 'https://tuner.najafov.dev' } };
@@ -248,11 +250,12 @@ describe('retention against a real database', () => {
   it("deletes daily totals and the dropped and given-up counters after 25 months, but keeps an application's", async () => {
     const memh = await prisma.application.create({
       data: {
-        ...anApplication(),
+        ...anApplication({
+          company: 'Xsolla',
+          role: 'Developer',
+          appliedOn: new Date('2024-08-30'),
+        }),
         code: 'memh',
-        company: 'Xsolla',
-        role: 'Developer',
-        appliedOn: new Date('2024-08-30'),
       },
     });
     const oldDay = new Date('2024-09-01');

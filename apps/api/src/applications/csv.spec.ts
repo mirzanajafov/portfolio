@@ -23,7 +23,7 @@ const anApplicationRow = (overrides: Partial<Application> = {}): Application => 
 });
 
 describe('applicationsCsv', () => {
-  it("writes career's columns in career's order, with an empty file still having its header", () => {
+  it("writes the hand-kept CSV's columns in its order, with an empty file still having its header", () => {
     expect(applicationsCsv([])).toBe(
       'company,role,date,cv_variant,channel,ref,status,days_to_first_answer,notes\n',
     );

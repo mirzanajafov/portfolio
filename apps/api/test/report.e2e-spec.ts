@@ -257,13 +257,13 @@ describe('the visitor report against a real database', () => {
   it('puts a coded visit and a guessed one under the company the application went to, with when its link was first opened, and the site reads both back', async () => {
     await prisma.application.create({
       data: {
-        ...anApplication(),
+        ...anApplication({
+          company: 'Xsolla',
+          appliedOn: new Date('2026-10-01'),
+          country: 'AZ',
+          city: 'Baku',
+        }),
         code: 'memh',
-        company: 'Xsolla',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-01'),
-        country: 'AZ',
-        city: 'Baku',
       },
     });
     at('12:00:00');

@@ -269,7 +269,7 @@ describe('admin sign-in against a real database', () => {
       return call.set('Authorization', `Bearer ${token}`).send(body);
     };
 
-    const signedIn = async () => {
+    const signedInWithAcme = async () => {
       const token = await sessionFrom(await sessions.link());
       await write('post', '', token, acme).expect(201);
       return token;
@@ -297,8 +297,8 @@ describe('admin sign-in against a real database', () => {
       });
     });
 
-    it('refuses an application with a channel career has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
-      const token = await signedIn();
+    it('refuses an application with a channel the CSV has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
+      const token = await signedInWithAcme();
 
       await write('post', '', token, { ...acme, code: 'kxqtz', channel: 'friend' }).expect(400);
       await write('post', '', token, { ...acme, code: 'kxqtz', salary: 1 }).expect(400);
@@ -315,7 +315,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('moves a status forward, notes the Baku day of the first answer, and keeps each changed field in the history', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       clock.current = new Date('2026-10-04T21:30:00Z');
 
       const moved = await write('patch', '/memh', token, { status: 'screening' }).expect(200);
@@ -328,7 +328,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('refuses a status that would go back or past an end, and says which ones it can take', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       await write('patch', '/memh', token, { status: 'interview' }).expect(200);
 
       const refused = await write('patch', '/memh', token, { status: 'screening' }).expect(409);
@@ -346,7 +346,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('makes a move once when eight edits ask for it at the same time', async () => {
-      await signedIn();
+      await signedInWithAcme();
       const applications = app.get(ApplicationsService);
       await openConnections(8);
 
@@ -361,7 +361,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('takes a day as today once it has started in Baku, four hours before UTC', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       clock.current = new Date('2026-10-02T21:00:00Z');
 
       await write('post', '', token, { ...acme, code: 'kxqtz', appliedOn: '2026-10-03' }).expect(
@@ -377,7 +377,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('undoes the last status change with the answer day it set, and writes the undo to the history', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
       clock.current = later(minutes(5));
 
@@ -393,7 +393,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('walks back through each status change, then has nothing left to undo', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       await write('patch', '/memh', token, { status: 'screening' }).expect(200);
       await write('patch', '/memh', token, { status: 'interview' }).expect(200);
 
@@ -406,7 +406,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       await write('patch', '/memh', token, { status: 'screening' }).expect(200);
       await write('patch', '/memh', token, { answeredOn: '2026-10-01' }).expect(200);
       await write('patch', '/memh', token, { status: 'interview' }).expect(200);
@@ -417,7 +417,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('leaves a sent application unanswered when only its notes change', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
 
       const edited = await write('patch', '/memh', token, {
         notes: 'Applied through the form.',
@@ -427,7 +427,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('refuses an answer day for an application nobody answered', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
 
       const sent = await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
       await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
@@ -440,7 +440,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('refuses an answer day before the day I applied or after today in Baku', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
 
       const early = await write('patch', '/memh', token, {
         status: 'screening',
@@ -459,14 +459,14 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('says there is nothing to undo before the first status change', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       await write('patch', '/memh', token, { notes: 'Applied through the form.' }).expect(200);
 
       await write('post', '/memh/undo', token).expect(409);
     });
 
     it('is a 404 for a code nobody registered, and a 400 for an empty edit or a field it does not know', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
 
       await write('patch', '/kxqtz', token, { notes: 'x' }).expect(404);
       await write('patch', '/memh', token, {}).expect(400);
@@ -474,7 +474,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('takes 60 changes in ten minutes from one session, then says when to come back', async () => {
-      const token = await signedIn();
+      const token = await signedInWithAcme();
       for (let change = 2; change <= 60; change += 1) {
         await write('patch', '/memh', token, { notes: String(change) }).expect(200);
       }

@@ -150,7 +150,7 @@ describe('parseCommand', () => {
       ],
     ],
     [
-      'with a channel career has no name for',
+      'with a channel the CSV has no name for',
       ['application', 'add', ...required, '--channel', 'friend'],
     ],
     ['with arguments export does not take', ['application', 'export', '--all']],
