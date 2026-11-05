@@ -16,7 +16,7 @@ const longestWaitSeconds = alertHours * 60 * 60;
 const refusal = z.object({
   description: z.string().optional().catch(undefined),
   parameters: z
-    .object({ retry_after: z.number().nonnegative().optional() })
+    .object({ retry_after: z.number().positive().optional() })
     .optional()
     .catch(undefined),
 });

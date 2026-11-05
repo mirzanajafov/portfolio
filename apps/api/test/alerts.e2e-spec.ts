@@ -226,6 +226,17 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     });
   });
 
+  it('backs off as usual when a rate limit asks for no wait at all', async () => {
+    bot.replies.push({ status: 429, body: { ok: false, parameters: { retry_after: 0 } } });
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(await prisma.alert.findFirst()).toMatchObject({
+      attempts: 1,
+      nextAttemptAt: new Date('2026-10-02T12:01:00Z'),
+    });
+  });
+
   it('takes a wait Telegram gives in a fraction of a second as a rate limit too', async () => {
     bot.replies.push({ status: 429, body: { ok: false, parameters: { retry_after: 1.5 } } });
     await sendEvent(app, aCodedView()).expect(204);
