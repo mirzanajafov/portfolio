@@ -52,13 +52,13 @@ export const applicationEditSchema = newApplicationSchema
     networks,
   })
   .partial()
-  .extend({ version: version.optional() })
+  .extend({ version })
   .refine(
     ({ version: _, ...changes }) => Object.keys(changes).length > 0,
     'an edit changes at least one field',
   );
 
-export const undoSchema = z.strictObject({ version: version.optional() });
+export const undoSchema = z.strictObject({ version });
 
 export type NewApplication = z.infer<typeof newApplicationSchema>;
 

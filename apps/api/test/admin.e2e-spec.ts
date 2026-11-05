@@ -285,6 +285,9 @@ describe('admin sign-in against a real database', () => {
     const openConnections = (count: number) =>
       Promise.all(Array.from({ length: count }, () => prisma.$executeRaw`SELECT pg_sleep(0.05)`));
 
+    const versionOf = async () =>
+      (await prisma.application.findUniqueOrThrow({ where: { code: 'memh' } })).version;
+
     const history = async () =>
       (await prisma.applicationChange.findMany({ orderBy: { id: 'asc' } })).map(
         ({ field, before, after }) => [field, before, after],
@@ -313,6 +316,7 @@ describe('admin sign-in against a real database', () => {
       const token = await signedInWithAcme();
 
       await write('patch', '/memh', token, {
+        version: await versionOf(),
         company: 'Acme',
         role: 'Backend Engineer',
         appliedOn: '2026-10-01',
@@ -360,7 +364,10 @@ describe('admin sign-in against a real database', () => {
 
     it('says which status an undo would restore', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
 
       const page = await request(app.getHttpServer())
         .get('/admin/applications/memh')
@@ -372,9 +379,14 @@ describe('admin sign-in against a real database', () => {
 
     it('corrects the day I applied and the hints, clears a hint with null, and keeps each change in the history', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { country: 'AZ', city: 'Baku' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        country: 'AZ',
+        city: 'Baku',
+      }).expect(200);
 
       const edited = await write('patch', '/memh', token, {
+        version: await versionOf(),
         appliedOn: '2026-09-30',
         city: null,
         atsHost: 'jobs.lever.co',
@@ -400,20 +412,28 @@ describe('admin sign-in against a real database', () => {
 
     it('refuses an applied day after today in Baku, after the answer, or after the first visit', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
       await prisma.application.update({
         where: { code: 'memh' },
         data: { firstSeenOn: new Date('2026-10-01') },
       });
 
-      const future = await write('patch', '/memh', token, { appliedOn: '2026-10-03' }).expect(400);
+      const future = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        appliedOn: '2026-10-03',
+      }).expect(400);
       const afterAnswer = await write('patch', '/memh', token, {
+        version: await versionOf(),
         appliedOn: '2026-10-02',
         answeredOn: '2026-10-01',
       }).expect(400);
-      const afterVisit = await write('patch', '/memh', token, { appliedOn: '2026-10-02' }).expect(
-        400,
-      );
+      const afterVisit = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        appliedOn: '2026-10-02',
+      }).expect(400);
 
       expect(future.body).toMatchObject({ message: 'appliedOn 2026-10-03 is after today in Baku' });
       expect(afterAnswer.body).toMatchObject({
@@ -427,13 +447,25 @@ describe('admin sign-in against a real database', () => {
     it('takes a country in either case, and refuses a hint it would refuse on registration', async () => {
       const token = await signedInWithAcme();
 
-      const edited = await write('patch', '/memh', token, { country: ' az ' }).expect(200);
+      const edited = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        country: ' az ',
+      }).expect(200);
       expect(edited.body).toMatchObject({ country: 'AZ' });
 
-      await write('patch', '/memh', token, { country: 'AZE' }).expect(400);
-      await write('patch', '/memh', token, { country: 'ıe' }).expect(400);
-      await write('patch', '/memh', token, { atsHost: 'my ats' }).expect(400);
-      await write('patch', '/memh', token, { networks: [''] }).expect(400);
+      await write('patch', '/memh', token, { version: await versionOf(), country: 'AZE' }).expect(
+        400,
+      );
+      await write('patch', '/memh', token, { version: await versionOf(), country: 'ıe' }).expect(
+        400,
+      );
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        atsHost: 'my ats',
+      }).expect(400);
+      await write('patch', '/memh', token, { version: await versionOf(), networks: [''] }).expect(
+        400,
+      );
     });
 
     it('refuses an application with a channel the CSV has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
@@ -457,7 +489,10 @@ describe('admin sign-in against a real database', () => {
       const token = await signedInWithAcme();
       clock.current = new Date('2026-10-04T21:30:00Z');
 
-      const moved = await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      const moved = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
 
       expect(moved.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-05' });
       expect(await history()).toEqual([
@@ -468,9 +503,15 @@ describe('admin sign-in against a real database', () => {
 
     it('refuses a status that would go back or past an end, and says which ones it can take', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'interview',
+      }).expect(200);
 
-      const refused = await write('patch', '/memh', token, { status: 'screening' }).expect(409);
+      const refused = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(409);
 
       expect(refused.body).toMatchObject({
         message: "an application that is interview can't become screening",
@@ -479,8 +520,14 @@ describe('admin sign-in against a real database', () => {
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
         status: 'interview',
       });
-      await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
-      const ended = await write('patch', '/memh', token, { status: 'offer' }).expect(409);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'rejected',
+      }).expect(200);
+      const ended = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'offer',
+      }).expect(409);
       expect(ended.body).toMatchObject({ allowed: [] });
     });
 
@@ -490,7 +537,9 @@ describe('admin sign-in against a real database', () => {
       await openConnections(8);
 
       await Promise.all(
-        Array.from({ length: 8 }, () => applications.edit('memh', { status: 'rejected' })),
+        Array.from({ length: 8 }, () =>
+          applications.edit('memh', { version: 0, status: 'rejected' }),
+        ),
       );
 
       expect(await history()).toEqual([
@@ -510,6 +559,7 @@ describe('admin sign-in against a real database', () => {
         400,
       );
       await write('patch', '/memh', token, {
+        version: await versionOf(),
         status: 'screening',
         answeredOn: '2026-10-03',
       }).expect(200);
@@ -517,10 +567,15 @@ describe('admin sign-in against a real database', () => {
 
     it('undoes the last status change with the answer day it set, and writes the undo to the history', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'rejected',
+      }).expect(200);
       clock.current = later(minutes(5));
 
-      const undone = await write('post', '/memh/undo', token, {}).expect(200);
+      const undone = await write('post', '/memh/undo', token, {
+        version: await versionOf(),
+      }).expect(200);
 
       expect(undone.body).toMatchObject({ status: 'sent', answeredOn: null });
       expect(await history()).toEqual([
@@ -533,20 +588,33 @@ describe('admin sign-in against a real database', () => {
 
     it('walks back through each status change, then has nothing left to undo', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
-      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'interview',
+      }).expect(200);
 
-      const once = await write('post', '/memh/undo', token, {}).expect(200);
-      const twice = await write('post', '/memh/undo', token, {}).expect(200);
+      const once = await write('post', '/memh/undo', token, { version: await versionOf() }).expect(
+        200,
+      );
+      const twice = await write('post', '/memh/undo', token, { version: await versionOf() }).expect(
+        200,
+      );
 
       expect(once.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-02' });
       expect(twice.body).toMatchObject({ status: 'sent', answeredOn: null });
-      await write('post', '/memh/undo', token, {}).expect(409);
+      await write('post', '/memh/undo', token, { version: await versionOf() }).expect(409);
     });
 
     it('refuses an edit or an undo from a page that loaded an older version, and changes nothing', async () => {
       const token = await signedInWithAcme();
-      const loaded = await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      const loaded = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
       const { version } = applicationViewSchema.parse(loaded.body);
       await write('patch', '/memh', token, { version, notes: 'From the phone.' }).expect(200);
 
@@ -575,11 +643,22 @@ describe('admin sign-in against a real database', () => {
     });
     it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
-      await write('patch', '/memh', token, { answeredOn: '2026-10-01' }).expect(200);
-      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'screening',
+      }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        answeredOn: '2026-10-01',
+      }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'interview',
+      }).expect(200);
 
-      const undone = await write('post', '/memh/undo', token, {}).expect(200);
+      const undone = await write('post', '/memh/undo', token, {
+        version: await versionOf(),
+      }).expect(200);
 
       expect(undone.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-01' });
     });
@@ -588,6 +667,7 @@ describe('admin sign-in against a real database', () => {
       const token = await signedInWithAcme();
 
       const edited = await write('patch', '/memh', token, {
+        version: await versionOf(),
         notes: 'Applied through the form.',
       }).expect(200);
 
@@ -597,9 +677,18 @@ describe('admin sign-in against a real database', () => {
     it('refuses an answer day for an application nobody answered', async () => {
       const token = await signedInWithAcme();
 
-      const sent = await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
-      await write('patch', '/memh', token, { status: 'withdrawn' }).expect(200);
-      await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
+      const sent = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        answeredOn: '2026-10-02',
+      }).expect(400);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        status: 'withdrawn',
+      }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        answeredOn: '2026-10-02',
+      }).expect(400);
 
       expect(sent.body).toMatchObject({
         message: 'answeredOn 2026-10-02 needs an answer, and none came',
@@ -611,10 +700,12 @@ describe('admin sign-in against a real database', () => {
       const token = await signedInWithAcme();
 
       const early = await write('patch', '/memh', token, {
+        version: await versionOf(),
         status: 'screening',
         answeredOn: '2026-09-30',
       }).expect(400);
       const late = await write('patch', '/memh', token, {
+        version: await versionOf(),
         status: 'screening',
         answeredOn: '2026-10-03',
       }).expect(400);
@@ -628,26 +719,39 @@ describe('admin sign-in against a real database', () => {
 
     it('says there is nothing to undo before the first status change', async () => {
       const token = await signedInWithAcme();
-      await write('patch', '/memh', token, { notes: 'Applied through the form.' }).expect(200);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        notes: 'Applied through the form.',
+      }).expect(200);
 
-      await write('post', '/memh/undo', token, {}).expect(409);
+      await write('post', '/memh/undo', token, { version: await versionOf() }).expect(409);
     });
 
     it('is a 404 for a code nobody registered, and a 400 for an empty edit or a field it does not know', async () => {
       const token = await signedInWithAcme();
 
-      await write('patch', '/kxqtz', token, { notes: 'x' }).expect(404);
-      await write('patch', '/memh', token, {}).expect(400);
-      await write('patch', '/memh', token, { notes: 'x', salary: 1 }).expect(400);
+      await write('patch', '/kxqtz', token, { version: 0, notes: 'x' }).expect(404);
+      await write('patch', '/memh', token, { version: await versionOf() }).expect(400);
+      await write('patch', '/memh', token, {
+        version: await versionOf(),
+        notes: 'x',
+        salary: 1,
+      }).expect(400);
     });
 
     it('takes 60 changes in ten minutes from one session, then says when to come back', async () => {
       const token = await signedInWithAcme();
       for (let change = 2; change <= 60; change += 1) {
-        await write('patch', '/memh', token, { notes: String(change) }).expect(200);
+        await write('patch', '/memh', token, {
+          version: await versionOf(),
+          notes: String(change),
+        }).expect(200);
       }
 
-      const refused = await write('patch', '/memh', token, { notes: 'one too many' }).expect(429);
+      const refused = await write('patch', '/memh', token, {
+        version: await versionOf(),
+        notes: 'one too many',
+      }).expect(429);
 
       expect(refused.headers['retry-after']).toBe('600');
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({

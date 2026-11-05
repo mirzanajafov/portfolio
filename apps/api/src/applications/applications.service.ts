@@ -173,7 +173,7 @@ export class ApplicationsService {
       if (!current) {
         return { kind: 'missing' };
       }
-      if (version !== undefined && version !== current.version) {
+      if (version !== current.version) {
         return { kind: 'out of date' };
       }
       const status = edit.status ?? current.status;
@@ -205,7 +205,7 @@ export class ApplicationsService {
       if (!current) {
         return { kind: 'missing' };
       }
-      if (version !== undefined && version !== current.version) {
+      if (version !== current.version) {
         return { kind: 'out of date' };
       }
       const restored = await statusBeforeLastMove(tx, current.id);
