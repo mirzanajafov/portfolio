@@ -90,22 +90,40 @@ export async function startSession(
   return { kind: 'signed in', ...adminSignInSchema.parse(await response.json()) };
 }
 
-export async function sessionExpiry(
-  apiUrl: string,
+async function read<T>(
+  url: string,
   token: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<Date | null> {
-  const response = await fetchImpl(`${apiUrl}/admin/session`, {
+  what: string,
+  schema: { parse: (value: unknown) => T },
+  fetchImpl: typeof fetch,
+  timeout = timeoutMs,
+): Promise<T | null> {
+  const response = await fetchImpl(url, {
     headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(timeout),
   });
   if (response.status === 404) {
     return null;
   }
   if (response.status !== 200) {
-    throw unexpected('a session check', response);
+    throw unexpected(what, response);
   }
-  return adminSessionSchema.parse(await response.json()).expiresAt;
+  return schema.parse(await response.json());
+}
+
+export async function sessionExpiry(
+  apiUrl: string,
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Date | null> {
+  const session = await read(
+    `${apiUrl}/admin/session`,
+    token,
+    'a session check',
+    adminSessionSchema,
+    fetchImpl,
+  );
+  return session?.expiresAt ?? null;
 }
 
 export async function endSession(
@@ -123,61 +141,50 @@ export async function endSession(
   }
 }
 
-export async function fetchReport(
+export function fetchReport(
   apiUrl: string,
   token: string,
   days: number | undefined,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Report | null> {
   const query = days === undefined ? '' : `?days=${String(days)}`;
-  const response = await fetchImpl(`${apiUrl}/admin/report${query}`, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(reportTimeoutMs),
-  });
-  if (response.status === 404) {
-    return null;
-  }
-  if (response.status !== 200) {
-    throw unexpected('a report', response);
-  }
-  return reportSchema.parse(await response.json());
+  return read(
+    `${apiUrl}/admin/report${query}`,
+    token,
+    'a report',
+    reportSchema,
+    fetchImpl,
+    reportTimeoutMs,
+  );
 }
 
-export async function fetchApplications(
+export function fetchApplications(
   apiUrl: string,
   token: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationView[] | null> {
-  const response = await fetchImpl(`${apiUrl}/admin/applications`, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (response.status === 404) {
-    return null;
-  }
-  if (response.status !== 200) {
-    throw unexpected('a list of applications', response);
-  }
-  return applicationListSchema.parse(await response.json());
+  return read(
+    `${apiUrl}/admin/applications`,
+    token,
+    'a list of applications',
+    applicationListSchema,
+    fetchImpl,
+  );
 }
 
-export async function fetchApplication(
+export function fetchApplication(
   apiUrl: string,
   token: string,
   code: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationPage | null> {
-  const response = await fetchImpl(`${apiUrl}/admin/applications/${code}`, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (response.status === 404) {
-    return null;
-  }
-  if (response.status !== 200) {
-    throw unexpected('an application', response);
-  }
-  return applicationPageSchema.parse(await response.json());
+  return read(
+    `${apiUrl}/admin/applications/${code}`,
+    token,
+    'an application',
+    applicationPageSchema,
+    fetchImpl,
+  );
 }
 
 async function outcomeOf(what: string, response: Response): Promise<ApplicationWrite> {
