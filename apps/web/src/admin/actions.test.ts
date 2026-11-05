@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { signIn, signOut } from './actions';
+import { addApplication, editApplication, signIn, signOut, undoStatus } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
 import { request } from './testing';
-import type { endSession, startSession } from './api';
+import { anApplicationPage } from '@portfolio/content/testing';
+import type {
+  createApplication,
+  endSession,
+  startSession,
+  undoStatusChange,
+  updateApplication,
+} from './api';
 
 const link = 'l'.repeat(43);
 const session = 's'.repeat(43);
@@ -11,6 +18,9 @@ const ends = new Date('2026-11-29T12:00:00Z');
 const api = vi.hoisted(() => ({
   startSession: vi.fn<typeof startSession>(),
   endSession: vi.fn<typeof endSession>(),
+  createApplication: vi.fn<typeof createApplication>(),
+  updateApplication: vi.fn<typeof updateApplication>(),
+  undoStatusChange: vi.fn<typeof undoStatusChange>(),
 }));
 
 vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
@@ -32,6 +42,9 @@ beforeEach(() => {
   request.delete.mockClear();
   api.startSession.mockReset();
   api.endSession.mockReset();
+  api.createApplication.mockReset();
+  api.updateApplication.mockReset();
+  api.undoStatusChange.mockReset();
 });
 
 afterEach(() => {
@@ -141,5 +154,134 @@ describe('signOut', () => {
     await expect(signOut()).rejects.toThrow('redirect to /admin');
     expect(api.endSession).not.toHaveBeenCalled();
     expect(request.delete).toHaveBeenCalledWith(sessionCookie);
+  });
+});
+
+describe('the application actions', () => {
+  const { undoTo: _, ...memh } = anApplicationPage();
+  const done = { kind: 'done', application: memh } as const;
+
+  function formOf(fields: Record<string, string>): FormData {
+    const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) {
+      form.set(name, value);
+    }
+    return form;
+  }
+
+  it('adds an application from the form, leaving out empty hints, and opens its page', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.createApplication.mockResolvedValue(done);
+    const form = formOf({
+      company: ' Acme ',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'direct',
+      cvVariant: 'base',
+      code: '',
+      country: 'AZ',
+      city: '',
+      atsHost: '',
+      networks: 'ACME-NET\n\n ACME-VPN \n',
+    });
+
+    await expect(addApplication(null, form)).rejects.toThrow(
+      'redirect to /admin/applications/memh',
+    );
+    expect(api.createApplication).toHaveBeenCalledWith('http://api:3201', session, {
+      company: 'Acme',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'direct',
+      cvVariant: 'base',
+      country: 'AZ',
+      networks: ['ACME-NET', 'ACME-VPN'],
+    });
+  });
+
+  it('edits with every field of the form, clearing an emptied hint and leaving out an empty answer day', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue(done);
+    const form = formOf({
+      company: 'Acme',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'referral',
+      cvVariant: 'base',
+      status: 'screening',
+      answeredOn: '',
+      notes: 'Called back',
+      country: '',
+      city: 'Baku',
+      atsHost: '',
+      networks: '',
+    });
+
+    await expect(editApplication('memh', null, form)).rejects.toThrow(
+      'redirect to /admin/applications/memh',
+    );
+    expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
+      company: 'Acme',
+      role: 'Backend Engineer',
+      appliedOn: '2026-10-30',
+      channel: 'referral',
+      cvVariant: 'base',
+      status: 'screening',
+      notes: 'Called back',
+      country: null,
+      city: 'Baku',
+      atsHost: null,
+      networks: [],
+    });
+  });
+
+  it('undoes the last move and opens the page again', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.undoStatusChange.mockResolvedValue(done);
+
+    await expect(undoStatus('memh')).rejects.toThrow('redirect to /admin/applications/memh');
+    expect(api.undoStatusChange).toHaveBeenCalledWith('http://api:3201', session, 'memh');
+  });
+
+  it('shows the reason the API refused a write, and says how long to wait after too many', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({ kind: 'refused', message: 'no move' });
+    expect(await editApplication('memh', null, formOf({}))).toBe('no move');
+
+    api.undoStatusChange.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 600 });
+    expect(await undoStatus('memh')).toBe('Too many changes. Try again in 10 minutes.');
+  });
+
+  it('is a 404 when the API has no such application or session', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.undoStatusChange.mockResolvedValue({ kind: 'missing' });
+
+    await expect(undoStatus('memh')).rejects.toThrow('not found');
+  });
+
+  it.each([
+    ['from another origin', 'https://evil.example', { [sessionCookie.name]: session }, 'memh'],
+    ['without a session', 'https://najafov.dev', {}, 'memh'],
+    [
+      'for a code a link could not carry',
+      'https://najafov.dev',
+      { [sessionCookie.name]: session },
+      '../session',
+    ],
+  ])('is a 404 %s, before it asks the API', async (_, origin, cookies, code) => {
+    arriving(origin, cookies);
+
+    await expect(undoStatus(code)).rejects.toThrow('not found');
+    await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
+    expect(api.undoStatusChange).not.toHaveBeenCalled();
+    expect(api.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it('is a 404 for an add from another origin or without a session', async () => {
+    arriving('https://evil.example', { [sessionCookie.name]: session });
+    await expect(addApplication(null, formOf({}))).rejects.toThrow('not found');
+    arriving('https://najafov.dev', {});
+    await expect(addApplication(null, formOf({}))).rejects.toThrow('not found');
+    expect(api.createApplication).not.toHaveBeenCalled();
   });
 });

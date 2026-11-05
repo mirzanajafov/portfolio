@@ -1,7 +1,7 @@
-import { aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
+import { anApplicationPage, aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { fetchReport, sessionExpiry } from '@/admin/api';
+import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { request } from '@/admin/testing';
 import AdminPage, { dynamic } from './page';
 
@@ -9,6 +9,7 @@ const session = 's'.repeat(43);
 
 const api = vi.hoisted(() => ({
   sessionExpiry: vi.fn<typeof sessionExpiry>(),
+  fetchApplications: vi.fn<typeof fetchApplications>(),
   fetchReport: vi.fn<typeof fetchReport>(),
 }));
 
@@ -33,6 +34,8 @@ beforeEach(() => {
   request.cookies = new Map([['__Host-admin', session]]);
   api.sessionExpiry.mockReset();
   api.sessionExpiry.mockResolvedValue(new Date('2026-11-29T18:53:00Z'));
+  api.fetchApplications.mockReset();
+  api.fetchApplications.mockResolvedValue([]);
   api.fetchReport.mockReset();
   api.fetchReport.mockResolvedValue(aReport());
 });
@@ -96,7 +99,7 @@ describe('admin page', () => {
     );
   });
 
-  it('links each application to its CV', async () => {
+  it('links each application in the report to its page', async () => {
     api.fetchReport.mockResolvedValue(
       aReport({
         applications: {
@@ -112,14 +115,45 @@ describe('admin page', () => {
     expect(
       screen.getByText('Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet'),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Download CV for memh' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open memh' })).toHaveAttribute(
       'href',
-      '/admin/applications/memh/cv',
+      '/admin/applications/memh',
     );
-    expect(screen.getByRole('link', { name: 'Download CV for kxqtz' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open kxqtz' })).toHaveAttribute(
       'href',
-      '/admin/applications/kxqtz/cv',
+      '/admin/applications/kxqtz',
     );
+  });
+
+  it('lists the applications above the report, each linked to its page, with a link to add one', async () => {
+    const { undoTo: _, ...answered } = anApplicationPage({
+      status: 'screening',
+      answeredOn: '2026-11-02',
+    });
+    api.fetchApplications.mockResolvedValue([answered]);
+
+    render(await open());
+
+    expect(api.fetchApplications).toHaveBeenCalledWith('http://api:3201', session);
+    expect(screen.getByRole('link', { name: 'Acme, Backend Engineer' })).toHaveAttribute(
+      'href',
+      '/admin/applications/memh',
+    );
+    expect(
+      screen.getByRole('row', {
+        name: /Acme, Backend Engineer 2026-10-30 direct base screening 2026-11-02 -/,
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Add an application' })).toHaveAttribute(
+      'href',
+      '/admin/add',
+    );
+  });
+
+  it('says so when there are no applications yet', async () => {
+    render(await open());
+
+    expect(screen.getByText('No applications yet.')).toBeVisible();
   });
 
   it('writes out the control characters a visitor sent, so they cannot reorder the text', async () => {
@@ -161,6 +195,7 @@ describe('admin page', () => {
 
   it('is the 404 page when the API knows no such session', async () => {
     api.sessionExpiry.mockResolvedValue(null);
+    api.fetchApplications.mockResolvedValue(null);
     api.fetchReport.mockResolvedValue(null);
 
     await expect(open()).rejects.toThrow('not found');
@@ -168,6 +203,7 @@ describe('admin page', () => {
 
   it.each([
     ['session check', api.sessionExpiry],
+    ['list of applications', api.fetchApplications],
     ['report', api.fetchReport],
   ] as const)(
     'fails rather than shows a 404 when the %s fails, so an outage is not a lost session',

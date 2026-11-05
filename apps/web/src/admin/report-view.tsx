@@ -49,10 +49,10 @@ function Part({ part, first }: { part: ReportPart; first: boolean }) {
           <span>{part.text}</span>
           <a
             className="text-sm underline underline-offset-4"
-            href={`/admin/applications/${encodeURIComponent(part.code)}/cv`}
-            aria-label={`Download CV for ${part.code}`}
+            href={`/admin/applications/${encodeURIComponent(part.code)}`}
+            aria-label={`Open ${part.code}`}
           >
-            Download CV
+            Open
           </a>
         </p>
       );
