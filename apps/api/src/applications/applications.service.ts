@@ -98,18 +98,16 @@ export class ApplicationsService {
       if (status !== current.status && !nextStatuses(current.status).includes(status)) {
         return { kind: 'refused', status: current.status, allowed: nextStatuses(current.status) };
       }
-      const firstAnswer = isAnswer(current.status, status) ? utcDay(inBaku(at)) : null;
-      const next: Tracked = {
-        ...trackedOf(current),
-        ...edit,
-        answeredOn: edit.answeredOn ?? current.answeredOn ?? firstAnswer,
-      };
-      if (next.answeredOn && (next.status === 'sent' || next.answeredOn < current.appliedOn)) {
+      const today = utcDay(inBaku(at));
+      const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);
+      const { answeredOn } = edit;
+      if (answeredOn && (!answered || answeredOn < current.appliedOn || answeredOn > today)) {
         return {
           kind: 'invalid',
-          reason: 'answeredOn needs a status past sent and a day no earlier than appliedOn',
+          reason: 'answeredOn corrects the day of an answer that came, from appliedOn to today',
         };
       }
+      const next: Tracked = { ...trackedOf(current), ...edit, answeredOn: answeredOn ?? answered };
       return { kind: 'edited', application: await record(tx, current, next, at, false) };
     });
   }
