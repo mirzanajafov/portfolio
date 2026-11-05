@@ -181,18 +181,19 @@ export function fetchApplication(
   );
 }
 
+const refusalKinds = new Map<number, 'refused' | 'conflict' | 'stale'>([
+  [400, 'refused'],
+  [409, 'conflict'],
+  [412, 'stale'],
+]);
+
 async function outcomeOf(what: string, response: Response): Promise<ApplicationWrite> {
   if (response.status === 200 || response.status === 201) {
     return { kind: 'done', application: applicationViewSchema.parse(await response.json()) };
   }
-  if (response.status === 400) {
-    return { kind: 'refused', message: adminRefusalSchema.parse(await response.json()).message };
-  }
-  if (response.status === 409) {
-    return { kind: 'conflict', message: adminRefusalSchema.parse(await response.json()).message };
-  }
-  if (response.status === 412) {
-    return { kind: 'stale', message: adminRefusalSchema.parse(await response.json()).message };
+  const refusal = refusalKinds.get(response.status);
+  if (refusal) {
+    return { kind: refusal, message: adminRefusalSchema.parse(await response.json()).message };
   }
   if (response.status === 429) {
     return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };
