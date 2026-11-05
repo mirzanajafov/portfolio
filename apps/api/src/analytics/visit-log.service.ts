@@ -30,12 +30,12 @@ export class VisitLogService {
     demo: string | null,
     at: Date,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.visit.createMany({
+    const write = async (db: Prisma.TransactionClient) => {
+      await db.visit.createMany({
         data: [{ visitor: key, startedAt: at, ...visit }],
         skipDuplicates: true,
       });
-      const { count } = await tx.pageView.createMany({
+      const { count } = await db.pageView.createMany({
         data: [
           {
             id: event.id,
@@ -51,9 +51,10 @@ export class VisitLogService {
         skipDuplicates: true,
       });
       if (count > 0 && event.ref !== undefined) {
-        await this.noteFirstVisit(tx, event.ref, { path: event.path, demo }, at);
+        await this.noteFirstVisit(db, event.ref, { path: event.path, demo }, at);
       }
-    });
+    };
+    await (event.ref === undefined ? write(this.prisma) : this.prisma.$transaction(write));
   }
 
   private async noteFirstVisit(
