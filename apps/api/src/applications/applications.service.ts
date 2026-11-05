@@ -7,18 +7,18 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { ApplicationEdit, NewApplication } from './application.schema.js';
 import { newCode } from './code.js';
 
-export type AddOutcome =
+type AddOutcome =
   | { kind: 'added'; application: Application }
   | { kind: 'code taken'; reason: string }
   | { kind: 'invalid'; reason: string };
 
-export type EditOutcome =
+type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
   | { kind: 'refused'; from: Status; to: Status; allowed: readonly Status[] }
   | { kind: 'invalid'; reason: string };
 
-export type UndoOutcome =
+type UndoOutcome =
   { kind: 'undone'; application: Application } | { kind: 'missing' } | { kind: 'nothing to undo' };
 
 type Tracked = Pick<Application, ApplicationField>;
