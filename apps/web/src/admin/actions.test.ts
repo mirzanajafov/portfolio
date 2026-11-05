@@ -293,7 +293,7 @@ describe('the application actions', () => {
     });
     api.undoStatusChange.mockResolvedValue({
       kind: 'conflict',
-      message: 'the application is interview now, not screening, so that undo is out of date',
+      message: 'the application changed since that page loaded',
     });
     api.createApplication.mockResolvedValue({
       kind: 'conflict',
@@ -308,7 +308,7 @@ describe('the application actions', () => {
       "an application that is rejected can't become screening. Reload the page to see the application as it is now.",
     );
     expect(undone).toBe(
-      'the application is interview now, not screening, so that undo is out of date. Reload the page to see the application as it is now.',
+      'the application changed since that page loaded. Reload the page to see the application as it is now.',
     );
     expect(added?.failure).toBe('code memh already belongs to another application');
   });
