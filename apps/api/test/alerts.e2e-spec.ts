@@ -129,16 +129,22 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     ]);
   });
 
-  it('names the first page by the site, never by the path the visitor sent', async () => {
-    await sendEvent(app, aCodedView({ path: '/evil.example/login', notFound: true })).expect(204);
-    await sendDue();
+  it.each([
+    ['a path the site never had', { path: '/evil.example/login', notFound: true }],
+    ['a known path that showed the missing page', { path: '/cv', notFound: true }],
+  ])(
+    'names the first page by the site, never by the path the visitor sent: %s',
+    async (_, view) => {
+      await sendEvent(app, aCodedView(view)).expect(204);
+      await sendDue();
 
-    expect(bot.received).toEqual([
-      message(
-        "Xsolla, Backend Engineer: someone opened your link, first a page that isn't on the site, at 2026-10-02 16:00 Baku time.",
-      ),
-    ]);
-  });
+      expect(bot.received).toEqual([
+        message(
+          "Xsolla, Backend Engineer: someone opened your link, first a page that isn't on the site, at 2026-10-02 16:00 Baku time.",
+        ),
+      ]);
+    },
+  );
 
   it('sends no message when older code recorded an earlier coded view since registration, and notes that day', async () => {
     const recorded = (createdAt: string) => ({

@@ -6,7 +6,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { firstVisitText } from './first-visit-text.js';
 import { TELEGRAM, type Telegram } from './telegram.js';
 
-export type FirstView = { path: string; demo: string | null };
+export type FirstView = { path: string; demo: string | null; notFound: boolean };
 
 @Injectable()
 export class AlertsService {
@@ -24,17 +24,21 @@ export class AlertsService {
   async queueFirstVisit(
     tx: Prisma.TransactionClient,
     application: { company: string; role: string },
-    { path, demo }: FirstView,
+    { path, demo, notFound }: FirstView,
     at: Date,
   ): Promise<void> {
     if (!this.telegram) {
       return;
     }
     const firstPage =
-      (demo === null ? this.pageNames.get(path) : this.demoNames.get(demo)) ??
+      (demo === null ? this.pageNameOf(path, notFound) : this.demoNames.get(demo)) ??
       "a page that isn't on the site";
     await tx.alert.create({
       data: { createdAt: at, nextAttemptAt: at, text: firstVisitText(application, firstPage, at) },
     });
+  }
+
+  private pageNameOf(path: string, notFound: boolean): string | undefined {
+    return notFound ? undefined : this.pageNames.get(path);
   }
 }

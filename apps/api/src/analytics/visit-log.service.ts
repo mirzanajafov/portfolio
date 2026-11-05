@@ -31,6 +31,7 @@ export class VisitLogService {
     demo: string | null,
     at: Date,
   ): Promise<void> {
+    const unseenCode = (await this.isUnseen(event.ref)) ? event.ref : undefined;
     const write = async (db: Prisma.TransactionClient) => {
       await db.visit.createMany({
         data: [{ visitor: key, startedAt: at, ...visit }],
@@ -51,11 +52,20 @@ export class VisitLogService {
         ],
         skipDuplicates: true,
       });
-      if (count > 0 && event.ref !== undefined) {
-        await this.noteFirstVisit(db, event.ref, { path: event.path, demo }, at);
+      if (count > 0 && unseenCode !== undefined) {
+        const firstView = { path: event.path, demo, notFound: event.notFound };
+        await this.noteFirstVisit(db, unseenCode, firstView, at);
       }
     };
-    await (event.ref === undefined ? write(this.prisma) : this.prisma.$transaction(write));
+    await (unseenCode === undefined ? write(this.prisma) : this.prisma.$transaction(write));
+  }
+
+  private async isUnseen(code: string | undefined): Promise<boolean> {
+    if (code === undefined) {
+      return false;
+    }
+    const unseen = await this.prisma.application.count({ where: { code, firstSeenOn: null } });
+    return unseen > 0;
   }
 
   private async noteFirstVisit(
@@ -168,18 +178,16 @@ async function earliestDayRecordedBefore(
   code: string,
   at: Date,
 ): Promise<Date | null> {
-  const [view, rolled] = await Promise.all([
-    tx.pageView.findFirst({
-      where: { ref: code, createdAt: { gte: createdAt, lt: at } },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    }),
-    tx.dailyApplication.findFirst({
-      where: { applicationId: id, day: { gte: utcDay(createdAt) } },
-      orderBy: { day: 'asc' },
-      select: { day: true },
-    }),
-  ]);
+  const view = await tx.pageView.findFirst({
+    where: { ref: code, createdAt: { gte: createdAt, lt: at } },
+    orderBy: { createdAt: 'asc' },
+    select: { createdAt: true },
+  });
+  const rolled = await tx.dailyApplication.findFirst({
+    where: { applicationId: id, day: { gte: utcDay(createdAt) } },
+    orderBy: { day: 'asc' },
+    select: { day: true },
+  });
   const days = [...(view ? [utcDay(inBaku(view.createdAt))] : []), ...(rolled ? [rolled.day] : [])];
   return days.length === 0 ? null : new Date(Math.min(...days.map((day) => day.getTime())));
 }
