@@ -109,9 +109,8 @@ function scoreOf(
 function tallyBy(
   applications: readonly ApplicationRow[],
   keyOf: (application: ApplicationRow) => string,
-  now: Date,
+  windowStart: Date,
 ): ApplicationTally[] {
-  const windowStart = daysAfter(bakuDay(now), -guessWindowDays);
   return rankedGroups(applications, keyOf).map(([name, group]) => {
     const oldEnough = group.filter(({ appliedOn }) => appliedOn < windowStart);
     const answerDays = oldEnough.flatMap((application) => daysToAnswer(application) ?? []);
@@ -174,6 +173,7 @@ export function applicationsOf(
   const unknown = newest.flatMap(({ visit, code }) =>
     code !== null && !byCode.has(code) ? [{ code, visit }] : [],
   );
+  const windowStart = daysAfter(bakuDay(now), -guessWindowDays);
   return {
     list: applications
       .toSorted(
@@ -201,8 +201,8 @@ export function applicationsOf(
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
         guesses: guessesOf.get(application.id) ?? [],
       })),
-    byChannel: tallyBy(applications, ({ channel }) => channel, now),
-    byVariant: tallyBy(applications, ({ cvVariant }) => cvVariant, now),
+    byChannel: tallyBy(applications, ({ channel }) => channel, windowStart),
+    byVariant: tallyBy(applications, ({ cvVariant }) => cvVariant, windowStart),
     score: scoreOf(coded.filter(sawTheSite), guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
