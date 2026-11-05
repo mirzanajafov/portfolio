@@ -261,6 +261,19 @@ describe('the application actions', () => {
     expect(api.updateApplication).not.toHaveBeenCalled();
   });
 
+  it('says nothing changed when the API kept the stored value, as it does for a country typed in lower case', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({
+      kind: 'done',
+      application: anApplicationView({ country: 'AZ', version: 4 }),
+    });
+
+    const state = await editApplication('memh', null, editFormOf({ country: 'az' }));
+
+    expect(state?.failure).toBe('Nothing changed, so there was nothing to save.');
+    expect(cache.revalidatePath).not.toHaveBeenCalled();
+  });
+
   it('undoes the last move, clears an earlier refusal and shows the page as it now is', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue(done);
@@ -296,7 +309,7 @@ describe('the application actions', () => {
     api.updateApplication.mockResolvedValue(stale);
     api.undoStatusChange.mockResolvedValue(stale);
     api.createApplication.mockResolvedValue({
-      kind: 'conflict',
+      kind: 'refused',
       message: 'code memh already belongs to another application',
     });
 

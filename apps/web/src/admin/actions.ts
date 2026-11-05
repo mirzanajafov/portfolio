@@ -69,6 +69,8 @@ export type FormState = { failure: string; values: FormValues } | null;
 
 const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
 
+const nothingChanged = 'Nothing changed, so there was nothing to save.';
+
 const applicationGone =
   'The session has ended or the application is gone. Run admin link for a new sign-in link.';
 
@@ -191,9 +193,12 @@ export async function editApplication(
   }
   const edit = editIn(form);
   if (!edit) {
-    return refused('Nothing changed, so there was nothing to save.', form, editFields);
+    return refused(nothingChanged, form, editFields);
   }
   const outcome = await updateApplication(apiUrl(), token, target, edit);
+  if (outcome.kind === 'done' && outcome.application.version === edit.version) {
+    return refused(nothingChanged, form, editFields);
+  }
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
     revalidatePath('/admin');
