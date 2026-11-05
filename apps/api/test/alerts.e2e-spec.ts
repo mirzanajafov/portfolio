@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
-import { VisitLogService } from '../src/analytics/visit-log.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
@@ -43,7 +42,13 @@ const firstCv =
 
 const register = (prisma: PrismaService, code: string, company: string) =>
   prisma.application.create({
-    data: { code, company, role: 'Backend Engineer', appliedOn: new Date('2026-10-01') },
+    data: {
+      code,
+      company,
+      role: 'Backend Engineer',
+      appliedOn: new Date('2026-10-01'),
+      createdAt: new Date('2026-10-01T00:00:00Z'),
+    },
   });
 
 async function startOverWithXsolla(prisma: PrismaService): Promise<void> {
@@ -133,6 +138,43 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
         "Xsolla, Backend Engineer: someone opened your link, first a page that isn't on the site, at 2026-10-02 16:00 Baku time.",
       ),
     ]);
+  });
+
+  it('sends no message when older code recorded an earlier coded view since registration, and notes that day', async () => {
+    const recorded = (createdAt: string) => ({
+      id: randomUUID(),
+      createdAt: new Date(createdAt),
+      path: '/',
+      ref: 'memh',
+    });
+    await prisma.visit.create({
+      data: {
+        visitor: 'older',
+        startedAt: new Date('2026-09-30T10:00:00Z'),
+        device: 'desktop',
+        browser: 'chrome',
+        views: {
+          create: [recorded('2026-09-30T10:00:00Z'), recorded('2026-10-01T10:00:00Z')],
+        },
+      },
+    });
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-01') });
+  });
+
+  it('sends no message when older code rolled up an earlier day of the application, and notes that day', async () => {
+    const xsolla = await prisma.application.findUniqueOrThrow({ where: { code: 'memh' } });
+    await prisma.dailyApplication.create({
+      data: { day: new Date('2026-10-01'), applicationId: xsolla.id, visits: 1, views: 1 },
+    });
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-01') });
   });
 
   it('sends nothing for a code nobody registered or a browser that opted out', async () => {
@@ -263,78 +305,5 @@ describe('first visits while alerts are off', () => {
 
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
     expect(await prisma.alert.count()).toBe(0);
-  });
-});
-
-describe('first visits that older code recorded without noting them', () => {
-  let app: NestExpressApplication;
-  let prisma: PrismaService;
-
-  const registerOn = (code: string, createdAt = '2026-09-01T00:00:00Z') =>
-    prisma.application.create({
-      data: {
-        code,
-        company: code,
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-09-01'),
-        createdAt: new Date(createdAt),
-      },
-    });
-
-  const coded = (ref: string, createdAt: string) => ({
-    id: randomUUID(),
-    createdAt: new Date(createdAt),
-    path: '/',
-    ref,
-  });
-
-  beforeAll(async () => {
-    ({ app, prisma } = await startApp());
-  });
-
-  afterAll(async () => {
-    await app.close();
-  });
-
-  it('sets each application already opened to the day of its earliest coded view or rolled up day since it was registered', async () => {
-    await prisma.$executeRaw`TRUNCATE "Visit", "PageView", "DailyApplication", "Application" CASCADE`;
-    const rolled = await registerOn('rolled');
-    await registerOn('viewed');
-    await registerOn('unopened');
-    await registerOn('reused', '2026-10-04T12:00:00Z');
-    await prisma.dailyApplication.create({
-      data: { day: new Date('2026-09-20'), applicationId: rolled.id, visits: 1, views: 1 },
-    });
-    await prisma.visit.create({
-      data: {
-        visitor: 'v',
-        startedAt: new Date('2026-10-03T08:00:00Z'),
-        device: 'desktop',
-        browser: 'chrome',
-        views: {
-          create: [
-            coded('rolled', '2026-10-03T08:00:00Z'),
-            coded('viewed', '2026-10-05T09:30:00Z'),
-            coded('viewed', '2026-10-04T10:15:00Z'),
-            coded('reused', '2026-10-03T09:00:00Z'),
-            coded('reused', '2026-10-06T09:00:00Z'),
-          ],
-        },
-      },
-    });
-
-    await app.get(VisitLogService).backfillFirstVisits();
-
-    expect(
-      await prisma.application.findMany({
-        select: { code: true, firstSeenOn: true },
-        orderBy: { code: 'asc' },
-      }),
-    ).toEqual([
-      { code: 'reused', firstSeenOn: new Date('2026-10-06') },
-      { code: 'rolled', firstSeenOn: new Date('2026-09-20') },
-      { code: 'unopened', firstSeenOn: null },
-      { code: 'viewed', firstSeenOn: new Date('2026-10-04') },
-    ]);
   });
 });
