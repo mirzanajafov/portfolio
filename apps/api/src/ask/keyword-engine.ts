@@ -1,3 +1,4 @@
+import { answerMaxLength } from '@portfolio/content/ask';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
 import type { Knowledge, KnowledgeDocument } from './knowledge.js';
 
@@ -146,11 +147,19 @@ export class KeywordAnswerEngine implements AnswerEngine {
     if (!top || top.score < minScore) {
       return [];
     }
-    return ranked
-      .filter(({ document }) => document.project === top.document.project)
-      .filter(({ score }) => score >= top.score * shareOfTopScore)
-      .slice(0, maxSentences)
-      .map(({ document }) => document);
+    const candidates = ranked.filter(
+      ({ document, score }) =>
+        document.project === top.document.project && score >= top.score * shareOfTopScore,
+    );
+    const chosen: KnowledgeDocument[] = [];
+    let characters = 0;
+    for (const { document } of candidates) {
+      if (chosen.length < maxSentences && characters + document.text.length <= answerMaxLength) {
+        chosen.push(document);
+        characters += document.text.length;
+      }
+    }
+    return chosen;
   }
 
   async *answer(question: string, signal: AbortSignal): AsyncIterable<DraftSentence> {
