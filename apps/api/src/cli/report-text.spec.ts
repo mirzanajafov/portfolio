@@ -540,7 +540,7 @@ describe('reportText', () => {
     expect(reportText(aReport(), { all: false })).not.toContain('given up');
   });
 
-  it('says how each application went out and when it was answered, and tallies them with counts below ten applications', () => {
+  it('says how each application went out and when it was answered, and tallies them with counts below ten applications and a dash before any is old enough', () => {
     const report = aReport({
       applications: {
         byChannel: [
@@ -563,6 +563,14 @@ describe('reportText', () => {
         ],
         byVariant: [
           { name: 'base', applications: 15, opened: 7, oldEnough: 13, answered: 5, medianDays: 6 },
+          {
+            name: 'payments',
+            applications: 1,
+            opened: 0,
+            oldEnough: 0,
+            answered: 0,
+            medianDays: null,
+          },
         ],
         list: [
           anEntry({
@@ -588,6 +596,7 @@ describe('reportText', () => {
     expect(text).toMatch(/referral\s+3\s+2\s+3\s+2 of 3\s+4/);
     expect(text).toMatch(/direct\s+12\s+5\s+10\s+30%\s+-/);
     expect(text).toMatch(/base\s+15\s+7\s+13\s+38%\s+6/);
+    expect(text).toMatch(/payments\s+1\s+0\s+0\s+-\s+-/);
   });
 
   it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {

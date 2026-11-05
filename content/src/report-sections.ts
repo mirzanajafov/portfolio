@@ -504,6 +504,9 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
 }
 
 function answeredText({ answered, oldEnough }: ApplicationTally): string {
+  if (oldEnough === 0) {
+    return '-';
+  }
   return oldEnough < fewestForShare
     ? `${String(answered)} of ${String(oldEnough)}`
     : share(answered, oldEnough);
