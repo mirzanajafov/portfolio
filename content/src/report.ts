@@ -217,7 +217,7 @@ export const reportSchema = z.object({
   filter: z.array(z.object({ day, bot: z.number(), limited: z.number(), origin: z.number() })),
   applications: z.object({
     list: z.array(applicationEntrySchema),
-    byChannel: z.array(applicationTallySchema),
+    byChannel: z.array(z.extend(applicationTallySchema, { name: z.enum(channels) })),
     byVariant: z.array(applicationTallySchema),
     score: z.object({
       visits: z.number(),

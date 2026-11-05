@@ -106,11 +106,11 @@ function scoreOf(
   return { visits: coded.length, unplaced, levels };
 }
 
-function tallyBy(
+function tallyBy<Name extends string>(
   applications: readonly ApplicationRow[],
-  keyOf: (application: ApplicationRow) => string,
+  keyOf: (application: ApplicationRow) => Name,
   windowStart: Date,
-): ApplicationTally[] {
+): (ApplicationTally & { name: Name })[] {
   return rankedGroups(applications, keyOf).map(([name, group]) => {
     const oldEnough = group.filter(({ appliedOn }) => appliedOn < windowStart);
     const answerDays = oldEnough.flatMap((application) => daysToAnswer(application) ?? []);
