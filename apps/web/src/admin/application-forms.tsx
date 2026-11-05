@@ -167,13 +167,22 @@ export function EditApplicationForm({ application }: { application: ApplicationV
   );
 }
 
-export function UndoForm({ code, undoTo }: { code: string; undoTo: Status }) {
+export function UndoForm({
+  code,
+  status,
+  undoTo,
+}: {
+  code: string;
+  status: Status;
+  undoTo: Status;
+}) {
   const [failure, action, pending] = useActionState<string | null, FormData>(
     undoStatus.bind(null, code),
     null,
   );
   return (
     <form action={action} className="flex flex-col items-start gap-2">
+      <input type="hidden" name="from" value={status} />
       <button
         type="submit"
         disabled={pending}

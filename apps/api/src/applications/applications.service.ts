@@ -19,7 +19,10 @@ type EditOutcome =
   | { kind: 'invalid'; reason: string };
 
 type UndoOutcome =
-  { kind: 'undone'; application: Application } | { kind: 'missing' } | { kind: 'nothing to undo' };
+  | { kind: 'undone'; application: Application }
+  | { kind: 'missing' }
+  | { kind: 'moved'; status: Status }
+  | { kind: 'nothing to undo' };
 
 type Tracked = Pick<Application, ApplicationField>;
 
@@ -183,12 +186,15 @@ export class ApplicationsService {
     });
   }
 
-  undo(code: string): Promise<UndoOutcome> {
+  undo(code: string, from: Status): Promise<UndoOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
         return { kind: 'missing' };
+      }
+      if (current.status !== from) {
+        return { kind: 'moved', status: current.status };
       }
       const restored = await statusBeforeLastMove(tx, current.id);
       if (!restored) {

@@ -52,6 +52,10 @@ export const applicationEditSchema = newApplicationSchema
   .partial()
   .refine((edit) => Object.keys(edit).length > 0, 'an edit changes at least one field');
 
+export const undoSchema = z.strictObject({ from: z.enum(statuses) });
+
 export type NewApplication = z.infer<typeof newApplicationSchema>;
 
 export type ApplicationEdit = z.infer<typeof applicationEditSchema>;
+
+export type Undo = z.infer<typeof undoSchema>;

@@ -206,12 +206,12 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
 function sending(
   method: 'POST' | 'PATCH',
   token: string,
-  body?: NewApplicationBody | ApplicationEditBody,
+  body: NewApplicationBody | ApplicationEditBody | { from: string },
 ): RequestInit {
   return {
     method,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: body && JSON.stringify(body),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   };
 }
@@ -244,11 +244,12 @@ export async function undoStatusChange(
   apiUrl: string,
   token: string,
   code: string,
+  from: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationWrite> {
   const response = await fetchImpl(
     `${apiUrl}/admin/applications/${code}/undo`,
-    sending('POST', token),
+    sending('POST', token, { from }),
   );
   return outcomeOf('an undo', response);
 }

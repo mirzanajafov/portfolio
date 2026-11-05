@@ -21,8 +21,10 @@ import {
   applicationEditSchema,
   codeSchema,
   newApplicationSchema,
+  undoSchema,
   type ApplicationEdit,
   type NewApplication,
+  type Undo,
 } from '../applications/application.schema.js';
 import { ApplicationsService } from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
@@ -133,12 +135,18 @@ export class AdminApplicationsController {
   async undo(
     @Req() { adminSession }: SignedInRequest,
     @Param('code', new ZodPipe(codeSchema)) code: string,
+    @Body(new ZodPipe(undoSchema)) { from }: Undo,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    const outcome = await this.applications.undo(code);
+    const outcome = await this.applications.undo(code, from);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
+    }
+    if (outcome.kind === 'moved') {
+      throw new ConflictException(
+        `the application is ${outcome.status} now, not ${from}, so that undo is out of date`,
+      );
     }
     if (outcome.kind === 'nothing to undo') {
       throw new ConflictException('there is no status change to undo');

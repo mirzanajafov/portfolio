@@ -203,14 +203,18 @@ export async function editApplication(
   return refused(failureOf(outcome, applicationGone), form, editFields);
 }
 
-export async function undoStatus(code: string): Promise<string | null> {
+export async function undoStatus(
+  code: string,
+  _failure: string | null,
+  form: FormData,
+): Promise<string | null> {
   await headersFromSite();
   const target = validCode(code);
   const token = await tokenIn(sessionCookie);
   if (token === undefined) {
     return sessionEnded;
   }
-  const outcome = await undoStatusChange(apiUrl(), token, target);
+  const outcome = await undoStatusChange(apiUrl(), token, target, cleaned(form.get('from')));
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
     return null;
