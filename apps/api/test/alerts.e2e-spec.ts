@@ -1,5 +1,8 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
@@ -60,7 +63,9 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
   let clock: FixedClock;
   let prisma: PrismaService;
 
-  const sendDue = () => app.get(AlertSenderService).sendDue();
+  const sender = () => app.get(AlertSenderService);
+
+  const sendDue = () => sender().sendDue();
 
   const at = (time: string) => {
     clock.current = new Date(time);
@@ -73,6 +78,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
       TELEGRAM_BOT_TOKEN: 'test-token',
       TELEGRAM_CHAT_ID: '42',
     }));
+    sender().onModuleDestroy();
   });
 
   afterAll(async () => {
@@ -144,15 +150,30 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(await prisma.alert.count()).toBe(0);
   });
 
-  it('waits as long as Telegram asks when it is rate limited', async () => {
+  it('holds every waiting alert as long as Telegram asks when it is rate limited', async () => {
+    await prisma.application.create({
+      data: {
+        code: 'k7mpx',
+        company: 'Wolt',
+        role: 'Backend Engineer',
+        appliedOn: new Date('2026-10-01'),
+      },
+    });
     bot.replies.push({ status: 429, body: { ok: false, parameters: { retry_after: 7 } } });
     await sendEvent(app, aCodedView()).expect(204);
+    await sendEvent(app, aCodedView({ ref: 'k7mpx' }), { ip: '198.51.100.4' }).expect(204);
     await sendDue();
+    at('2026-10-02T12:00:06Z');
+    await sendDue();
+    expect(bot.received).toHaveLength(1);
+    expect(
+      (await prisma.alert.findMany()).map(({ nextAttemptAt }) => nextAttemptAt.toISOString()),
+    ).toEqual(['2026-10-02T12:00:07.000Z', '2026-10-02T12:00:07.000Z']);
 
-    expect(await prisma.alert.findFirst()).toMatchObject({
-      attempts: 1,
-      nextAttemptAt: new Date('2026-10-02T12:00:07Z'),
-    });
+    at('2026-10-02T12:00:07Z');
+    await sendDue();
+    expect(bot.received).toHaveLength(3);
+    expect(await prisma.alert.count()).toBe(0);
   });
 
   it('keeps an alert Telegram refuses, then gives it up unsent after a day and counts it', async () => {
@@ -194,5 +215,81 @@ describe('first visits while alerts are off', () => {
 
     expect(await firstSeen(prisma)).toEqual({ firstSeenAt: new Date('2026-10-02T12:00:00Z') });
     expect(await prisma.alert.count()).toBe(0);
+  });
+});
+
+describe('the migration that adds firstSeenAt', () => {
+  let app: NestExpressApplication;
+  let prisma: PrismaService;
+
+  const migration = readFileSync(
+    join(
+      import.meta.dirname,
+      '..',
+      'prisma',
+      'migrations',
+      '20261105100000_first_visit_alert',
+      'migration.sql',
+    ),
+    'utf8',
+  );
+  const backfill = migration.slice(migration.indexOf('UPDATE "Application"'));
+
+  const register = (code: string) =>
+    prisma.application.create({
+      data: { code, company: code, role: 'Backend Engineer', appliedOn: new Date('2026-09-01') },
+    });
+
+  const coded = (ref: string, createdAt: string) => ({
+    id: randomUUID(),
+    createdAt: new Date(createdAt),
+    path: '/',
+    ref,
+  });
+
+  beforeAll(async () => {
+    ({ app, prisma } = await startApp());
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('sets each application already opened to its earliest coded view or rolled up day', async () => {
+    await prisma.$executeRaw`TRUNCATE "Visit", "PageView", "DailyApplication", "Application" CASCADE`;
+    const rolled = await register('rolled');
+    await register('viewed');
+    await register('unopened');
+    await prisma.dailyApplication.create({
+      data: { day: new Date('2026-09-20'), applicationId: rolled.id, visits: 1, views: 1 },
+    });
+    await prisma.visit.create({
+      data: {
+        visitor: 'v',
+        startedAt: new Date('2026-10-03T08:00:00Z'),
+        device: 'desktop',
+        browser: 'chrome',
+        views: {
+          create: [
+            coded('rolled', '2026-10-03T08:00:00Z'),
+            coded('viewed', '2026-10-05T09:30:00Z'),
+            coded('viewed', '2026-10-04T10:15:00Z'),
+          ],
+        },
+      },
+    });
+
+    await prisma.$executeRawUnsafe(backfill);
+
+    expect(
+      await prisma.application.findMany({
+        select: { code: true, firstSeenAt: true },
+        orderBy: { code: 'asc' },
+      }),
+    ).toEqual([
+      { code: 'rolled', firstSeenAt: new Date('2026-09-20T00:00:00Z') },
+      { code: 'unopened', firstSeenAt: null },
+      { code: 'viewed', firstSeenAt: new Date('2026-10-04T10:15:00Z') },
+    ]);
   });
 });

@@ -9,11 +9,11 @@ export type Delivery =
 
 export const TELEGRAM = Symbol('TELEGRAM');
 
-export const sendTimeoutMs = 10_000;
+const sendTimeoutMs = 10_000;
 
 const refusal = z.object({
   description: z.string().optional(),
-  parameters: z.object({ retry_after: z.number().int().positive() }).optional(),
+  parameters: z.object({ retry_after: z.number().int().positive().optional() }).optional(),
 });
 
 export function telegramOf({

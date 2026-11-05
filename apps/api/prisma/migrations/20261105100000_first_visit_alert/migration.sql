@@ -18,3 +18,8 @@ CREATE TABLE "GivenUpAlerts" (
 );
 
 CREATE INDEX "Alert_nextAttemptAt_idx" ON "Alert"("nextAttemptAt");
+
+UPDATE "Application" AS a SET "firstSeenAt" = LEAST(
+    (SELECT min(p."createdAt") FROM "PageView" AS p WHERE p.ref = a.code),
+    (SELECT min(d.day)::timestamp(3) FROM "DailyApplication" AS d WHERE d."applicationId" = a.id)
+);
