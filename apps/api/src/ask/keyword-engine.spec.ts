@@ -10,8 +10,11 @@ const engine = new KeywordAnswerEngine(knowledge);
 
 async function draft(question: string, from = engine): Promise<DraftSentence[]> {
   const sentences: DraftSentence[] = [];
-  for await (const sentence of from.answer(question, new AbortController().signal)) {
+  let characters = 0;
+  const roomLeft = () => answerMaxLength - characters;
+  for await (const sentence of from.answer(question, new AbortController().signal, roomLeft)) {
     sentences.push(sentence);
+    characters += sentence.text.length;
   }
   return sentences;
 }
@@ -60,8 +63,8 @@ describe('KeywordAnswerEngine', () => {
       [
         ...knowledge.documents,
         relayFact('batches', 'Relay batches writes.'),
+        relayFact('groups', 'Relay batches writes in small groups.'),
         relayFact('long', `Relay batches writes. ${'x'.repeat(answerMaxLength - 30)}`),
-        relayFact('groups', 'Relay batches writes in groups.'),
       ],
       new Map([...knowledge.projectNames, ['relay', 'Relay']]),
     );
@@ -83,7 +86,11 @@ describe('KeywordAnswerEngine', () => {
     const abort = new AbortController();
     abort.abort();
     const sentences: DraftSentence[] = [];
-    for await (const sentence of engine.answer('Tuner questions', abort.signal)) {
+    for await (const sentence of engine.answer(
+      'Tuner questions',
+      abort.signal,
+      () => answerMaxLength,
+    )) {
       sentences.push(sentence);
     }
     expect(sentences).toEqual([]);

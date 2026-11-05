@@ -1,4 +1,3 @@
-import { answerMaxLength } from '@portfolio/content/ask';
 import type { AnswerEngine, DraftSentence } from './answer-engine.js';
 import type { Knowledge, KnowledgeDocument } from './knowledge.js';
 
@@ -139,7 +138,7 @@ export class KeywordAnswerEngine implements AnswerEngine {
       .sort((x, y) => y.score - x.score);
   }
 
-  private choose(question: string): KnowledgeDocument[] {
+  private candidates(question: string): KnowledgeDocument[] {
     const query = new Set(tokenize(question));
     const needed = Math.min(minMatchedTerms, query.size);
     const ranked = this.rank(query).filter(({ matched }) => matched >= needed);
@@ -147,27 +146,26 @@ export class KeywordAnswerEngine implements AnswerEngine {
     if (!top || top.score < minScore) {
       return [];
     }
-    const candidates = ranked.filter(
-      ({ document, score }) =>
-        document.project === top.document.project && score >= top.score * shareOfTopScore,
-    );
-    const chosen: KnowledgeDocument[] = [];
-    let characters = 0;
-    for (const { document } of candidates) {
-      if (chosen.length < maxSentences && characters + document.text.length <= answerMaxLength) {
-        chosen.push(document);
-        characters += document.text.length;
-      }
-    }
-    return chosen;
+    return ranked
+      .filter(({ document }) => document.project === top.document.project)
+      .filter(({ score }) => score >= top.score * shareOfTopScore)
+      .map(({ document }) => document);
   }
 
-  async *answer(question: string, signal: AbortSignal): AsyncIterable<DraftSentence> {
-    for (const document of this.choose(question)) {
-      if (signal.aborted) {
+  async *answer(
+    question: string,
+    signal: AbortSignal,
+    roomLeft: () => number,
+  ): AsyncIterable<DraftSentence> {
+    let sentences = 0;
+    for (const document of this.candidates(question)) {
+      if (signal.aborted || sentences === maxSentences) {
         return;
       }
-      yield { text: document.text, sourceIds: [document.id] };
+      if (document.text.length <= roomLeft()) {
+        sentences += 1;
+        yield { text: document.text, sourceIds: [document.id] };
+      }
     }
   }
 }

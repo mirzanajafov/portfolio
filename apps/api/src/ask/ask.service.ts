@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AskEvent, AskSource, GateReason } from '@portfolio/content/ask';
+import {
+  answerMaxLength,
+  type AskEvent,
+  type AskSource,
+  type GateReason,
+} from '@portfolio/content/ask';
 import { ANSWER_ENGINE, type AnswerEngine } from './answer-engine.js';
 import { Knowledge } from './knowledge.js';
 import { gateSentence } from './sentence-gate.js';
@@ -45,7 +50,11 @@ export class AskService {
   ): AsyncIterable<AskEvent> {
     yield { type: 'meta', engine: outcome.engine };
     let characters = 0;
-    for await (const draft of this.engine.answer(question, signal)) {
+    for await (const draft of this.engine.answer(
+      question,
+      signal,
+      () => answerMaxLength - characters,
+    )) {
       const sources = draft.sourceIds
         .map((id) => this.knowledge.get(id)?.source)
         .filter((source): source is AskSource => source !== undefined);

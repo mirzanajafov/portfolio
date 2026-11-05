@@ -5,7 +5,11 @@ export type DraftSentence = {
 
 export type AnswerEngine = {
   readonly name: string;
-  answer(question: string, signal: AbortSignal): AsyncIterable<DraftSentence>;
+  answer(
+    question: string,
+    signal: AbortSignal,
+    roomLeft: () => number,
+  ): AsyncIterable<DraftSentence>;
 };
 
 export const ANSWER_ENGINE = Symbol('ANSWER_ENGINE');
