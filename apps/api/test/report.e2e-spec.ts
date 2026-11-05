@@ -288,4 +288,66 @@ describe('the visitor report against a real database', () => {
     );
     expect(throughJson(report)).toEqual(report);
   });
+
+  it('gives each application its channel, variant, status and days to an answer, and tallies only those applied more than the guess window ago as old enough', async () => {
+    await prisma.application.createMany({
+      data: [
+        {
+          ...anApplication({ channel: 'referral', appliedOn: new Date('2026-09-01') }),
+          code: 'kxqt',
+          firstSeenOn: new Date('2026-09-02'),
+          status: 'interview',
+          answeredOn: new Date('2026-09-04'),
+        },
+        {
+          ...anApplication({ channel: 'referral', appliedOn: new Date('2026-09-17') }),
+          code: 'mpw7',
+        },
+        {
+          ...anApplication({ cvVariant: 'payments', appliedOn: new Date('2026-09-18') }),
+          code: 'k7mp',
+          status: 'rejected',
+          answeredOn: new Date('2026-09-18'),
+        },
+      ],
+    });
+    at('12:00:00');
+
+    const report = await reports.build(7);
+
+    expect(
+      report.applications.list.map(({ code, channel, cvVariant, status, daysToAnswer }) => ({
+        code,
+        channel,
+        cvVariant,
+        status,
+        daysToAnswer,
+      })),
+    ).toEqual([
+      {
+        code: 'k7mp',
+        channel: 'direct',
+        cvVariant: 'payments',
+        status: 'rejected',
+        daysToAnswer: 0,
+      },
+      { code: 'mpw7', channel: 'referral', cvVariant: 'base', status: 'sent', daysToAnswer: null },
+      {
+        code: 'kxqt',
+        channel: 'referral',
+        cvVariant: 'base',
+        status: 'interview',
+        daysToAnswer: 3,
+      },
+    ]);
+    expect(report.applications.byChannel).toEqual([
+      { name: 'referral', applications: 2, opened: 1, oldEnough: 2, answered: 1, medianDays: 3 },
+      { name: 'direct', applications: 1, opened: 0, oldEnough: 0, answered: 0, medianDays: null },
+    ]);
+    expect(report.applications.byVariant.map(({ name, oldEnough }) => [name, oldEnough])).toEqual([
+      ['base', 2],
+      ['payments', 0],
+    ]);
+    expect(throughJson(report)).toEqual(report);
+  });
 });
