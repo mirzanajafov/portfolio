@@ -51,10 +51,11 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  onModuleDestroy(): void {
+  async onModuleDestroy(): Promise<void> {
     for (const stop of this.stops) {
       stop();
     }
+    await this.pass;
   }
 
   sendDue(): Promise<void> {

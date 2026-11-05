@@ -78,7 +78,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
       TELEGRAM_BOT_TOKEN: 'test-token',
       TELEGRAM_CHAT_ID: '42',
     }));
-    sender().onModuleDestroy();
+    await sender().onModuleDestroy();
   });
 
   afterAll(async () => {
@@ -134,6 +134,23 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
 
     expect(bot.received).toEqual([]);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+  });
+
+  it('runs one pass at a time, so a failure ends it before a second pass tries the next alert', async () => {
+    await prisma.application.create({
+      data: {
+        code: 'k7mpx',
+        company: 'Wolt',
+        role: 'Backend Engineer',
+        appliedOn: new Date('2026-10-01'),
+      },
+    });
+    bot.replies.push({ status: 500, body: { ok: false } });
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendEvent(app, aCodedView({ ref: 'k7mpx' }), { ip: '198.51.100.4' }).expect(204);
+    await Promise.all([sendDue(), sendDue()]);
+
+    expect(bot.received).toHaveLength(1);
   });
 
   it('tries again a minute after a failure and sends the message once', async () => {
