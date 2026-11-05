@@ -118,7 +118,7 @@ export class AdminApplicationsController {
     }
     if (outcome.kind === 'refused') {
       throw new ConflictException({
-        message: `an application that is ${outcome.status} can't become that`,
+        message: `an application that is ${outcome.from} can't become ${outcome.to}`,
         allowed: outcome.allowed,
       });
     }

@@ -329,7 +329,10 @@ describe('admin sign-in against a real database', () => {
 
       const refused = await write('patch', '/memh', token, { status: 'screening' }).expect(409);
 
-      expect(refused.body).toMatchObject({ allowed: ['offer', 'rejected', 'withdrawn'] });
+      expect(refused.body).toMatchObject({
+        message: "an application that is interview can't become screening",
+        allowed: ['offer', 'rejected', 'withdrawn'],
+      });
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
         status: 'interview',
       });

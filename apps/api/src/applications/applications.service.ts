@@ -16,7 +16,7 @@ import { newCode } from './code.js';
 export type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
-  | { kind: 'refused'; status: Status; allowed: readonly Status[] }
+  | { kind: 'refused'; from: Status; to: Status; allowed: readonly Status[] }
   | { kind: 'invalid'; reason: string };
 
 export type UndoOutcome =
@@ -103,8 +103,9 @@ export class ApplicationsService {
         return { kind: 'missing' };
       }
       const status = edit.status ?? current.status;
-      if (status !== current.status && !nextStatuses(current.status).includes(status)) {
-        return { kind: 'refused', status: current.status, allowed: nextStatuses(current.status) };
+      const allowed = nextStatuses[current.status];
+      if (status !== current.status && !allowed.includes(status)) {
+        return { kind: 'refused', from: current.status, to: status, allowed };
       }
       const today = utcDay(inBaku(at));
       const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);

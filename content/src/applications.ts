@@ -17,7 +17,7 @@ export type Status = (typeof statuses)[number];
 export const cvVariantMaxLength = 100;
 export const notesMaxLength = 2000;
 
-const next: Record<Status, readonly Status[]> = {
+export const nextStatuses: Record<Status, readonly Status[]> = {
   sent: ['screening', 'interview', 'offer', 'rejected', 'withdrawn'],
   screening: ['interview', 'offer', 'rejected', 'withdrawn'],
   interview: ['offer', 'rejected', 'withdrawn'],
@@ -26,10 +26,6 @@ const next: Record<Status, readonly Status[]> = {
   rejected: [],
   withdrawn: [],
 };
-
-export function nextStatuses(status: Status): readonly Status[] {
-  return next[status];
-}
 
 export function isAnswer(from: Status, to: Status): boolean {
   return from === 'sent' && to !== 'sent' && to !== 'withdrawn';
