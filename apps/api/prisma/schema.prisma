@@ -213,7 +213,7 @@ model Alert {
 
 model GivenUpAlerts {
   day   DateTime @id @db.Date
-  count Int      @default(1)
+  count Int
 }
 
 model AdminLoginToken {

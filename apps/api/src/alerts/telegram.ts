@@ -9,7 +9,7 @@ export type Delivery =
 
 export const TELEGRAM = Symbol('TELEGRAM');
 
-const sendTimeoutMs = 10_000;
+const sendTimeoutMs = 5_000;
 
 const refusal = z.object({
   description: z.string().optional(),

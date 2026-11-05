@@ -12,7 +12,7 @@ CREATE TABLE "Alert" (
 
 CREATE TABLE "GivenUpAlerts" (
     "day" DATE NOT NULL,
-    "count" INTEGER NOT NULL DEFAULT 1,
+    "count" INTEGER NOT NULL,
 
     CONSTRAINT "GivenUpAlerts_pkey" PRIMARY KEY ("day")
 );

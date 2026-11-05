@@ -94,7 +94,7 @@ INSERT INTO "AdminLoginToken" ("hash", "expiresAt") VALUES (decode('01', 'hex'),
 INSERT INTO "AdminSession" ("hash", "expiresAt") VALUES (decode('02', 'hex'), now());
 INSERT INTO "Alert" ("id", "text", "nextAttemptAt")
 VALUES ('019a3b6e-0000-7000-8000-000000000006', 'Acme, Backend engineer: someone opened your link', now());
-INSERT INTO "GivenUpAlerts" ("day") VALUES (current_date);
+INSERT INTO "GivenUpAlerts" ("day", "count") VALUES (current_date, 1);
 SQL
 
 source_counts=$(counts portfolio)
