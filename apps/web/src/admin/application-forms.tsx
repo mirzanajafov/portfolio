@@ -161,6 +161,7 @@ export function UndoForm({
   return (
     <form action={action} className="flex flex-col items-start gap-2">
       <input type="hidden" name="from" value={status} />
+      <input type="hidden" name="to" value={undoTo} />
       <button
         type="submit"
         disabled={pending}

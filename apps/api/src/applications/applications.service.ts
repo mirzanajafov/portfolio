@@ -4,7 +4,7 @@ import { ClockService } from '../common/clock.service.js';
 import { bakuDay, dayOf, dayOrNull } from '../common/days.js';
 import { ApplicationField, Prisma, type Application } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { ApplicationEdit, NewApplication } from './application.schema.js';
+import type { ApplicationEdit, NewApplication, Undo } from './application.schema.js';
 import { newCode } from './code.js';
 
 type AddOutcome =
@@ -21,7 +21,7 @@ type EditOutcome =
 type UndoOutcome =
   | { kind: 'undone'; application: Application }
   | { kind: 'missing' }
-  | { kind: 'moved'; status: Status }
+  | { kind: 'out of date'; reason: string }
   | { kind: 'nothing to undo' };
 
 type Tracked = Pick<Application, ApplicationField>;
@@ -186,7 +186,7 @@ export class ApplicationsService {
     });
   }
 
-  undo(code: string, from: Status): Promise<UndoOutcome> {
+  undo(code: string, { from, to }: Undo): Promise<UndoOutcome> {
     const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
@@ -194,11 +194,17 @@ export class ApplicationsService {
         return { kind: 'missing' };
       }
       if (current.status !== from) {
-        return { kind: 'moved', status: current.status };
+        return {
+          kind: 'out of date',
+          reason: `the application is ${current.status} now, not ${from}`,
+        };
       }
       const restored = await statusBeforeLastMove(tx, current.id);
       if (!restored) {
         return { kind: 'nothing to undo' };
+      }
+      if (restored !== to) {
+        return { kind: 'out of date', reason: `an undo goes back to ${restored} now, not ${to}` };
       }
       const next: Tracked = {
         ...trackedOf(current),

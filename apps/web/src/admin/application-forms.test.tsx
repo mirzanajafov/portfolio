@@ -155,6 +155,6 @@ describe('UndoForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('so that undo is out of date');
     const [code, , form] = actions.undoStatus.mock.calls[0] ?? [];
-    expect([code, form?.get('from')]).toEqual(['memh', 'screening']);
+    expect([code, form?.get('from'), form?.get('to')]).toEqual(['memh', 'screening', 'sent']);
   });
 });

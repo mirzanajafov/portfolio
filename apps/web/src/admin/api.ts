@@ -45,6 +45,8 @@ export type ApplicationEditBody = Partial<{
   networks: string[];
 }>;
 
+export type UndoMove = { from: string; to: string };
+
 export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }
   | { kind: 'refused'; message: string }
@@ -206,7 +208,7 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
 function sending(
   method: 'POST' | 'PATCH',
   token: string,
-  body: NewApplicationBody | ApplicationEditBody | { from: string },
+  body: NewApplicationBody | ApplicationEditBody | UndoMove,
 ): RequestInit {
   return {
     method,
@@ -244,12 +246,12 @@ export async function undoStatusChange(
   apiUrl: string,
   token: string,
   code: string,
-  from: string,
+  move: UndoMove,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationWrite> {
   const response = await fetchImpl(
     `${apiUrl}/admin/applications/${code}/undo`,
-    sending('POST', token, { from }),
+    sending('POST', token, move),
   );
   return outcomeOf('an undo', response);
 }

@@ -135,18 +135,16 @@ export class AdminApplicationsController {
   async undo(
     @Req() { adminSession }: SignedInRequest,
     @Param('code', new ZodPipe(codeSchema)) code: string,
-    @Body(new ZodPipe(undoSchema)) { from }: Undo,
+    @Body(new ZodPipe(undoSchema)) expected: Undo,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    const outcome = await this.applications.undo(code, from);
+    const outcome = await this.applications.undo(code, expected);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
     }
-    if (outcome.kind === 'moved') {
-      throw new ConflictException(
-        `the application is ${outcome.status} now, not ${from}, so that undo is out of date`,
-      );
+    if (outcome.kind === 'out of date') {
+      throw new ConflictException(`${outcome.reason}, so that undo is out of date`);
     }
     if (outcome.kind === 'nothing to undo') {
       throw new ConflictException('there is no status change to undo');

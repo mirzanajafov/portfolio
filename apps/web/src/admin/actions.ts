@@ -195,7 +195,8 @@ export async function undoStatus(
   if (token === undefined) {
     return sessionEnded;
   }
-  const outcome = await undoStatusChange(apiUrl(), token, target, cleaned(form.get('from')));
+  const move = { from: cleaned(form.get('from')), to: cleaned(form.get('to')) };
+  const outcome = await undoStatusChange(apiUrl(), token, target, move);
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
     return null;
