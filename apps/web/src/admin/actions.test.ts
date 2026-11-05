@@ -191,6 +191,7 @@ describe('the application actions', () => {
     await expect(addApplication(null, form)).rejects.toThrow(
       'redirect to /admin/applications/memh',
     );
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
     expect(api.createApplication).toHaveBeenCalledWith('http://api:3201', session, {
       company: 'Acme',
       role: 'Backend Engineer',
@@ -236,6 +237,7 @@ describe('the application actions', () => {
 
     expect(await editApplication('memh', null, form)).toBeNull();
     expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
     expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
       version: 4,
       channel: 'referral',
@@ -266,6 +268,7 @@ describe('the application actions', () => {
       version: 4,
     });
     expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin');
   });
 
   it('shows the reason the API refused a write with what was typed, so the form can keep it', async () => {
@@ -275,7 +278,7 @@ describe('the application actions', () => {
     const state = await editApplication(
       'memh',
       null,
-      formOf({ notes: ' Called back ', status: 'offer' }),
+      formOf({ notes: ' Called back ', status: 'offer', version: '4' }),
     );
 
     expect(state?.failure).toBe('no move');
@@ -363,6 +366,17 @@ describe('the application actions', () => {
     await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
     expect(api.undoStatusChange).not.toHaveBeenCalled();
     expect(api.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it('is a 404 for an edit or an undo whose form carries no version it can read', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+
+    await expect(
+      editApplication('memh', null, editFormOf({ version: '', notes: 'Called back' })),
+    ).rejects.toThrow('not found');
+    await expect(undoStatus('memh', null, formOf({ version: 'one' }))).rejects.toThrow('not found');
+    expect(api.updateApplication).not.toHaveBeenCalled();
+    expect(api.undoStatusChange).not.toHaveBeenCalled();
   });
 
   it('is a 404 for an add from another origin', async () => {

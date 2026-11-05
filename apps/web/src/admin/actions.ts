@@ -6,7 +6,13 @@ import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiUrl } from '@/lib/forward-to-api';
-import { addFields, editFields, type FieldName, type FormValues } from './application-fields';
+import {
+  addFields,
+  clearableFields,
+  editFields,
+  type FieldName,
+  type FormValues,
+} from './application-fields';
 import { linkCookie, sessionCookie, tokenIn } from './cookies';
 import {
   createApplication,
@@ -117,13 +123,21 @@ function newApplicationIn(form: FormData): NewApplicationBody {
   };
 }
 
+function versionIn(form: FormData): number {
+  const version = cleaned(form.get('version'));
+  if (!/^\d+$/.test(version)) {
+    notFound();
+  }
+  return Number(version);
+}
+
 function editedValue(form: FormData, name: FieldName): string | string[] | null {
   if (name === 'networks') {
     return linesIn(form, name);
   }
   const value = textIn(form, name);
-  const hint = name === 'country' || name === 'city' || name === 'atsHost';
-  return hint && value === '' ? null : value;
+  const clearable = clearableFields.some((field) => field === name);
+  return clearable && value === '' ? null : value;
 }
 
 function editIn(form: FormData): ApplicationEditBody | null {
@@ -134,7 +148,7 @@ function editIn(form: FormData): ApplicationEditBody | null {
     return null;
   }
   return {
-    version: Number(cleaned(form.get('version'))),
+    version: versionIn(form),
     ...Object.fromEntries(changed.map((name) => [name, editedValue(form, name)])),
   };
 }
@@ -164,6 +178,7 @@ export async function addApplication(_state: FormState, form: FormData): Promise
   }
   const outcome = await createApplication(apiUrl(), token, newApplicationIn(form));
   if (outcome.kind === 'done') {
+    revalidatePath('/admin');
     redirect(`/admin/applications/${outcome.application.code}`);
   }
   return refused(failureOf(outcome, sessionEnded), form, addFields);
@@ -187,6 +202,7 @@ export async function editApplication(
   const outcome = await updateApplication(apiUrl(), token, target, edit);
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
+    revalidatePath('/admin');
     return null;
   }
   return refused(failureOf(outcome, applicationGone, changedElsewhere), form, editFields);
@@ -204,10 +220,11 @@ export async function undoStatus(
     return sessionEnded;
   }
   const outcome = await undoStatusChange(apiUrl(), token, target, {
-    version: Number(cleaned(form.get('version'))),
+    version: versionIn(form),
   });
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
+    revalidatePath('/admin');
     return null;
   }
   return failureOf(outcome, applicationGone, changedElsewhere);

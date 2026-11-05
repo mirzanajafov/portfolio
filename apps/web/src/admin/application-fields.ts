@@ -12,6 +12,8 @@ const sharedFields = [
   'networks',
 ] as const;
 
+export const clearableFields = ['country', 'city', 'atsHost'] as const;
+
 export const addFields = [...sharedFields, 'code'] as const;
 
 export const editFields = [...sharedFields, 'status', 'answeredOn', 'notes'] as const;
