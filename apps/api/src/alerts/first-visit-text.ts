@@ -1,12 +1,9 @@
 import { bakuTime } from '@portfolio/content/time';
 
-export type FirstPage = { path: string; demoName: string | null };
-
 export function firstVisitText(
   { company, role }: { company: string; role: string },
-  { path, demoName }: FirstPage,
+  firstPage: string,
   at: Date,
 ): string {
-  const first = demoName === null ? path : `the ${demoName} demo`;
-  return `${company}, ${role}: someone opened your link, first ${first}, at ${bakuTime(at)} Baku time.`;
+  return `${company}, ${role}: someone opened your link, first ${firstPage}, at ${bakuTime(at)} Baku time.`;
 }

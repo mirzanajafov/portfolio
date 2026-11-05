@@ -1,7 +1,26 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { backupDays, demoSites, readingBlocks } from './analytics.ts';
+import { backupDays, demoSites, pageNames, readingBlocks } from './analytics.ts';
 import { aCaseStudy, aProject, contentOf } from './testing.ts';
+
+describe('pageNames', () => {
+  it('names the fixed pages and the case study of every project that has one', async () => {
+    const content = await contentOf({
+      projects: [
+        aProject({ slug: 'shown', name: 'Shown', caseStudy: aCaseStudy() }),
+        aProject({ slug: 'listed', name: 'Listed', order: 2 }),
+      ],
+    });
+    expect(pageNames(content)).toEqual(
+      new Map([
+        ['/', 'the home page'],
+        ['/cv', 'the CV'],
+        ['/privacy', 'the privacy page'],
+        ['/projects/shown', 'the Shown case study'],
+      ]),
+    );
+  });
+});
 
 describe('readingBlocks', () => {
   it('lists the reading blocks of the home page and of every case study in page order', async () => {

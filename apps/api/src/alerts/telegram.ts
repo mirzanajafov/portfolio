@@ -42,7 +42,7 @@ export async function sendMessage(
     return { kind: 'failed', reason: reasonOf(error), retryAfterSeconds: null };
   }
   if (response.ok) {
-    await response.body?.cancel();
+    await response.body?.cancel().catch(() => undefined);
     return { kind: 'sent' };
   }
   const parsed = refusal.safeParse(await response.json().catch(() => null));

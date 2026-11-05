@@ -40,7 +40,7 @@ const message = (text: string) => ({
 });
 
 const firstCv =
-  'Xsolla, Backend Engineer: someone opened your link, first /cv, at 2026-10-02 16:00 Baku time.';
+  'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-10-02 16:00 Baku time.';
 
 const register = (prisma: PrismaService, code: string, company: string) =>
   prisma.application.create({
@@ -121,6 +121,17 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(bot.received).toEqual([
       message(
         'Xsolla, Backend Engineer: someone opened your link, first the Tuner demo, at 2026-10-02 16:00 Baku time.',
+      ),
+    ]);
+  });
+
+  it('names the first page by the site, never by the path the visitor sent', async () => {
+    await sendEvent(app, aCodedView({ path: '/evil.example/login', notFound: true })).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        "Xsolla, Backend Engineer: someone opened your link, first a page that isn't on the site, at 2026-10-02 16:00 Baku time.",
       ),
     ]);
   });

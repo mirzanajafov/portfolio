@@ -72,6 +72,20 @@ function caseStudyBlocks({ demo, demoCaption, decisions }: CaseStudy): string[] 
   ];
 }
 
+export function pageNames({ projects }: Content): Map<string, string> {
+  const names = new Map([
+    ['/', 'the home page'],
+    ['/cv', 'the CV'],
+    ['/privacy', 'the privacy page'],
+  ]);
+  for (const { slug, name, caseStudy } of projects) {
+    if (caseStudy) {
+      names.set(`/projects/${slug}`, `the ${name} case study`);
+    }
+  }
+  return names;
+}
+
 export function readingBlocks({ projects }: Content): Map<string, string[]> {
   const blocks = new Map([['/', [...projects.map(({ slug }) => slug), 'ask', 'experience']]]);
   for (const { slug, caseStudy } of projects) {
