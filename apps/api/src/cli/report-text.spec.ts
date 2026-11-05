@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuessedVisit, Report, VisitStory } from '@portfolio/content/report';
-import { aReport, anEntry, noOutcomes, someVisits } from '@portfolio/content/testing';
+import { aReport, aTally, anEntry, someApplications, someVisits } from '@portfolio/content/testing';
 import { reportText } from './report-text.js';
 
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
@@ -310,7 +310,7 @@ describe('reportText', () => {
   it("tells an application's coded visits, rolled up days, guesses and how well the guesses do", () => {
     const text = reportText(
       aReport({
-        applications: {
+        applications: someApplications({
           list: [
             anEntry({
               visits: [
@@ -367,22 +367,25 @@ describe('reportText', () => {
           unknownCodes: [
             { code: 'check1', visits: 2, firstSeen: new Date('2026-10-30T08:00:00Z') },
           ],
-        },
+        }),
       }),
       { all: false },
     );
     expect(text).toContain(
       [
         'Applications, every visit kept rather than only the period, times in Baku',
-        'Xsolla, Backend Engineer, applied 2026-10-29, code memh',
+        'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent',
         '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > tuner.najafov.dev/ 140 s (answered a question) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
         'Guesses checked on 3 coded visits to the site: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
-        'Unknown codes, first seen in Baku time',
-        '  check1: 2 visits, first 2026-10-30 12:00',
       ].join('\n'),
+    );
+    expect(text).toContain(
+      ['Unknown codes, first seen in Baku time', '  check1: 2 visits, first 2026-10-30 12:00'].join(
+        '\n',
+      ),
     );
   });
 
@@ -396,11 +399,9 @@ describe('reportText', () => {
   it('quotes each question a visit asked on its line, shows three unless asked for all, and keeps a line break from starting a new line', () => {
     const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
     const report = aReport({
-      applications: {
+      applications: someApplications({
         list: [anEntry({ visits: [aStory({ questions })] })],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
     });
 
     const short = reportText(report, { all: false });
@@ -413,7 +414,7 @@ describe('reportText', () => {
     const company = (name: string, role = 'Developer') => ({ company: name, role });
     const text = reportText(
       aReport({
-        applications: {
+        applications: someApplications({
           list: [
             anEntry({
               guesses: [
@@ -440,9 +441,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-          unknownCodes: [],
-        },
+        }),
       }),
       { all: false },
     );
@@ -453,7 +452,7 @@ describe('reportText', () => {
   it('names the role when a guess could be either of two applications to the same company', () => {
     const text = reportText(
       aReport({
-        applications: {
+        applications: someApplications({
           list: [
             anEntry({
               guesses: [
@@ -470,9 +469,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-          unknownCodes: [],
-        },
+        }),
       }),
       { all: false },
     );
@@ -490,16 +487,14 @@ describe('reportText', () => {
       daysAfter: 1,
     };
     const report = aReport({
-      applications: {
+      applications: someApplications({
         list: [anEntry({ guesses: [lowGuess] }), anEntry({ code: 'k7mpx', company: 'Wolt' })],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
     });
     const short = reportText(report, { all: false });
     expect(short).toContain('  low guesses not shown: 1, --all shows them');
     expect(short).toContain(
-      'Wolt, Backend Engineer, applied 2026-10-29, code k7mpx: no visits yet',
+      'Wolt, Backend Engineer, applied 2026-10-29, code k7mpx, direct, variant base, sent: no visits yet',
     );
     expect(reportText(report, { all: true })).toContain(
       '  possibly Xsolla, low (AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
@@ -508,30 +503,99 @@ describe('reportText', () => {
 
   it("says when an application's link was first opened, and how many alerts were given up", () => {
     const report = aReport({
-      applications: {
+      applications: someApplications({
         list: [
           anEntry({
             firstSeenOn: '2026-10-30',
             days: [{ day: '2026-10-30', visits: 1, views: 2 }],
           }),
         ],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
       alerts: { givenUp: 2 },
     });
     const text = reportText(report, { all: false });
     expect(text).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened 2026-10-30',
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent, first opened 2026-10-30',
     );
     expect(text).toContain('Telegram alerts given up in the period, not sent within 24 h: 2');
     expect(reportText(aReport(), { all: false })).not.toContain('given up');
   });
 
+  it('says how each application went out and when it was answered, and tallies them with counts below ten applications, a median from three answers and a dash before any is old enough', () => {
+    const report = aReport({
+      applications: someApplications({
+        byChannel: [
+          aTally('referral', {
+            applications: 3,
+            opened: 2,
+            oldEnough: 3,
+            answered: 2,
+            medianDays: 4,
+          }),
+          aTally('direct', {
+            applications: 12,
+            opened: 5,
+            oldEnough: 10,
+            answered: 3,
+            medianDays: 5,
+          }),
+        ],
+        byVariant: [
+          aTally('base', {
+            applications: 15,
+            opened: 7,
+            oldEnough: 13,
+            answered: 5,
+            medianDays: 6,
+          }),
+          aTally('payments'),
+        ],
+        list: [
+          anEntry({
+            channel: 'referral',
+            cvVariant: 'payments',
+            status: 'interview',
+            firstSeenOn: '2026-10-30',
+            daysToAnswer: 3,
+          }),
+          anEntry({ code: 'k7mp', status: 'rejected', daysToAnswer: 0 }),
+        ],
+      }),
+    });
+
+    const text = reportText(report, { all: false });
+
+    expect(text).toContain(
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, referral, variant payments, interview, first opened 2026-10-30, first answer after 3 days',
+    );
+    expect(text).toContain('code k7mp, direct, variant base, rejected, first answer the same day');
+    expect(text).toMatch(
+      /By channel\s+applications\s+link opened\s+applied over 14 days ago\s+answered, of those/,
+    );
+    expect(text).toMatch(/referral\s+3\s+2\s+3\s+2 of 3\s+-/);
+    expect(text).toMatch(/direct\s+12\s+5\s+10\s+30%\s+5/);
+    expect(text).toMatch(/base\s+15\s+7\s+13\s+38%\s+6/);
+    expect(text).toMatch(/payments\s+1\s+0\s+0\s+-\s+-/);
+  });
+
+  it('cuts a tally at ten rows like every other table unless asked for all', () => {
+    const variants = Array.from({ length: 12 }, (_, index) => aTally(`variant${String(index)}`));
+    const report = aReport({
+      applications: someApplications({ list: [anEntry()], byVariant: variants }),
+    });
+
+    const short = reportText(report, { all: false });
+
+    expect(short).toContain('variant9');
+    expect(short).not.toContain('variant10');
+    expect(short).toContain('and 2 more');
+    expect(reportText(report, { all: true })).toContain('variant11');
+  });
+
   it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {
     const twelve = Array.from({ length: 12 }, (_, index) => index);
     const report = aReport({
-      applications: {
+      applications: someApplications({
         list: twelve.map((index) =>
           anEntry({
             code: `code${String(index)}`,
@@ -539,13 +603,12 @@ describe('reportText', () => {
             visits: index === 0 ? twelve.map(() => aStory()) : [],
           }),
         ),
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: twelve.map((index) => ({
           code: `check${String(index)}`,
           visits: 1,
           firstSeen: new Date('2026-10-30T08:00:00Z'),
         })),
-      },
+      }),
     });
     const short = reportText(report, { all: false });
     expect(short).not.toContain('Company 10');

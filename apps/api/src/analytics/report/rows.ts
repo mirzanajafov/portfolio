@@ -1,3 +1,4 @@
+import type { Channel, Status } from '@portfolio/content/applications';
 import type { DayTotals } from '../day-totals.js';
 import type { DropReason } from '../visit-log.service.js';
 import type { VisitRow } from '../visits.js';
@@ -13,6 +14,10 @@ export type ApplicationRow = {
   atsHost: string | null;
   networks: string[];
   firstSeenOn: Date | null;
+  channel: Channel;
+  cvVariant: string;
+  status: Status;
+  answeredOn: Date | null;
 };
 
 export type RolledApplicationDay = {

@@ -85,6 +85,10 @@ export function anApplication(overrides: Partial<ApplicationRow> = {}): Applicat
     atsHost: null,
     networks: [],
     firstSeenOn: null,
+    channel: 'direct',
+    cvVariant: 'base',
+    status: 'sent',
+    answeredOn: null,
     ...overrides,
   };
 }

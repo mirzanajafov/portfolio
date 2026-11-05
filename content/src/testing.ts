@@ -7,7 +7,7 @@ import type { ApplicationPage, ApplicationView } from './applications.ts';
 import { caseStudiesIn } from './case-studies.ts';
 import type * as ContentModule from './index.ts';
 import { loadContent } from './load.ts';
-import type { ApplicationEntry, Report, Totals } from './report.ts';
+import type { ApplicationEntry, ApplicationTally, Report, Totals } from './report.ts';
 import { siteUrl } from './site.ts';
 import type {
   Content,
@@ -237,12 +237,36 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
-    applications: {
-      list: [],
-      score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-      unknownCodes: [],
-    },
+    applications: someApplications(),
     alerts: { givenUp: 0 },
+    ...overrides,
+  };
+}
+
+export function someApplications(
+  overrides: Partial<Report['applications']> = {},
+): Report['applications'] {
+  return {
+    list: [],
+    byChannel: [],
+    byVariant: [],
+    score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+    unknownCodes: [],
+    ...overrides,
+  };
+}
+
+export function aTally<Name extends string>(
+  name: Name,
+  overrides: Partial<Omit<ApplicationTally, 'name'>> = {},
+): ApplicationTally & { name: Name } {
+  return {
+    name,
+    applications: 1,
+    opened: 0,
+    oldEnough: 0,
+    answered: 0,
+    medianDays: null,
     ...overrides,
   };
 }
@@ -254,6 +278,10 @@ export function anEntry(overrides: Partial<ApplicationEntry> = {}): ApplicationE
     role: 'Backend Engineer',
     appliedOn: '2026-10-29',
     firstSeenOn: null,
+    channel: 'direct',
+    cvVariant: 'base',
+    status: 'sent',
+    daysToAnswer: null,
     visits: [],
     days: [],
     guesses: [],

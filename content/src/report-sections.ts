@@ -1,9 +1,11 @@
 import { alertHours, geolocationCredit } from './analytics.ts';
+import { guessWindowDays } from './applications.ts';
 import {
   quickExitSeconds,
   readSeconds,
   vitalBars,
   type ApplicationEntry,
+  type ApplicationTally,
   type Confidence,
   type GuessedVisit,
   type Outcome,
@@ -27,6 +29,8 @@ export type ReportSection = ReportPart[];
 const listLength = 10;
 const candidateLength = 3;
 const questionsInStory = 3;
+const fewestForShare = 10;
+const fewestAnswersForMedian = 3;
 const unprintable = /[\p{Cc}\p{Cf}]/gu;
 
 const sourceNames: Record<Source, string> = {
@@ -479,7 +483,8 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
   const firstOpened = application.firstSeenOn ? `, first opened ${application.firstSeenOn}` : '';
-  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}${firstOpened}`;
+  const answer = firstAnswerText(application.daysToAnswer);
+  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${firstOpened}${answer}`;
   const parts = [
     ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [
@@ -494,6 +499,50 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   return parts.length === 0
     ? [applicationLine(`${heading}: no visits yet`, code)]
     : [applicationLine(heading, code), ...parts];
+}
+
+function firstAnswerText(days: number | null): string {
+  if (days === null) {
+    return '';
+  }
+  return days === 0
+    ? ', first answer the same day'
+    : `, first answer after ${counted(days, 'day')}`;
+}
+
+function answeredCell({ answered, oldEnough }: ApplicationTally): string {
+  if (oldEnough === 0) {
+    return '-';
+  }
+  return oldEnough < fewestForShare
+    ? `${String(answered)} of ${String(oldEnough)}`
+    : share(answered, oldEnough);
+}
+
+function tallySection(
+  title: string,
+  tallies: readonly ApplicationTally[],
+  all: boolean,
+): ReportSection {
+  return section(
+    title,
+    [
+      'applications',
+      'link opened',
+      `applied over ${String(guessWindowDays)} days ago`,
+      'answered, of those',
+      'median days to an answer',
+    ],
+    tallies.map((tally) => [
+      tally.name,
+      String(tally.applications),
+      String(tally.opened),
+      String(tally.oldEnough),
+      answeredCell(tally),
+      tally.answered < fewestAnswersForMedian ? '-' : optional(tally.medianDays),
+    ]),
+    all,
+  );
 }
 
 function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>): string {
@@ -512,6 +561,8 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
           line(
             `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),
+          ...tallySection('By channel', applications.byChannel, all),
+          ...tallySection('By CV variant', applications.byVariant, all),
         ]),
     ...(unknownCodes.length > 0
       ? [

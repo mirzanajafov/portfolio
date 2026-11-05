@@ -283,6 +283,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       labels,
       askedIn(rows.questions),
       new Map(demos.map((demo) => [demo.slug, demo])),
+      now,
     ),
     alerts: {
       givenUp: rows.givenUpAlerts

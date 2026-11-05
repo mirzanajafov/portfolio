@@ -1,5 +1,6 @@
-import { dayOf, daysBetween } from '../common/days.js';
+import { dayOf } from '../common/days.js';
 import type { Application } from '../generated/prisma/client.js';
+import { daysToAnswer } from './days-to-answer.js';
 
 const header = [
   'company',
@@ -18,8 +19,7 @@ function field(value: string): string {
 }
 
 function rowOf(application: Application): string[] {
-  const { company, role, appliedOn, cvVariant, channel, code, status, answeredOn, notes } =
-    application;
+  const { company, role, appliedOn, cvVariant, channel, code, status, notes } = application;
   return [
     company,
     role,
@@ -28,7 +28,7 @@ function rowOf(application: Application): string[] {
     channel,
     code,
     status,
-    answeredOn === null ? '' : String(daysBetween(appliedOn, answeredOn)),
+    daysToAnswer(application)?.toString() ?? '',
     notes,
   ];
 }

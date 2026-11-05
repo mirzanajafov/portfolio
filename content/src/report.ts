@@ -1,5 +1,6 @@
 import * as z from 'zod/mini';
 import { analyticsDays } from './analytics.ts';
+import { channels, statuses } from './applications.ts';
 import { isoDate } from './time.ts';
 
 const sources = [
@@ -90,9 +91,22 @@ const applicationEntrySchema = z.object({
   role: z.string(),
   appliedOn: day,
   firstSeenOn: z.nullable(day),
+  channel: z.enum(channels),
+  cvVariant: z.string(),
+  status: z.enum(statuses),
+  daysToAnswer: z.nullable(z.number()),
   visits: z.array(visitStorySchema),
   days: z.array(z.object({ day, visits: z.number(), views: z.number() })),
   guesses: z.array(guessedVisitSchema),
+});
+
+const applicationTallySchema = z.object({
+  name: z.string(),
+  applications: z.number(),
+  opened: z.number(),
+  oldEnough: z.number(),
+  answered: z.number(),
+  medianDays: z.nullable(z.number()),
 });
 
 const ratingSchema = z.enum(['good', 'needs improvement', 'poor']);
@@ -203,6 +217,8 @@ export const reportSchema = z.object({
   filter: z.array(z.object({ day, bot: z.number(), limited: z.number(), origin: z.number() })),
   applications: z.object({
     list: z.array(applicationEntrySchema),
+    byChannel: z.array(z.extend(applicationTallySchema, { name: z.enum(channels) })),
+    byVariant: z.array(applicationTallySchema),
     score: z.object({
       visits: z.number(),
       unplaced: z.number(),
@@ -222,5 +238,6 @@ export type Outcome = keyof z.infer<typeof outcomesSchema>;
 export type VisitStory = z.infer<typeof visitStorySchema>;
 export type GuessedVisit = z.infer<typeof guessedVisitSchema>;
 export type ApplicationEntry = z.infer<typeof applicationEntrySchema>;
+export type ApplicationTally = z.infer<typeof applicationTallySchema>;
 export type Rating = z.infer<typeof ratingSchema>;
 export type Vital = z.infer<typeof vitalSchema>;
