@@ -558,11 +558,11 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
       : [
           line('Applications, every visit kept rather than only the period, times in Baku'),
           ...listed(list, all, (application) => applicationParts(application, all), false),
-          ...tallySection('By channel', applications.byChannel, all),
-          ...tallySection('By CV variant', applications.byVariant, all),
           line(
             `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),
+          ...tallySection('By channel', applications.byChannel, all),
+          ...tallySection('By CV variant', applications.byVariant, all),
         ]),
     ...(unknownCodes.length > 0
       ? [

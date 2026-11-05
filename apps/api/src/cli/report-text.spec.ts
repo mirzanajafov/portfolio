@@ -379,14 +379,13 @@ describe('reportText', () => {
         '  2026-10-30 15:00: / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
+        'Guesses checked on 3 coded visits to the site: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
       ].join('\n'),
     );
     expect(text).toContain(
-      [
-        'Guesses checked on 3 coded visits to the site: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
-        'Unknown codes, first seen in Baku time',
-        '  check1: 2 visits, first 2026-10-30 12:00',
-      ].join('\n'),
+      ['Unknown codes, first seen in Baku time', '  check1: 2 visits, first 2026-10-30 12:00'].join(
+        '\n',
+      ),
     );
   });
 
