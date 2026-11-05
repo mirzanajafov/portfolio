@@ -12,7 +12,8 @@ export function runEvery(
       return;
     }
     running = true;
-    task()
+    Promise.resolve()
+      .then(task)
       .finally(() => {
         running = false;
       })
