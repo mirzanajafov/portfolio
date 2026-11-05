@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
+import { ApplicationsService } from '../src/applications/applications.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { anApplication } from './applications.js';
 import { address } from './send-event.js';
@@ -274,6 +275,9 @@ describe('admin sign-in against a real database', () => {
       return token;
     };
 
+    const openConnections = (count: number) =>
+      Promise.all(Array.from({ length: count }, () => prisma.$executeRaw`SELECT pg_sleep(0.05)`));
+
     const history = async () =>
       (await prisma.applicationChange.findMany({ orderBy: { id: 'asc' } })).map(
         ({ field, before, after }) => [field, before, after],
@@ -336,6 +340,40 @@ describe('admin sign-in against a real database', () => {
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
         status: 'interview',
       });
+      await write('patch', '/memh', token, { status: 'rejected' }).expect(200);
+      const ended = await write('patch', '/memh', token, { status: 'offer' }).expect(409);
+      expect(ended.body).toMatchObject({ allowed: [] });
+    });
+
+    it('makes a move once when eight edits ask for it at the same time', async () => {
+      await signedIn();
+      const applications = app.get(ApplicationsService);
+      await openConnections(8);
+
+      await Promise.all(
+        Array.from({ length: 8 }, () => applications.edit('memh', { status: 'rejected' })),
+      );
+
+      expect(await history()).toEqual([
+        ['status', 'sent', 'rejected'],
+        ['answeredOn', null, '2026-10-02'],
+      ]);
+    });
+
+    it('takes a day as today once it has started in Baku, four hours before UTC', async () => {
+      const token = await signedIn();
+      clock.current = new Date('2026-10-02T21:00:00Z');
+
+      await write('post', '', token, { ...acme, code: 'kxqtz', appliedOn: '2026-10-03' }).expect(
+        201,
+      );
+      await write('post', '', token, { ...acme, code: 'mpw7r', appliedOn: '2026-10-04' }).expect(
+        400,
+      );
+      await write('patch', '/memh', token, {
+        status: 'screening',
+        answeredOn: '2026-10-03',
+      }).expect(200);
     });
 
     it('undoes the last status change with the answer day it set, and writes the undo to the history', async () => {
