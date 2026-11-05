@@ -426,6 +426,7 @@ describe('admin sign-in against a real database', () => {
       expect(edited.body).toMatchObject({ country: 'AZ' });
 
       await write('patch', '/memh', token, { country: 'AZE' }).expect(400);
+      await write('patch', '/memh', token, { country: 'ıe' }).expect(400);
       await write('patch', '/memh', token, { atsHost: 'my ats' }).expect(400);
       await write('patch', '/memh', token, { networks: [''] }).expect(400);
     });

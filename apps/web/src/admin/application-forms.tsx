@@ -89,7 +89,7 @@ function Fields({ values, choosing }: { values: FormValues; choosing: boolean })
       <Field label="CV variant">
         <input name="cvVariant" required defaultValue={values.cvVariant} className={input} />
       </Field>
-      <Field label="Country, as two capital letters">
+      <Field label="Country code, two letters">
         <input name="country" defaultValue={values.country} className={input} />
       </Field>
       <Field label="City">

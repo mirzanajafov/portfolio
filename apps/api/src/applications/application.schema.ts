@@ -9,8 +9,8 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 const country = z
   .string()
   .trim()
-  .toUpperCase()
-  .regex(/^[A-Z]{2}$/);
+  .regex(/^[a-z]{2}$/i)
+  .transform((value) => value.toUpperCase());
 
 const city = text(100);
 
