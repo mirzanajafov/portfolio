@@ -92,9 +92,16 @@ function validCode(code: string): string {
   return code;
 }
 
+function cleaned(value: FormDataEntryValue | null): string {
+  return typeof value === 'string' ? value.replaceAll('\r\n', '\n').trim() : '';
+}
+
 function textIn(form: FormData, name: FieldName): string {
-  const value = form.get(name);
-  return typeof value === 'string' ? value.trim() : '';
+  return cleaned(form.get(name));
+}
+
+function shownIn(form: FormData, name: FieldName): string {
+  return cleaned(form.get(`shown.${name}`));
 }
 
 function linesIn(form: FormData, name: FieldName): string[] {
@@ -127,21 +134,26 @@ function newApplicationIn(form: FormData): NewApplicationBody {
   };
 }
 
-function editIn(form: FormData): ApplicationEditBody {
-  const orNull = (name: FieldName) => textIn(form, name) || null;
+function editIn(form: FormData): ApplicationEditBody | null {
+  const changed = (name: FieldName) => textIn(form, name) !== shownIn(form, name);
+  if (!fieldNames.some(changed)) {
+    return null;
+  }
+  const text = (name: FieldName) => (changed(name) ? textIn(form, name) : undefined);
+  const hint = (name: FieldName) => (changed(name) ? textIn(form, name) || null : undefined);
   return {
-    company: textIn(form, 'company'),
-    role: textIn(form, 'role'),
-    appliedOn: textIn(form, 'appliedOn'),
-    channel: textIn(form, 'channel'),
-    cvVariant: textIn(form, 'cvVariant'),
-    status: textIn(form, 'status'),
-    answeredOn: textIn(form, 'answeredOn') || undefined,
-    notes: textIn(form, 'notes'),
-    country: orNull('country'),
-    city: orNull('city'),
-    atsHost: orNull('atsHost'),
-    networks: linesIn(form, 'networks'),
+    company: text('company'),
+    role: text('role'),
+    appliedOn: text('appliedOn'),
+    channel: text('channel'),
+    cvVariant: text('cvVariant'),
+    status: text('status'),
+    answeredOn: text('answeredOn'),
+    notes: text('notes'),
+    country: hint('country'),
+    city: hint('city'),
+    atsHost: hint('atsHost'),
+    networks: changed('networks') ? linesIn(form, 'networks') : undefined,
   };
 }
 
@@ -179,7 +191,11 @@ export async function editApplication(
   if (token === undefined) {
     return refused(sessionEnded, form);
   }
-  const outcome = await updateApplication(apiUrl(), token, target, editIn(form));
+  const edit = editIn(form);
+  if (!edit) {
+    return null;
+  }
+  const outcome = await updateApplication(apiUrl(), token, target, edit);
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
     return null;

@@ -66,10 +66,6 @@ function textOf(value: string | string[] | Date | null): string | null {
   return typeof value === 'string' ? value : dayOrNull(value);
 }
 
-function changedDay(day: Date | undefined, stored: Date | null): Date | undefined {
-  return day?.getTime() === stored?.getTime() ? undefined : day;
-}
-
 function appliedDayRefusal(
   day: Date | undefined,
   answeredOn: Date | null,
@@ -177,11 +173,9 @@ export class ApplicationsService {
         ...edit,
         answeredOn: edit.answeredOn ?? answered,
       };
-      const appliedOn = changedDay(edit.appliedOn, current.appliedOn);
-      const answeredOn = changedDay(edit.answeredOn, current.answeredOn);
       const refusal =
-        appliedDayRefusal(appliedOn, next.answeredOn, current.firstSeenOn, today) ??
-        answerDayRefusal(answeredOn, answered, next.appliedOn, today);
+        appliedDayRefusal(edit.appliedOn, next.answeredOn, current.firstSeenOn, today) ??
+        answerDayRefusal(edit.answeredOn, answered, next.appliedOn, today);
       if (refusal) {
         return { kind: 'invalid', reason: refusal };
       }

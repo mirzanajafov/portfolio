@@ -202,39 +202,57 @@ describe('the application actions', () => {
     });
   });
 
-  it('edits with every field of the form, clearing an emptied hint and leaving out an empty answer day, then shows the page as it now is', async () => {
+  const shown = {
+    company: 'Acme',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-30',
+    channel: 'direct',
+    cvVariant: 'base',
+    status: 'sent',
+    answeredOn: '',
+    notes: 'First line',
+    country: 'AZ',
+    city: '',
+    atsHost: '',
+    networks: 'ACME-NET',
+  };
+
+  function editFormOf(fields: Record<string, string>): FormData {
+    const asShown = Object.fromEntries(
+      Object.entries(shown).map(([name, value]) => [`shown.${name}`, value]),
+    );
+    return formOf({ ...shown, ...asShown, ...fields });
+  }
+
+  it('sends only what the edit changed, clearing an emptied hint, then shows the page as it now is', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.updateApplication.mockResolvedValue(done);
-    const form = formOf({
-      company: 'Acme',
-      role: 'Backend Engineer',
-      appliedOn: '2026-10-30',
+    const form = editFormOf({
       channel: 'referral',
-      cvVariant: 'base',
       status: 'screening',
-      answeredOn: '',
-      notes: 'Called back',
       country: '',
       city: 'Baku',
-      atsHost: '',
-      networks: '',
     });
 
     expect(await editApplication('memh', null, form)).toBeNull();
     expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
     expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
-      company: 'Acme',
-      role: 'Backend Engineer',
-      appliedOn: '2026-10-30',
       channel: 'referral',
-      cvVariant: 'base',
       status: 'screening',
-      notes: 'Called back',
       country: null,
       city: 'Baku',
-      atsHost: null,
-      networks: [],
     });
+  });
+
+  it('asks the API for nothing when nothing changed, and reads a CRLF the browser sent as the LF it was shown', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    const form = editFormOf({
+      notes: 'First line\r\nSecond line',
+      'shown.notes': 'First line\nSecond line',
+    });
+
+    expect(await editApplication('memh', null, form)).toBeNull();
+    expect(api.updateApplication).not.toHaveBeenCalled();
   });
 
   it('undoes the last move, clears an earlier refusal and shows the page as it now is', async () => {
@@ -279,7 +297,9 @@ describe('the application actions', () => {
 
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.updateApplication.mockResolvedValue({ kind: 'missing' });
-    expect((await editApplication('memh', null, formOf({})))?.failure).toBe(
+    expect(
+      (await editApplication('memh', null, editFormOf({ notes: 'Called back' })))?.failure,
+    ).toBe(
       'The session has ended or the application is gone. Run admin link for a new sign-in link.',
     );
     api.createApplication.mockResolvedValue({ kind: 'missing' });

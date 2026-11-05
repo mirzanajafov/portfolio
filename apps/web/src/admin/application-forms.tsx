@@ -129,10 +129,14 @@ export function EditApplicationForm({ application }: { application: ApplicationV
     editApplication.bind(null, application.code),
     null,
   );
-  const values = state?.values ?? storedValues(application);
+  const shown = storedValues(application);
+  const values = state?.values ?? shown;
   const choices: Status[] = [application.status, ...nextStatuses[application.status]];
   return (
     <form key={JSON.stringify(values)} action={action} className="grid gap-4 sm:grid-cols-2">
+      {Object.entries(shown).map(([name, value]) => (
+        <input key={name} type="hidden" name={`shown.${name}`} value={value} />
+      ))}
       <Field label="Status">
         <select name="status" defaultValue={values.status} className={input}>
           {choices.map((status) => (

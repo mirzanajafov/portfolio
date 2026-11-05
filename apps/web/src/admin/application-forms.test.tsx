@@ -87,6 +87,18 @@ describe('EditApplicationForm', () => {
     ).toHaveValue('ACME-NET\nACME-VPN');
   });
 
+  it('carries the values it showed, so the action can send only what changed', () => {
+    const { container } = render(
+      <EditApplicationForm
+        application={anApplicationPage({ status: 'interview', city: 'Baku' })}
+      />,
+    );
+
+    const shown = (name: string) =>
+      container.querySelector<HTMLInputElement>(`input[type=hidden][name="shown.${name}"]`)?.value;
+    expect([shown('status'), shown('city'), shown('country')]).toEqual(['interview', 'Baku', '']);
+  });
+
   it('leaves a final status with nowhere to go', () => {
     render(<EditApplicationForm application={anApplicationPage({ status: 'rejected' })} />);
 
