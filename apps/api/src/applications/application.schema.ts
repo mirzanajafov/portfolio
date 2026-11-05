@@ -6,7 +6,11 @@ const day = z.iso.date().transform((value) => new Date(value));
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
-const country = z.string().regex(/^[A-Z]{2}$/);
+const country = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{2}$/);
 
 const city = text(100);
 

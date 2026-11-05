@@ -419,10 +419,13 @@ describe('admin sign-in against a real database', () => {
       });
     });
 
-    it('refuses a hint it would refuse on registration', async () => {
+    it('takes a country in either case, and refuses a hint it would refuse on registration', async () => {
       const token = await signedInWithAcme();
 
-      await write('patch', '/memh', token, { country: 'az' }).expect(400);
+      const edited = await write('patch', '/memh', token, { country: ' az ' }).expect(200);
+      expect(edited.body).toMatchObject({ country: 'AZ' });
+
+      await write('patch', '/memh', token, { country: 'AZE' }).expect(400);
       await write('patch', '/memh', token, { atsHost: 'my ats' }).expect(400);
       await write('patch', '/memh', token, { networks: [''] }).expect(400);
     });
