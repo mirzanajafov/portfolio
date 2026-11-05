@@ -82,11 +82,11 @@ export class AdminApplicationsController {
 
   @Get(':code')
   async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<ApplicationPage> {
-    const application = await this.applications.find(code);
-    if (!application) {
+    const found = await this.applications.findWithUndo(code);
+    if (!found) {
       throw new NotFoundException();
     }
-    return { ...viewOf(application), undoTo: await this.applications.undoTo(application) };
+    return { ...viewOf(found.application), undoTo: found.undoTo };
   }
 
   @Post()
