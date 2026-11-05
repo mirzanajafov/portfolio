@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
-import { demoSites, pageNames } from '@portfolio/content/analytics';
+import { demoNames, pageNames } from '@portfolio/content/analytics';
 import { CONTENT } from '../content.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { firstVisitText } from './first-visit-text.js';
@@ -17,9 +17,7 @@ export class AlertsService {
     @Inject(TELEGRAM) private readonly telegram: Telegram | null,
     @Inject(CONTENT) content: Content,
   ) {
-    this.demoNames = new Map(
-      [...demoSites(content).values()].map(({ slug, name }) => [slug, `the ${name} demo`]),
-    );
+    this.demoNames = demoNames(content);
     this.pageNames = pageNames(content);
   }
 

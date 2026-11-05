@@ -73,6 +73,12 @@ function caseStudyBlocks({ demo, demoCaption, decisions }: CaseStudy): string[] 
   ];
 }
 
+export function demoNames(content: Content): Map<string, string> {
+  return new Map(
+    [...demoSites(content).values()].map(({ slug, name }) => [slug, `the ${name} demo`]),
+  );
+}
+
 export function pageNames({ projects }: Content): Map<string, string> {
   const names = new Map([
     ['/', 'the home page'],

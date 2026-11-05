@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { inBaku } from '@portfolio/content/time';
 import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -19,11 +19,46 @@ type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type:
 type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
 @Injectable()
-export class VisitLogService {
+export class VisitLogService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.backfillFirstVisits();
+  }
+
+  async backfillFirstVisits(): Promise<void> {
+    const unseen = await this.prisma.application.findMany({
+      where: { firstSeenOn: null },
+      select: { id: true, code: true, createdAt: true },
+    });
+    for (const { id, code, createdAt } of unseen) {
+      const [view, rolled] = await Promise.all([
+        this.prisma.pageView.findFirst({
+          where: { ref: code, createdAt: { gte: createdAt } },
+          orderBy: { createdAt: 'asc' },
+          select: { createdAt: true },
+        }),
+        this.prisma.dailyApplication.findFirst({
+          where: { applicationId: id, day: { gte: utcDay(createdAt) } },
+          orderBy: { day: 'asc' },
+          select: { day: true },
+        }),
+      ]);
+      const days = [
+        ...(view ? [utcDay(inBaku(view.createdAt))] : []),
+        ...(rolled ? [rolled.day] : []),
+      ];
+      if (days.length > 0) {
+        await this.prisma.application.updateMany({
+          where: { id, firstSeenOn: null },
+          data: { firstSeenOn: new Date(Math.min(...days.map((day) => day.getTime()))) },
+        });
+      }
+    }
+  }
 
   async recordView(
     event: EventOf<'view'>,

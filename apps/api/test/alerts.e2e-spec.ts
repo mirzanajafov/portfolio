@@ -1,10 +1,9 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
+import { VisitLogService } from '../src/analytics/visit-log.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
@@ -267,22 +266,9 @@ describe('first visits while alerts are off', () => {
   });
 });
 
-describe('the migration that adds firstSeenOn', () => {
+describe('first visits that older code recorded without noting them', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
-
-  const migration = readFileSync(
-    join(
-      import.meta.dirname,
-      '..',
-      'prisma',
-      'migrations',
-      '20261105100000_first_visit_alert',
-      'migration.sql',
-    ),
-    'utf8',
-  );
-  const backfill = migration.slice(migration.indexOf('UPDATE "Application"'));
 
   const registerOn = (code: string, createdAt = '2026-09-01T00:00:00Z') =>
     prisma.application.create({
@@ -337,7 +323,7 @@ describe('the migration that adds firstSeenOn', () => {
       },
     });
 
-    await prisma.$executeRawUnsafe(backfill);
+    await app.get(VisitLogService).backfillFirstVisits();
 
     expect(
       await prisma.application.findMany({
