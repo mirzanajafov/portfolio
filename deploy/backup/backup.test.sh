@@ -92,6 +92,9 @@ INSERT INTO "DailyDemo" ("day", "demo", "clicked", "fromSite", "clickedNotOpened
 VALUES (current_date - 31, 'tuner', 1, 1, 0, '[]', 0, '[]', '{10}');
 INSERT INTO "AdminLoginToken" ("hash", "expiresAt") VALUES (decode('01', 'hex'), now());
 INSERT INTO "AdminSession" ("hash", "expiresAt") VALUES (decode('02', 'hex'), now());
+INSERT INTO "Alert" ("id", "text", "nextAttemptAt")
+VALUES ('019a3b6e-0000-7000-8000-000000000006', 'Acme, Backend engineer: someone opened your link', now());
+INSERT INTO "GivenUpAlerts" ("day") VALUES (current_date);
 SQL
 
 source_counts=$(counts portfolio)
@@ -125,11 +128,12 @@ docker run --rm --network "$name" --volume "$name:/backups" --env PGHOST="$name-
   --env PGPASSWORD=test --entrypoint pg_restore "$name" --no-owner --single-transaction \
   --dbname restored "/backups/db/$dump"
 expected=$(echo "$source_counts" | awk '
-  $1 == "VisitorSalt" || $1 == "RateLimit" || $1 == "AdminLoginToken" || $1 == "AdminSession" { $2 = 0 }
+  $1 == "VisitorSalt" || $1 == "RateLimit" || $1 == "AdminLoginToken" || $1 == "AdminSession" ||
+    $1 == "Alert" { $2 = 0 }
   { print }')
 restored=$(counts restored)
 [ "$restored" = "$expected" ] ||
-  fail "a restore should bring back every table's rows except the four left out. Expected:
+  fail "a restore should bring back every table's rows except the five left out. Expected:
 $expected
 Restored:
 $restored"

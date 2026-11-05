@@ -98,6 +98,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       this.prisma.dailyClick.deleteMany(old),
       this.prisma.dailyDemo.deleteMany(old),
       this.prisma.droppedEvents.deleteMany(old),
+      this.prisma.givenUpAlerts.deleteMany(old),
     ]);
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AlertsService } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { dayOf } from './days.js';
@@ -18,7 +19,10 @@ type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
 @Injectable()
 export class VisitLogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly alerts: AlertsService,
+  ) {}
 
   async recordView(
     event: EventOf<'view'>,
@@ -26,25 +30,46 @@ export class VisitLogService {
     demo: string | null,
     at: Date,
   ): Promise<void> {
-    await this.prisma.visit.createMany({
-      data: [{ visitor: key, startedAt: at, ...visit }],
-      skipDuplicates: true,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.visit.createMany({
+        data: [{ visitor: key, startedAt: at, ...visit }],
+        skipDuplicates: true,
+      });
+      const { count } = await tx.pageView.createMany({
+        data: [
+          {
+            id: event.id,
+            createdAt: at,
+            visitor: key,
+            path: event.path,
+            notFound: event.notFound,
+            referrerHost: event.referrer,
+            ref: event.ref,
+            demo,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      if (count > 0 && event.ref !== undefined) {
+        await this.noteFirstVisit(tx, event.ref, { path: event.path, demo }, at);
+      }
     });
-    await this.prisma.pageView.createMany({
-      data: [
-        {
-          id: event.id,
-          createdAt: at,
-          visitor: key,
-          path: event.path,
-          notFound: event.notFound,
-          referrerHost: event.referrer,
-          ref: event.ref,
-          demo,
-        },
-      ],
-      skipDuplicates: true,
+  }
+
+  private async noteFirstVisit(
+    tx: Prisma.TransactionClient,
+    code: string,
+    firstPage: { path: string; demo: string | null },
+    at: Date,
+  ): Promise<void> {
+    const [application] = await tx.application.updateManyAndReturn({
+      where: { code, firstSeenAt: null },
+      data: { firstSeenAt: at },
+      select: { company: true, role: true },
     });
+    if (application) {
+      await this.alerts.queueFirstVisit(tx, application, firstPage, at);
+    }
   }
 
   async record(event: FollowUp, demo: string | null, at: Date): Promise<void> {

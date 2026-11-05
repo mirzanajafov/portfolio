@@ -3,6 +3,11 @@ import { z } from 'zod';
 
 const positive = (fallback: number) => z.coerce.number().int().positive().default(fallback);
 
+const unsetWhenEmpty = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().optional(),
+);
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -26,11 +31,21 @@ const envSchema = z
     EVENTS_PER_ADDRESS_10_MIN: positive(300),
     EVENTS_PER_ADDRESS_DAY: positive(3000),
     EVENTS_PER_DAY: positive(20_000),
+    TELEGRAM_API_URL: z.url().default('https://api.telegram.org'),
+    TELEGRAM_BOT_TOKEN: unsetWhenEmpty,
+    TELEGRAM_CHAT_ID: unsetWhenEmpty,
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.CLIENT_HASH_SECRET.length >= 32, {
     message: 'must be at least 32 characters in production',
     path: ['CLIENT_HASH_SECRET'],
-  });
+  })
+  .refine(
+    (env) => (env.TELEGRAM_BOT_TOKEN === undefined) === (env.TELEGRAM_CHAT_ID === undefined),
+    {
+      message: 'set both TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID, or neither',
+      path: ['TELEGRAM_CHAT_ID'],
+    },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 

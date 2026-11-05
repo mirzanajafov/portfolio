@@ -22,7 +22,7 @@ backup_database() {
   timeout --foreground "$DUMP_TIMEOUT" pg_dump --format=custom --no-privileges \
     --exclude-table-data='"VisitorSalt"' --exclude-table-data='"RateLimit"' \
     --exclude-table-data='"AdminLoginToken"' --exclude-table-data='"AdminSession"' \
-    --file="$partial"
+    --exclude-table-data='"Alert"' --file="$partial"
   pg_restore --list "$partial" > /dev/null
   mv "$partial" "$target"
   log "database $(du -h "$target" | cut -f1) $target"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnv, trustProxySetting } from './env.js';
+import { parseEnv, trustProxySetting, type Env } from './env.js';
 
 const base = {
   DATABASE_URL: 'postgresql://u:p@localhost:5442/db',
@@ -43,6 +43,31 @@ describe('parseEnv', () => {
     expect(() =>
       parseEnv({ ...base, NODE_ENV: 'production', CLIENT_HASH_SECRET: 'x'.repeat(32) }),
     ).not.toThrow();
+  });
+});
+
+describe('parseEnv for Telegram alerts', () => {
+  const bot = { TELEGRAM_BOT_TOKEN: '123:abc', TELEGRAM_CHAT_ID: '42' };
+  const telegramPair = (env: Env) => [env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID];
+
+  it('takes both the bot token and the chat id, or neither', () => {
+    expect(parseEnv({ ...base, ...bot })).toEqual(expect.objectContaining(bot));
+    expect(telegramPair(parseEnv(base))).toEqual([undefined, undefined]);
+  });
+
+  it.each([{ TELEGRAM_BOT_TOKEN: '123:abc' }, { TELEGRAM_CHAT_ID: '42' }])(
+    'refuses to start with only one of the two: %j',
+    (one) => {
+      expect(() => parseEnv({ ...base, ...one })).toThrow(
+        /TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID/,
+      );
+    },
+  );
+
+  it('reads an empty value as unset, the way Compose passes a variable the server does not have', () => {
+    expect(
+      telegramPair(parseEnv({ ...base, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' })),
+    ).toEqual([undefined, undefined]);
   });
 });
 

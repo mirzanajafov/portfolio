@@ -187,17 +187,33 @@ model DailyApplication {
 }
 
 model Application {
-  id        String             @id @default(uuid(7)) @db.Uuid
-  code      String             @unique
-  company   String
-  role      String
-  appliedOn DateTime           @db.Date
-  createdAt DateTime           @default(now())
-  country   String?
-  city      String?
-  atsHost   String?
-  networks  String[]
-  days      DailyApplication[]
+  id          String             @id @default(uuid(7)) @db.Uuid
+  code        String             @unique
+  company     String
+  role        String
+  appliedOn   DateTime           @db.Date
+  createdAt   DateTime           @default(now())
+  country     String?
+  city        String?
+  atsHost     String?
+  networks    String[]
+  firstSeenAt DateTime?
+  days        DailyApplication[]
+}
+
+model Alert {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  createdAt     DateTime @default(now())
+  text          String
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime
+
+  @@index([nextAttemptAt])
+}
+
+model GivenUpAlerts {
+  day   DateTime @id @db.Date
+  count Int      @default(1)
 }
 
 model AdminLoginToken {
