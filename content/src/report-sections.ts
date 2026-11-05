@@ -483,7 +483,7 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
   const firstOpened = application.firstSeenOn ? `, first opened ${application.firstSeenOn}` : '';
-  const answer = answerText(application.daysToAnswer);
+  const answer = firstAnswerText(application.daysToAnswer);
   const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${firstOpened}${answer}`;
   const parts = [
     ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
@@ -501,7 +501,7 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
     : [applicationLine(heading, code), ...parts];
 }
 
-function answerText(days: number | null): string {
+function firstAnswerText(days: number | null): string {
   if (days === null) {
     return '';
   }
@@ -510,7 +510,7 @@ function answerText(days: number | null): string {
     : `, first answer after ${counted(days, 'day')}`;
 }
 
-function answeredText({ answered, oldEnough }: ApplicationTally): string {
+function answeredCell({ answered, oldEnough }: ApplicationTally): string {
   if (oldEnough === 0) {
     return '-';
   }
@@ -538,7 +538,7 @@ function tallySection(
       String(tally.applications),
       String(tally.opened),
       String(tally.oldEnough),
-      answeredText(tally),
+      answeredCell(tally),
       tally.answered < fewestAnswersForMedian ? '-' : optional(tally.medianDays),
     ]),
     all,
