@@ -6,6 +6,7 @@ import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
 import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
+import { applicationsCsv } from '../applications/csv.js';
 import { dayOf } from '../common/days.js';
 import { ENV, type Env } from '../config/env.js';
 import { CliModule } from './cli.module.js';
@@ -42,6 +43,10 @@ async function runApplication(
     for (const { appliedOn, company, role, code } of await applications.list()) {
       process.stdout.write(`${dayOf(appliedOn)}  ${code}  ${company}, ${role}\n`);
     }
+    return 0;
+  }
+  if (command.name === 'application export') {
+    process.stdout.write(applicationsCsv(await applications.inOrderApplied()));
     return 0;
   }
   if (!env.CV_RENDER_TOKEN) {

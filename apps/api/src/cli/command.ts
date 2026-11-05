@@ -1,4 +1,5 @@
 import { analyticsDays, hostName, refCode } from '@portfolio/content/analytics';
+import { channels, cvVariantMaxLength } from '@portfolio/content/applications';
 import { reportDaysSchema } from '@portfolio/content/report';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ export type Command =
   | { name: 'report'; days: number; all: boolean }
   | { name: 'application add'; application: NewApplication }
   | { name: 'application list' }
+  | { name: 'application export' }
   | { name: 'application cv'; code: string }
   | { name: 'admin link' }
   | { name: 'admin revoke' };
@@ -15,8 +17,10 @@ export type Command =
 export const usage = `usage:
   cli.js report [--days <1-${String(analyticsDays)}>] [--all]
   cli.js application add --company <name> --role <title> --applied <yyyy-mm-dd>
+      --channel <${channels.join('|')}> --variant <cv build>
       [--code <code>] [--country <XX>] [--city <name>] [--ats <host>] [--network <name>]...
   cli.js application list
+  cli.js application export
   cli.js application cv <code>
   cli.js admin link
   cli.js admin revoke`;
@@ -35,6 +39,8 @@ const addOptions = {
   company: { type: 'string' },
   role: { type: 'string' },
   applied: { type: 'string' },
+  channel: { type: 'string' },
+  variant: { type: 'string' },
   code: { type: 'string' },
   country: { type: 'string' },
   city: { type: 'string' },
@@ -47,6 +53,8 @@ const newApplication = z
     company: z.string().trim().min(1),
     role: z.string().trim().min(1),
     applied: z.iso.date().transform((day) => new Date(day)),
+    channel: z.enum(channels),
+    variant: z.string().trim().min(1).max(cvVariantMaxLength),
     code: z.string().regex(refCode).optional(),
     country: z
       .string()
@@ -62,9 +70,10 @@ const newApplication = z
       .optional(),
     network: z.array(z.string().trim().min(1)).default([]),
   })
-  .transform(({ applied, ats, network, ...fields }): NewApplication => ({
+  .transform(({ applied, variant, ats, network, ...fields }): NewApplication => ({
     ...fields,
     appliedOn: applied,
+    cvVariant: variant,
     atsHost: ats,
     networks: network,
   }));
@@ -87,11 +96,11 @@ export function parseCommand(args: readonly string[]): Command {
     const { values } = parseArgs({ args: rest, options: addOptions });
     return { name: 'application add', application: valid(newApplication, values) };
   }
-  if (area === 'application' && name === 'list') {
+  if (area === 'application' && (name === 'list' || name === 'export')) {
     if (rest.length > 0) {
-      throw new Error('application list takes no arguments');
+      throw new Error(`application ${name} takes no arguments`);
     }
-    return { name: 'application list' };
+    return { name: `application ${name}` };
   }
   if (area === 'application' && name === 'cv') {
     const [code, ...extra] = rest;

@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -43,6 +44,7 @@ const firstCv =
 const register = (prisma: PrismaService, code: string, company: string) =>
   prisma.application.create({
     data: {
+      ...anApplication(),
       code,
       company,
       role: 'Backend Engineer',

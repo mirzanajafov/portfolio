@@ -2,25 +2,15 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { refCode } from '@portfolio/content/analytics';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  ApplicationsService,
-  type NewApplication,
-} from '../src/applications/applications.service.js';
+import { ApplicationsService } from '../src/applications/applications.service.js';
 import { newCode } from '../src/applications/code.js';
 import { CliModule } from '../src/cli/cli.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 
 vi.mock(import('../src/applications/code.js'), async (importOriginal) => {
   const original = await importOriginal();
   return { newCode: vi.fn(original.newCode) };
-});
-
-const anApplication = (overrides: Partial<NewApplication> = {}): NewApplication => ({
-  company: 'Acme',
-  role: 'Backend Engineer',
-  appliedOn: new Date('2026-10-30'),
-  networks: [],
-  ...overrides,
 });
 
 describe('applications against a real database', () => {

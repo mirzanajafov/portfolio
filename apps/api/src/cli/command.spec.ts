@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { parseCommand } from './command.js';
 
-const required = ['--company', 'Acme', '--role', 'Backend Engineer', '--applied', '2026-10-30'];
+const required = [
+  '--company',
+  'Acme',
+  '--role',
+  'Backend Engineer',
+  '--applied',
+  '2026-10-30',
+  '--channel',
+  'referral',
+  '--variant',
+  'base 2026-10-30',
+];
 
 describe('parseCommand', () => {
   it('turns the flags of application add into an application', () => {
@@ -29,6 +40,8 @@ describe('parseCommand', () => {
         company: 'Acme',
         role: 'Backend Engineer',
         appliedOn: new Date('2026-10-30'),
+        channel: 'referral',
+        cvVariant: 'base 2026-10-30',
         code: 'memh',
         country: 'AZ',
         city: 'Baku',
@@ -45,6 +58,8 @@ describe('parseCommand', () => {
         company: 'Acme',
         role: 'Backend Engineer',
         appliedOn: new Date('2026-10-30'),
+        channel: 'referral',
+        cvVariant: 'base 2026-10-30',
         networks: [],
       },
     });
@@ -101,6 +116,26 @@ describe('parseCommand', () => {
 
   it.each([
     ['without a role', ['application', 'add', '--company', 'Acme', '--applied', '2026-10-30']],
+    [
+      'without a channel',
+      [
+        'application',
+        'add',
+        '--company',
+        'Acme',
+        '--role',
+        'Dev',
+        '--applied',
+        '2026-10-30',
+        '--variant',
+        'base',
+      ],
+    ],
+    [
+      'with a channel career has no name for',
+      ['application', 'add', ...required, '--channel', 'friend'],
+    ],
+    ['with arguments export does not take', ['application', 'export', '--all']],
     [
       'with a country that is not two capital letters',
       ['application', 'add', ...required, '--country', 'az'],

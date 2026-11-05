@@ -7,6 +7,7 @@ import { ApplicationsService } from '../src/applications/applications.service.js
 import { CliModule } from '../src/cli/cli.module.js';
 import { runCli } from '../src/cli/run.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 
 vi.mock(import('../src/applications/code.js'), () => ({ newCode: () => 'k7mpx' }));
@@ -23,6 +24,10 @@ const addAcme = [
   'Backend Engineer',
   '--applied',
   '2026-10-30',
+  '--channel',
+  'direct',
+  '--variant',
+  'base',
 ];
 const stdoutIsTTY = process.stdout.isTTY;
 
@@ -111,13 +116,7 @@ describe('the CLI commands', () => {
   }
 
   function registerMemh() {
-    return applications.add({
-      company: 'Acme',
-      role: 'Backend Engineer',
-      appliedOn: new Date('2026-10-30'),
-      code: 'memh',
-      networks: [],
-    });
+    return applications.add(anApplication({ code: 'memh' }));
   }
 
   it('registers an application, prints its code and link, and writes the CV the site drew for that code', async () => {
@@ -150,6 +149,19 @@ describe('the CLI commands', () => {
     await registerMemh();
     expect((await cli('application', 'list')).stdout).toBe(
       '2026-10-30  memh  Acme, Backend Engineer\n',
+    );
+  });
+
+  it("exports the applications as career's CSV, in the order I applied", async () => {
+    await applications.add(
+      anApplication({ code: 'kxqtz', company: 'Wolt', appliedOn: new Date('2026-11-02') }),
+    );
+    await registerMemh();
+
+    expect((await cli('application', 'export')).stdout).toBe(
+      'company,role,date,cv_variant,channel,ref,status,days_to_first_answer,notes\n' +
+        'Acme,Backend Engineer,2026-10-30,base,direct,memh,sent,,\n' +
+        'Wolt,Backend Engineer,2026-11-02,base,direct,kxqtz,sent,,\n',
     );
   });
 
