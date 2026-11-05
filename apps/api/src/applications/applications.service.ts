@@ -82,12 +82,6 @@ export class ApplicationsService {
     });
   }
 
-  inOrderApplied(): Promise<Application[]> {
-    return this.prisma.application.findMany({
-      orderBy: [{ appliedOn: 'asc' }, { createdAt: 'asc' }],
-    });
-  }
-
   edit(code: string, edit: ApplicationEdit, at: Date): Promise<EditOutcome> {
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);

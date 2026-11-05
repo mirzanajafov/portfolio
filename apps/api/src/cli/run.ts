@@ -46,7 +46,7 @@ async function runApplication(
     return 0;
   }
   if (command.name === 'application export') {
-    process.stdout.write(applicationsCsv(await applications.inOrderApplied()));
+    process.stdout.write(applicationsCsv((await applications.list()).reverse()));
     return 0;
   }
   if (!env.CV_RENDER_TOKEN) {
