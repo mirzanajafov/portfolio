@@ -32,6 +32,13 @@ describe('parseEnv', () => {
     },
   );
 
+  it.each(['SITE_ORIGIN', 'TELEGRAM_API_URL'])(
+    'names %s when it is not a URL at all, instead of crashing on it',
+    (name) => {
+      expect(() => parseEnv({ ...base, [name]: 'not a url' })).toThrow(name);
+    },
+  );
+
   it('names every missing or broken variable at once, so a bad deploy fails on boot', () => {
     expect(() => parseEnv({ DATABASE_URL: 'mysql://x', ASK_PER_DAY: '-1' })).toThrow(
       /DATABASE_URL[\s\S]*CLIENT_HASH_SECRET[\s\S]*ASK_PER_DAY/,

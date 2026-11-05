@@ -3,6 +3,14 @@ import { z } from 'zod';
 
 const positive = (fallback: number) => z.coerce.number().int().positive().default(fallback);
 
+const origin = (example: string) =>
+  z
+    .url({ protocol: /^https?$/ })
+    .refine(
+      (url) => URL.canParse(url) && new URL(url).origin === url,
+      `must be an origin, such as ${example}`,
+    );
+
 const unsetWhenEmpty = z.preprocess(
   (value) => (value === '' ? undefined : value),
   z.string().optional(),
@@ -17,13 +25,7 @@ const envSchema = z
     TRUST_PROXY: z.string().default('loopback'),
     GEO_DIR: z.string().optional(),
     WEB_URL: z.url().default('http://portfolio-web:3200'),
-    SITE_ORIGIN: z
-      .url({ protocol: /^https?$/ })
-      .refine(
-        (url) => new URL(url).origin === url,
-        'must be an origin, such as https://najafov.dev',
-      )
-      .default(new URL(siteUrl).origin),
+    SITE_ORIGIN: origin('https://najafov.dev').default(new URL(siteUrl).origin),
     CV_RENDER_TOKEN: z.string().min(32).optional(),
     ASK_PER_CLIENT_10_MIN: positive(20),
     ASK_PER_CLIENT_DAY: positive(100),
@@ -31,13 +33,7 @@ const envSchema = z
     EVENTS_PER_ADDRESS_10_MIN: positive(300),
     EVENTS_PER_ADDRESS_DAY: positive(3000),
     EVENTS_PER_DAY: positive(20_000),
-    TELEGRAM_API_URL: z
-      .url()
-      .refine(
-        (url) => new URL(url).origin === url,
-        'must be an origin, such as https://api.telegram.org',
-      )
-      .default('https://api.telegram.org'),
+    TELEGRAM_API_URL: origin('https://api.telegram.org').default('https://api.telegram.org'),
     TELEGRAM_BOT_TOKEN: unsetWhenEmpty,
     TELEGRAM_CHAT_ID: unsetWhenEmpty,
   })
