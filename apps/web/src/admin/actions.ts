@@ -64,7 +64,7 @@ export type FormState = { failure: string; values: FormValues } | null;
 
 const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
 
-function registered(code: string): string {
+function validCode(code: string): string {
   if (!refCode.test(code)) {
     notFound();
   }
@@ -154,7 +154,7 @@ export async function editApplication(
   const failure =
     token === undefined
       ? sessionEnded
-      : failureOf(await updateApplication(apiUrl(), token, registered(code), editIn(form)));
+      : failureOf(await updateApplication(apiUrl(), token, validCode(code), editIn(form)));
   return { failure, values: valuesOf(form) };
 }
 
@@ -164,5 +164,5 @@ export async function undoStatus(code: string): Promise<string> {
   if (token === undefined) {
     return sessionEnded;
   }
-  return failureOf(await undoStatusChange(apiUrl(), token, registered(code)));
+  return failureOf(await undoStatusChange(apiUrl(), token, validCode(code)));
 }

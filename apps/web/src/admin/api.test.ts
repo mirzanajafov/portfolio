@@ -1,4 +1,4 @@
-import { anApplicationPage, aReport } from '@portfolio/content/testing';
+import { anApplicationPage, anApplicationView, aReport } from '@portfolio/content/testing';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createApplication,
@@ -138,8 +138,7 @@ describe('fetchReport', () => {
 
 describe('fetchApplications', () => {
   it('asks with the session as a bearer and reads the list, or null for a session the API refused', async () => {
-    const page = anApplicationPage();
-    const { undoTo: _, ...view } = page;
+    const view = anApplicationView();
     const fetchImpl = answering(200, [view]);
     expect(await fetchApplications(api, session, fetchImpl)).toEqual([view]);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -170,7 +169,7 @@ describe('fetchApplication', () => {
 });
 
 describe('the application writes', () => {
-  const { undoTo: _, ...view } = anApplicationPage();
+  const view = anApplicationView();
 
   it('sends the fields as JSON with the session as a bearer, to the route of each write', async () => {
     const fetchImpl = answering(200, view);

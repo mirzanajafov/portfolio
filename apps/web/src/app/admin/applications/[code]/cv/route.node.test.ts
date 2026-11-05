@@ -66,10 +66,8 @@ describe('GET /admin/applications/[code]/cv', () => {
   });
 
   it('fails rather than answers 404 when the API fails', async () => {
-    api.fetchApplication.mockRejectedValue(
-      new Error('the API answered 502 to an application check'),
-    );
+    api.fetchApplication.mockRejectedValue(new Error('the API answered 502 to an application'));
 
-    await expect(download('memh')).rejects.toThrow('the API answered 502 to an application check');
+    await expect(download('memh')).rejects.toThrow('the API answered 502 to an application');
   });
 });

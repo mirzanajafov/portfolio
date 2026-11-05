@@ -1,8 +1,8 @@
+import { anApplicationView } from '@portfolio/content/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addApplication, editApplication, signIn, signOut, undoStatus } from './actions';
 import { linkCookie, sessionCookie } from './cookies';
 import { request } from './testing';
-import { anApplicationPage } from '@portfolio/content/testing';
 import type {
   createApplication,
   endSession,
@@ -158,8 +158,7 @@ describe('signOut', () => {
 });
 
 describe('the application actions', () => {
-  const { undoTo: _, ...memh } = anApplicationPage();
-  const done = { kind: 'done', application: memh } as const;
+  const done = { kind: 'done', application: anApplicationView() } as const;
 
   function formOf(fields: Record<string, string>): FormData {
     const form = new FormData();

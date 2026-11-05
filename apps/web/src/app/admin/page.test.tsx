@@ -1,4 +1,4 @@
-import { anApplicationPage, aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
+import { anApplicationView, aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
@@ -125,12 +125,10 @@ describe('admin page', () => {
     );
   });
 
-  it('lists the applications above the report, each linked to its page, with a link to add one', async () => {
-    const { undoTo: _, ...answered } = anApplicationPage({
-      status: 'screening',
-      answeredOn: '2026-11-02',
-    });
-    api.fetchApplications.mockResolvedValue([answered]);
+  it('lists the applications, each linked to its page, with a link to add one', async () => {
+    api.fetchApplications.mockResolvedValue([
+      anApplicationView({ status: 'screening', answeredOn: '2026-11-02' }),
+    ]);
 
     render(await open());
 
