@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiUrl } from '@/lib/forward-to-api';
+import { addFields, editFields, type FieldName, type FormValues } from './application-fields';
 import { linkCookie, sessionCookie, tokenIn } from './cookies';
 import {
   createApplication,
@@ -57,26 +58,6 @@ export async function signOut(): Promise<void> {
   (await cookies()).delete(sessionCookie);
   redirect('/admin');
 }
-
-const sharedFields = [
-  'company',
-  'role',
-  'appliedOn',
-  'channel',
-  'cvVariant',
-  'country',
-  'city',
-  'atsHost',
-  'networks',
-] as const;
-
-const addFields = [...sharedFields, 'code'] as const;
-
-const editFields = [...sharedFields, 'status', 'answeredOn', 'notes'] as const;
-
-type FieldName = (typeof addFields)[number] | (typeof editFields)[number];
-
-export type FormValues = Partial<Record<FieldName, string>>;
 
 export type FormState = { failure: string; values: FormValues } | null;
 

@@ -7,13 +7,8 @@ import {
   type Status,
 } from '@portfolio/content/applications';
 import { useActionState, type ReactNode } from 'react';
-import {
-  addApplication,
-  editApplication,
-  undoStatus,
-  type FormState,
-  type FormValues,
-} from './actions';
+import { addApplication, editApplication, undoStatus, type FormState } from './actions';
+import { shownValues, type FormValues } from './application-fields';
 
 const input =
   'w-full min-w-0 rounded-lg border border-line bg-transparent px-3 py-2 outline-none focus:border-accent';
@@ -37,23 +32,6 @@ function Failure({ failure }: { failure: string | null }) {
       </p>
     )
   );
-}
-
-function storedValues(application: ApplicationView): FormValues {
-  return {
-    company: application.company,
-    role: application.role,
-    appliedOn: application.appliedOn,
-    channel: application.channel,
-    cvVariant: application.cvVariant,
-    status: application.status,
-    answeredOn: application.answeredOn ?? '',
-    notes: application.notes,
-    country: application.country ?? '',
-    city: application.city ?? '',
-    atsHost: application.atsHost ?? '',
-    networks: application.networks.join('\n'),
-  };
 }
 
 function Fields({ values, choosing }: { values: FormValues; choosing: boolean }) {
@@ -129,7 +107,7 @@ export function EditApplicationForm({ application }: { application: ApplicationV
     editApplication.bind(null, application.code),
     null,
   );
-  const shown = storedValues(application);
+  const shown = shownValues(application);
   const values = state?.values ?? shown;
   const choices: Status[] = [application.status, ...nextStatuses[application.status]];
   return (
