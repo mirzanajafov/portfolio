@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AlertsService } from '../alerts/alerts.service.js';
+import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { dayOf, utcDay } from './days.js';
@@ -60,7 +60,7 @@ export class VisitLogService {
   private async noteFirstVisit(
     tx: Prisma.TransactionClient,
     code: string,
-    firstPage: { path: string; demo: string | null },
+    firstView: FirstView,
     at: Date,
   ): Promise<void> {
     const [application] = await tx.application.updateManyAndReturn({
@@ -69,7 +69,7 @@ export class VisitLogService {
       select: { company: true, role: true },
     });
     if (application) {
-      await this.alerts.queueFirstVisit(tx, application, firstPage, at);
+      await this.alerts.queueFirstVisit(tx, application, firstView, at);
     }
   }
 

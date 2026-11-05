@@ -216,18 +216,18 @@ describe('first visits while alerts are off', () => {
     await app.close();
   });
 
-  it('gives up an alert left from when alerts were on', async () => {
+  it('gives up an alert left from when alerts were on, but not one a send has claimed', async () => {
     await startOverWithXsolla(prisma);
-    await prisma.alert.create({
-      data: {
-        text: 'Xsolla, Backend Engineer: someone opened your link',
-        createdAt: new Date('2026-10-01T11:59:59Z'),
-        nextAttemptAt: new Date('2026-10-01T12:00:00Z'),
-      },
+    const old = (nextAttemptAt: string) => ({
+      text: 'Xsolla, Backend Engineer: someone opened your link',
+      createdAt: new Date('2026-10-01T11:59:59Z'),
+      nextAttemptAt: new Date(nextAttemptAt),
     });
+    await prisma.alert.create({ data: old('2026-10-01T12:00:00Z') });
+    const claimed = await prisma.alert.create({ data: old('2026-10-02T12:00:30Z') });
     await app.get(AlertSenderService).giveUpOld();
 
-    expect(await prisma.alert.count()).toBe(0);
+    expect((await prisma.alert.findMany()).map(({ id }) => id)).toEqual([claimed.id]);
     expect(await prisma.givenUpAlerts.findMany()).toEqual([
       { day: new Date('2026-10-02'), count: 1 },
     ]);
@@ -259,9 +259,15 @@ describe('the migration that adds firstSeenOn', () => {
   );
   const backfill = migration.slice(migration.indexOf('UPDATE "Application"'));
 
-  const register = (code: string) =>
+  const register = (code: string, createdAt = '2026-09-01T00:00:00Z') =>
     prisma.application.create({
-      data: { code, company: code, role: 'Backend Engineer', appliedOn: new Date('2026-09-01') },
+      data: {
+        code,
+        company: code,
+        role: 'Backend Engineer',
+        appliedOn: new Date('2026-09-01'),
+        createdAt: new Date(createdAt),
+      },
     });
 
   const coded = (ref: string, createdAt: string) => ({
@@ -279,11 +285,12 @@ describe('the migration that adds firstSeenOn', () => {
     await app.close();
   });
 
-  it('sets each application already opened to its earliest coded view or rolled up day', async () => {
+  it('sets each application already opened to the day of its earliest coded view or rolled up day since it was registered', async () => {
     await prisma.$executeRaw`TRUNCATE "Visit", "PageView", "DailyApplication", "Application" CASCADE`;
     const rolled = await register('rolled');
     await register('viewed');
     await register('unopened');
+    await register('reused', '2026-10-04T12:00:00Z');
     await prisma.dailyApplication.create({
       data: { day: new Date('2026-09-20'), applicationId: rolled.id, visits: 1, views: 1 },
     });
@@ -298,6 +305,8 @@ describe('the migration that adds firstSeenOn', () => {
             coded('rolled', '2026-10-03T08:00:00Z'),
             coded('viewed', '2026-10-05T09:30:00Z'),
             coded('viewed', '2026-10-04T10:15:00Z'),
+            coded('reused', '2026-10-03T09:00:00Z'),
+            coded('reused', '2026-10-06T09:00:00Z'),
           ],
         },
       },
@@ -311,6 +320,7 @@ describe('the migration that adds firstSeenOn', () => {
         orderBy: { code: 'asc' },
       }),
     ).toEqual([
+      { code: 'reused', firstSeenOn: new Date('2026-10-06') },
       { code: 'rolled', firstSeenOn: new Date('2026-09-20') },
       { code: 'unopened', firstSeenOn: null },
       { code: 'viewed', firstSeenOn: new Date('2026-10-04') },

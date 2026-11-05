@@ -6,6 +6,8 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { firstVisitText } from './first-visit-text.js';
 import { TELEGRAM, type Telegram } from './telegram.js';
 
+export type FirstView = { path: string; demo: string | null };
+
 @Injectable()
 export class AlertsService {
   private readonly demoNames: Map<string, string>;
@@ -22,7 +24,7 @@ export class AlertsService {
   async queueFirstVisit(
     tx: Prisma.TransactionClient,
     application: { company: string; role: string },
-    { path, demo }: { path: string; demo: string | null },
+    { path, demo }: FirstView,
     at: Date,
   ): Promise<void> {
     if (!this.telegram) {

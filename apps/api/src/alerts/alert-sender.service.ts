@@ -34,6 +34,7 @@ function oldestSendable(now: Date): Date {
 export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(AlertSenderService.name);
   private readonly stops: (() => void)[] = [];
+  private pass: Promise<void> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -56,22 +57,18 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendDue(): Promise<void> {
-    const { telegram } = this;
-    if (!telegram) {
-      return;
-    }
-    let goOn = true;
-    while (goOn) {
-      goOn = await this.sendNext(telegram);
-    }
+  sendDue(): Promise<void> {
+    this.pass ??= this.sendUntilNoneDue().finally(() => {
+      this.pass = null;
+    });
+    return this.pass;
   }
 
   async giveUpOld(): Promise<void> {
     const now = this.clock.now();
     const givenUp = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.alert.deleteMany({
-        where: { createdAt: { lt: oldestSendable(now) } },
+        where: { createdAt: { lt: oldestSendable(now) }, nextAttemptAt: { lte: now } },
       });
       if (count > 0) {
         await tx.$executeRaw`
@@ -82,6 +79,17 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     });
     if (givenUp > 0) {
       this.log.warn(`gave up ${String(givenUp)} alerts not sent within ${String(alertHours)} h`);
+    }
+  }
+
+  private async sendUntilNoneDue(): Promise<void> {
+    const { telegram } = this;
+    if (!telegram) {
+      return;
+    }
+    let goOn = true;
+    while (goOn) {
+      goOn = await this.sendNext(telegram);
     }
   }
 
