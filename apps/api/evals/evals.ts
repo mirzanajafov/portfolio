@@ -1,4 +1,5 @@
 import type { Project } from '@portfolio/content';
+import type { GateReason } from '@portfolio/content/ask';
 import type { AskOutcome, AskService } from '../src/ask/ask.service.js';
 import type { Knowledge } from '../src/ask/knowledge.js';
 
@@ -7,11 +8,17 @@ type QuestionResult = {
   question: string;
   expected: string[];
   cited: string[];
+  withheld: GateReason[];
   hit: boolean;
   refused: boolean;
 };
 
-type AdversarialResult = { question: string; cited: string[]; refused: boolean };
+type AdversarialResult = {
+  question: string;
+  cited: string[];
+  withheld: GateReason[];
+  refused: boolean;
+};
 
 export type EvalReport = {
   engine: string;
@@ -45,7 +52,12 @@ export async function runEvals(
   const adversarialResults: AdversarialResult[] = [];
   for (const question of attacks) {
     const outcome = await answerOf(ask, question);
-    adversarialResults.push({ question, cited: citedBy(outcome), refused: outcome.refused });
+    adversarialResults.push({
+      question,
+      cited: citedBy(outcome),
+      withheld: outcome.withheld,
+      refused: outcome.refused,
+    });
   }
   const results: QuestionResult[] = [];
   for (const project of projects) {
@@ -58,6 +70,7 @@ export async function runEvals(
         question: question.question,
         expected,
         cited,
+        withheld: outcome.withheld,
         hit: cited.some(
           (id) =>
             expected.includes(id) ||
