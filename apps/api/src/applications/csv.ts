@@ -19,8 +19,7 @@ function field(value: string): string {
 }
 
 function rowOf(application: Application): string[] {
-  const { company, role, appliedOn, cvVariant, channel, code, status, answeredOn, notes } =
-    application;
+  const { company, role, appliedOn, cvVariant, channel, code, status, notes } = application;
   return [
     company,
     role,
@@ -29,7 +28,7 @@ function rowOf(application: Application): string[] {
     channel,
     code,
     status,
-    daysToAnswer({ appliedOn, answeredOn })?.toString() ?? '',
+    daysToAnswer(application)?.toString() ?? '',
     notes,
   ];
 }
