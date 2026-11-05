@@ -42,6 +42,7 @@ describe('application page', () => {
     expect(
       screen.getByText('Code memh, applied 2026-10-30, sent, link first opened 2026-11-01'),
     ).toBeVisible();
+    expect(screen.getByText('https://najafov.dev/?r=memh')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Download CV' })).toHaveAttribute(
       'href',
       '/admin/applications/memh/cv',

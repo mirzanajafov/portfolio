@@ -1,6 +1,8 @@
+import { siteUrl } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Fragment } from 'react';
 import { fetchApplication } from '@/admin/api';
 import { EditApplicationForm, UndoForm } from '@/admin/application-forms';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
@@ -34,6 +36,9 @@ export default async function EditApplicationPage({
           Code {code}, applied {application.appliedOn}, {application.status}
           {opened}
         </p>
+        <p className="break-all">
+          Its links go to <span className="font-semibold">{`${siteUrl}/?r=${code}`}</span>
+        </p>
         <a
           href={`/admin/applications/${code}/cv`}
           className="self-start text-sm underline underline-offset-4"
@@ -41,8 +46,10 @@ export default async function EditApplicationPage({
           Download CV
         </a>
       </header>
-      {application.undoTo && <UndoForm code={code} undoTo={application.undoTo} />}
-      <EditApplicationForm key={JSON.stringify(application)} application={application} />
+      <Fragment key={JSON.stringify(application)}>
+        {application.undoTo && <UndoForm code={code} undoTo={application.undoTo} />}
+        <EditApplicationForm application={application} />
+      </Fragment>
     </main>
   );
 }
