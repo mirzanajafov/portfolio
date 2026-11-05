@@ -482,9 +482,9 @@ function guessText(guess: GuessedVisit, all: boolean): string {
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
-  const answer = answerText(application.daysToAnswer);
   const firstOpened = application.firstSeenOn ? `, first opened ${application.firstSeenOn}` : '';
-  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${answer}${firstOpened}`;
+  const answer = answerText(application.daysToAnswer);
+  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${firstOpened}${answer}`;
   const parts = [
     ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [

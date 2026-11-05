@@ -577,6 +577,7 @@ describe('reportText', () => {
             channel: 'referral',
             cvVariant: 'payments',
             status: 'interview',
+            firstSeenOn: '2026-10-30',
             daysToAnswer: 3,
           }),
           anEntry({ code: 'k7mp', status: 'rejected', daysToAnswer: 0 }),
@@ -589,7 +590,7 @@ describe('reportText', () => {
     const text = reportText(report, { all: false });
 
     expect(text).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, referral, variant payments, interview, first answer after 3 days',
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, referral, variant payments, interview, first opened 2026-10-30, first answer after 3 days',
     );
     expect(text).toContain('code k7mp, direct, variant base, rejected, first answer the same day');
     expect(text).toMatch(
