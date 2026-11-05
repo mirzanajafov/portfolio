@@ -148,8 +148,8 @@ export class ApplicationsService {
     return this.prisma.application.findUnique({ where: { code } });
   }
 
-  async undoTo({ id }: Application): Promise<Status | null> {
-    return (await statusBeforeLastMove(this.prisma, id)) ?? null;
+  undoTo({ id }: Application): Promise<Status | null> {
+    return statusBeforeLastMove(this.prisma, id);
   }
 
   list(): Promise<Application[]> {
@@ -221,7 +221,7 @@ async function lockedApplication(
 async function statusBeforeLastMove(
   tx: Prisma.TransactionClient,
   applicationId: string,
-): Promise<Status | undefined> {
+): Promise<Status | null> {
   const changes = await tx.applicationChange.findMany({
     where: { applicationId, field: 'status' },
     orderBy: { id: 'desc' },
@@ -234,10 +234,10 @@ async function statusBeforeLastMove(
     } else if (undoneSince > 0) {
       undoneSince -= 1;
     } else {
-      return statuses.find((status) => status === before);
+      return statuses.find((status) => status === before) ?? null;
     }
   }
-  return undefined;
+  return null;
 }
 
 async function record(
