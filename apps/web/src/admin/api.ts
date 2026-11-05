@@ -40,7 +40,6 @@ export type UndoBody = { version: number };
 export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }
   | { kind: 'refused'; message: string }
-  | { kind: 'conflict'; message: string }
   | { kind: 'stale'; message: string }
   | { kind: 'limited'; retryAfterSeconds: number }
   | { kind: 'missing' };
@@ -181,9 +180,9 @@ export function fetchApplication(
   );
 }
 
-const refusalKinds = new Map<number, 'refused' | 'conflict' | 'stale'>([
+const refusalKinds = new Map<number, 'refused' | 'stale'>([
   [400, 'refused'],
-  [409, 'conflict'],
+  [409, 'refused'],
   [412, 'stale'],
 ]);
 

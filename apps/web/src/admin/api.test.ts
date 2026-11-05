@@ -207,7 +207,7 @@ describe('the application writes', () => {
     });
     expect(
       await updateApplication(api, session, 'memh', undo, answering(409, { message: 'no move' })),
-    ).toEqual({ kind: 'conflict', message: 'no move' });
+    ).toEqual({ kind: 'refused', message: 'no move' });
     expect(
       await undoStatusChange(api, session, 'memh', undo, answering(412, { message: 'changed' })),
     ).toEqual({ kind: 'stale', message: 'changed' });
