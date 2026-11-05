@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuessedVisit, Report, VisitStory } from '@portfolio/content/report';
-import { aReport, anEntry, noOutcomes, someVisits } from '@portfolio/content/testing';
+import { aReport, anEntry, someApplications, someVisits } from '@portfolio/content/testing';
 import { reportText } from './report-text.js';
 
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
@@ -310,9 +310,7 @@ describe('reportText', () => {
   it("tells an application's coded visits, rolled up days, guesses and how well the guesses do", () => {
     const text = reportText(
       aReport({
-        applications: {
-          byChannel: [],
-          byVariant: [],
+        applications: someApplications({
           list: [
             anEntry({
               visits: [
@@ -369,7 +367,7 @@ describe('reportText', () => {
           unknownCodes: [
             { code: 'check1', visits: 2, firstSeen: new Date('2026-10-30T08:00:00Z') },
           ],
-        },
+        }),
       }),
       { all: false },
     );
@@ -398,13 +396,9 @@ describe('reportText', () => {
   it('quotes each question a visit asked on its line, shows three unless asked for all, and keeps a line break from starting a new line', () => {
     const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
     const report = aReport({
-      applications: {
-        byChannel: [],
-        byVariant: [],
+      applications: someApplications({
         list: [anEntry({ visits: [aStory({ questions })] })],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
     });
 
     const short = reportText(report, { all: false });
@@ -417,9 +411,7 @@ describe('reportText', () => {
     const company = (name: string, role = 'Developer') => ({ company: name, role });
     const text = reportText(
       aReport({
-        applications: {
-          byChannel: [],
-          byVariant: [],
+        applications: someApplications({
           list: [
             anEntry({
               guesses: [
@@ -446,9 +438,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-          unknownCodes: [],
-        },
+        }),
       }),
       { all: false },
     );
@@ -459,9 +449,7 @@ describe('reportText', () => {
   it('names the role when a guess could be either of two applications to the same company', () => {
     const text = reportText(
       aReport({
-        applications: {
-          byChannel: [],
-          byVariant: [],
+        applications: someApplications({
           list: [
             anEntry({
               guesses: [
@@ -478,9 +466,7 @@ describe('reportText', () => {
               ],
             }),
           ],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-          unknownCodes: [],
-        },
+        }),
       }),
       { all: false },
     );
@@ -498,13 +484,9 @@ describe('reportText', () => {
       daysAfter: 1,
     };
     const report = aReport({
-      applications: {
-        byChannel: [],
-        byVariant: [],
+      applications: someApplications({
         list: [anEntry({ guesses: [lowGuess] }), anEntry({ code: 'k7mpx', company: 'Wolt' })],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
     });
     const short = reportText(report, { all: false });
     expect(short).toContain('  low guesses not shown: 1, --all shows them');
@@ -518,18 +500,14 @@ describe('reportText', () => {
 
   it("says when an application's link was first opened, and how many alerts were given up", () => {
     const report = aReport({
-      applications: {
-        byChannel: [],
-        byVariant: [],
+      applications: someApplications({
         list: [
           anEntry({
             firstSeenOn: '2026-10-30',
             days: [{ day: '2026-10-30', visits: 1, views: 2 }],
           }),
         ],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
       alerts: { givenUp: 2 },
     });
     const text = reportText(report, { all: false });
@@ -542,7 +520,7 @@ describe('reportText', () => {
 
   it('says how each application went out and when it was answered, and tallies them with counts below ten applications, a median from three answers and a dash before any is old enough', () => {
     const report = aReport({
-      applications: {
+      applications: someApplications({
         byChannel: [
           {
             name: 'referral',
@@ -582,9 +560,7 @@ describe('reportText', () => {
           }),
           anEntry({ code: 'k7mp', status: 'rejected', daysToAnswer: 0 }),
         ],
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-        unknownCodes: [],
-      },
+      }),
     });
 
     const text = reportText(report, { all: false });
@@ -605,9 +581,7 @@ describe('reportText', () => {
   it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {
     const twelve = Array.from({ length: 12 }, (_, index) => index);
     const report = aReport({
-      applications: {
-        byChannel: [],
-        byVariant: [],
+      applications: someApplications({
         list: twelve.map((index) =>
           anEntry({
             code: `code${String(index)}`,
@@ -615,13 +589,12 @@ describe('reportText', () => {
             visits: index === 0 ? twelve.map(() => aStory()) : [],
           }),
         ),
-        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: twelve.map((index) => ({
           code: `check${String(index)}`,
           visits: 1,
           firstSeen: new Date('2026-10-30T08:00:00Z'),
         })),
-      },
+      }),
     });
     const short = reportText(report, { all: false });
     expect(short).not.toContain('Company 10');

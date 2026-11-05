@@ -1,4 +1,4 @@
-import { anApplicationView, aReport, anEntry, noOutcomes } from '@portfolio/content/testing';
+import { anApplicationView, aReport, anEntry, someApplications } from '@portfolio/content/testing';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
@@ -102,13 +102,9 @@ describe('admin page', () => {
   it('links each application in the report to its page', async () => {
     api.fetchReport.mockResolvedValue(
       aReport({
-        applications: {
-          byChannel: [],
-          byVariant: [],
+        applications: someApplications({
           list: [anEntry(), anEntry({ code: 'kxqtz', company: 'Wolt' })],
-          score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-          unknownCodes: [],
-        },
+        }),
       }),
     );
 

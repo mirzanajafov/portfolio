@@ -237,14 +237,21 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     audience: { devices: [], browsers: [], countries: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
-    applications: {
-      list: [],
-      byChannel: [],
-      byVariant: [],
-      score: { visits: 0, unplaced: 0, levels: noOutcomes() },
-      unknownCodes: [],
-    },
+    applications: someApplications(),
     alerts: { givenUp: 0 },
+    ...overrides,
+  };
+}
+
+export function someApplications(
+  overrides: Partial<Report['applications']> = {},
+): Report['applications'] {
+  return {
+    list: [],
+    byChannel: [],
+    byVariant: [],
+    score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+    unknownCodes: [],
     ...overrides,
   };
 }
