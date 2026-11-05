@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -36,7 +37,7 @@ import {
 } from '../applications/applications.service.js';
 import { clientAddress } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
-import { dayOf } from '../common/days.js';
+import { dayOf, dayOrNull } from '../common/days.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import type { Application } from '../generated/prisma/client.js';
 import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
@@ -86,10 +87,6 @@ const editBody = z
     notes: z.string().trim().max(notesMaxLength).optional(),
   })
   .refine((body) => Object.keys(body).length > 0, 'an edit changes at least one field');
-
-function dayOrNull(date: Date | null): string | null {
-  return date === null ? null : dayOf(date);
-}
 
 function viewOf({
   code,
@@ -207,6 +204,9 @@ export class AdminController {
     const outcome = await this.applications.edit(code, edit, this.clock.now());
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
+    }
+    if (outcome.kind === 'invalid') {
+      throw new BadRequestException(outcome.reason);
     }
     if (outcome.kind === 'refused') {
       throw new ConflictException({

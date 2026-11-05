@@ -32,5 +32,5 @@ export function nextStatuses(status: Status): readonly Status[] {
 }
 
 export function isAnswer(from: Status, to: Status): boolean {
-  return from === 'sent' && to !== 'withdrawn';
+  return from === 'sent' && to !== 'sent' && to !== 'withdrawn';
 }

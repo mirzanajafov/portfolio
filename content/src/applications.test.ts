@@ -29,6 +29,7 @@ describe('nextStatuses', () => {
 describe('isAnswer', () => {
   it('counts leaving sent as an answer, unless I withdrew before one came', () => {
     expect(isAnswer('sent', 'rejected')).toBe(true);
+    expect(isAnswer('sent', 'sent')).toBe(false);
     expect(isAnswer('sent', 'withdrawn')).toBe(false);
     expect(isAnswer('screening', 'interview')).toBe(false);
   });

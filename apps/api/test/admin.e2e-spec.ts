@@ -275,7 +275,7 @@ describe('admin sign-in against a real database', () => {
     };
 
     const history = async () =>
-      (await prisma.applicationChange.findMany({ orderBy: [{ at: 'asc' }, { field: 'asc' }] })).map(
+      (await prisma.applicationChange.findMany({ orderBy: { id: 'asc' } })).map(
         ({ field, before, after }) => [field, before, after],
       );
 
@@ -348,6 +348,51 @@ describe('admin sign-in against a real database', () => {
       ]);
     });
 
+    it('walks back through each status change, then has nothing left to undo', async () => {
+      const token = await signedIn();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+
+      const once = await write('post', '/memh/undo', token).expect(200);
+      const twice = await write('post', '/memh/undo', token).expect(200);
+
+      expect(once.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-02' });
+      expect(twice.body).toMatchObject({ status: 'sent', answeredOn: null });
+      await write('post', '/memh/undo', token).expect(409);
+    });
+
+    it('keeps an answer day I corrected when an undo lands on a status that still has an answer', async () => {
+      const token = await signedIn();
+      await write('patch', '/memh', token, { status: 'screening' }).expect(200);
+      await write('patch', '/memh', token, { answeredOn: '2026-10-01' }).expect(200);
+      await write('patch', '/memh', token, { status: 'interview' }).expect(200);
+
+      const undone = await write('post', '/memh/undo', token).expect(200);
+
+      expect(undone.body).toMatchObject({ status: 'screening', answeredOn: '2026-10-01' });
+    });
+
+    it('leaves a sent application unanswered when only its notes change', async () => {
+      const token = await signedIn();
+
+      const edited = await write('patch', '/memh', token, {
+        notes: 'Applied through the form.',
+      }).expect(200);
+
+      expect(edited.body).toMatchObject({ status: 'sent', answeredOn: null });
+    });
+
+    it('refuses an answer day on an application nobody answered, or before the day I applied', async () => {
+      const token = await signedIn();
+
+      await write('patch', '/memh', token, { answeredOn: '2026-10-02' }).expect(400);
+      await write('patch', '/memh', token, {
+        status: 'screening',
+        answeredOn: '2026-09-30',
+      }).expect(400);
+      expect(await history()).toEqual([]);
+    });
+
     it('says there is nothing to undo before the first status change', async () => {
       const token = await signedIn();
       await write('patch', '/memh', token, { notes: 'Applied through the form.' }).expect(200);
@@ -355,7 +400,7 @@ describe('admin sign-in against a real database', () => {
       await write('post', '/memh/undo', token).expect(409);
     });
 
-    it('is a 404 for a code nobody registered, and a 400 for an edit that changes nothing', async () => {
+    it('is a 404 for a code nobody registered, and a 400 for an empty edit', async () => {
       const token = await signedIn();
 
       await write('patch', '/kxqtz', token, { notes: 'x' }).expect(404);

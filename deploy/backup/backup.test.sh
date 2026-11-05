@@ -79,8 +79,8 @@ INSERT INTO "VisitorSalt" ("day", "salt") VALUES (current_date, decode('00', 'he
 INSERT INTO "DroppedEvents" ("day", "reason") VALUES (current_date, 'bot');
 INSERT INTO "Application" ("id", "code", "company", "role", "appliedOn", "channel", "cvVariant")
 VALUES ('019a3b6e-0000-7000-8000-000000000005', 'test1', 'Acme', 'Backend engineer', current_date - 40, 'direct', 'base');
-INSERT INTO "ApplicationChange" ("id", "applicationId", "at", "field", "before", "after")
-VALUES ('019a3b6e-0000-7000-8000-000000000007', '019a3b6e-0000-7000-8000-000000000005', now(), 'status', 'sent', 'screening');
+INSERT INTO "ApplicationChange" ("applicationId", "at", "field", "before", "after")
+VALUES ('019a3b6e-0000-7000-8000-000000000005', now(), 'status', 'sent', 'screening');
 INSERT INTO "DailyApplication" ("day", "applicationId", "visits", "views")
 VALUES (current_date - 31, '019a3b6e-0000-7000-8000-000000000005', 1, 1);
 INSERT INTO "DailyVisits" ("day", "visits", "pageViews", "phoneVisits", "quickExits")

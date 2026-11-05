@@ -19,3 +19,7 @@ export function mondayOf(date: Date): Date {
 export function dayOf(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+export function dayOrNull(date: Date | null): string | null {
+  return date === null ? null : dayOf(date);
+}

@@ -14,16 +14,17 @@ ALTER TABLE "Application" ALTER COLUMN "channel" DROP DEFAULT,
 ALTER COLUMN "cvVariant" DROP DEFAULT;
 
 CREATE TABLE "ApplicationChange" (
-    "id" UUID NOT NULL,
+    "id" SERIAL NOT NULL,
     "applicationId" UUID NOT NULL,
     "at" TIMESTAMP(3) NOT NULL,
     "field" "ApplicationField" NOT NULL,
     "before" TEXT,
     "after" TEXT,
+    "undo" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "ApplicationChange_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "ApplicationChange_applicationId_at_idx" ON "ApplicationChange"("applicationId", "at");
+CREATE INDEX "ApplicationChange_applicationId_id_idx" ON "ApplicationChange"("applicationId", "id");
 
 ALTER TABLE "ApplicationChange" ADD CONSTRAINT "ApplicationChange_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "Application"("id") ON DELETE CASCADE ON UPDATE CASCADE;

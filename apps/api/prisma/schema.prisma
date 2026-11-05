@@ -234,15 +234,16 @@ enum ApplicationField {
 }
 
 model ApplicationChange {
-  id            String           @id @default(uuid(7)) @db.Uuid
+  id            Int              @id @default(autoincrement())
   applicationId String           @db.Uuid
   application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   at            DateTime
   field         ApplicationField
   before        String?
   after         String?
+  undo          Boolean          @default(false)
 
-  @@index([applicationId, at])
+  @@index([applicationId, id])
 }
 
 model Alert {

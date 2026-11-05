@@ -7,8 +7,13 @@ import {
   type Status,
 } from '@portfolio/content/applications';
 import { inBaku } from '@portfolio/content/time';
-import { dayOf, utcDay } from '../common/days.js';
-import { Prisma, type Application, type ApplicationField } from '../generated/prisma/client.js';
+import { dayOrNull, utcDay } from '../common/days.js';
+import {
+  ApplicationField,
+  Prisma,
+  type Application,
+  type ApplicationChange,
+} from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { newCode } from './code.js';
 
@@ -38,36 +43,18 @@ export type ApplicationEdit = Partial<{
 export type EditOutcome =
   | { kind: 'edited'; application: Application }
   | { kind: 'missing' }
-  | { kind: 'refused'; status: Status; allowed: readonly Status[] };
+  | { kind: 'refused'; status: Status; allowed: readonly Status[] }
+  | { kind: 'invalid'; reason: string };
 
 export type UndoOutcome =
   { kind: 'undone'; application: Application } | { kind: 'missing' } | { kind: 'nothing to undo' };
 
-type Tracked = Pick<
-  Application,
-  'company' | 'role' | 'channel' | 'cvVariant' | 'status' | 'answeredOn' | 'notes'
->;
-
-type Change = { field: ApplicationField; before: string | null; after: string | null };
+type Tracked = Pick<Application, ApplicationField>;
 
 const maxDraws = 5;
 
-const trackedFields: ApplicationField[] = [
-  'company',
-  'role',
-  'channel',
-  'cvVariant',
-  'status',
-  'answeredOn',
-  'notes',
-];
-
 function isCodeTaken(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
-}
-
-function textOf(value: string | Date | null): string | null {
-  return value instanceof Date ? dayOf(value) : value;
 }
 
 function trackedOf({
@@ -82,15 +69,8 @@ function trackedOf({
   return { company, role, channel, cvVariant, status, answeredOn, notes };
 }
 
-function dayFrom(text: string | null): Date | null {
-  return text === null ? null : new Date(text);
-}
-
-function changesBetween(before: Tracked, after: Tracked): Change[] {
-  return trackedFields.flatMap((field) => {
-    const [was, is] = [textOf(before[field]), textOf(after[field])];
-    return was === is ? [] : [{ field, before: was, after: is }];
-  });
+function textOf(value: string | Date | null): string | null {
+  return typeof value === 'string' ? value : dayOrNull(value);
 }
 
 export class CodeTakenError extends Error {
@@ -146,18 +126,19 @@ export class ApplicationsService {
       if (status !== current.status && !nextStatuses(current.status).includes(status)) {
         return { kind: 'refused', status: current.status, allowed: nextStatuses(current.status) };
       }
-      const firstAnswer =
-        current.answeredOn === null && isAnswer(current.status, status) ? utcDay(inBaku(at)) : null;
+      const firstAnswer = isAnswer(current.status, status) ? utcDay(inBaku(at)) : null;
       const next: Tracked = {
-        company: edit.company ?? current.company,
-        role: edit.role ?? current.role,
-        channel: edit.channel ?? current.channel,
-        cvVariant: edit.cvVariant ?? current.cvVariant,
-        status,
-        answeredOn: edit.answeredOn ?? firstAnswer ?? current.answeredOn,
-        notes: edit.notes ?? current.notes,
+        ...trackedOf(current),
+        ...edit,
+        answeredOn: edit.answeredOn ?? current.answeredOn ?? firstAnswer,
       };
-      return { kind: 'edited', application: await record(tx, current, next, at) };
+      if (next.answeredOn && (next.status === 'sent' || next.answeredOn < current.appliedOn)) {
+        return {
+          kind: 'invalid',
+          reason: 'answeredOn needs a status past sent and a day no earlier than appliedOn',
+        };
+      }
+      return { kind: 'edited', application: await record(tx, current, next, at, false) };
     });
   }
 
@@ -167,23 +148,17 @@ export class ApplicationsService {
       if (!current) {
         return { kind: 'missing' };
       }
-      const last = await tx.applicationChange.findFirst({
-        where: { applicationId: current.id, field: 'status' },
-        orderBy: { at: 'desc' },
-      });
-      const restored = statuses.find((status) => status === last?.before);
-      if (!last || !restored) {
+      const undone = await lastUndoable(tx, current.id);
+      const restored = statuses.find((status) => status === undone?.before);
+      if (!restored) {
         return { kind: 'nothing to undo' };
       }
-      const answered = await tx.applicationChange.findFirst({
-        where: { applicationId: current.id, field: 'answeredOn', at: last.at },
-      });
       const next: Tracked = {
         ...trackedOf(current),
         status: restored,
-        answeredOn: answered ? dayFrom(answered.before) : current.answeredOn,
+        answeredOn: restored === 'sent' ? null : current.answeredOn,
       };
-      return { kind: 'undone', application: await record(tx, current, next, at) };
+      return { kind: 'undone', application: await record(tx, current, next, at, true) };
     });
   }
 }
@@ -196,18 +171,41 @@ async function lockedApplication(
   return tx.application.findUnique({ where: { code } });
 }
 
+async function lastUndoable(
+  tx: Prisma.TransactionClient,
+  applicationId: string,
+): Promise<ApplicationChange | undefined> {
+  const changes = await tx.applicationChange.findMany({
+    where: { applicationId, field: 'status' },
+    orderBy: { id: 'desc' },
+  });
+  let undoneSince = 0;
+  for (const change of changes) {
+    if (change.undo) {
+      undoneSince += 1;
+    } else if (undoneSince > 0) {
+      undoneSince -= 1;
+    } else {
+      return change;
+    }
+  }
+  return undefined;
+}
+
 async function record(
   tx: Prisma.TransactionClient,
   current: Application,
   next: Tracked,
   at: Date,
+  undo: boolean,
 ): Promise<Application> {
-  const changes = changesBetween(current, next);
+  const changes = Object.values(ApplicationField).flatMap((field) => {
+    const [before, after] = [textOf(current[field]), textOf(next[field])];
+    return before === after ? [] : [{ applicationId: current.id, at, field, before, after, undo }];
+  });
   if (changes.length === 0) {
     return current;
   }
-  await tx.applicationChange.createMany({
-    data: changes.map((change) => ({ applicationId: current.id, at, ...change })),
-  });
+  await tx.applicationChange.createMany({ data: changes });
   return tx.application.update({ where: { id: current.id }, data: next });
 }
