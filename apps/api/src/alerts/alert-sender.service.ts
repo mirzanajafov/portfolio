@@ -45,14 +45,7 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
       runEvery(giveUpEveryMs, 'giving up old alerts', () => this.giveUpOld(), this.log),
     );
     if (this.telegram) {
-      this.stops.push(
-        runEvery(
-          sendEveryMs,
-          'sending alerts',
-          () => (this.pass ? Promise.resolve() : this.sendDue()),
-          this.log,
-        ),
-      );
+      this.stops.push(runEvery(sendEveryMs, 'sending alerts', () => this.sendDue(), this.log));
     }
   }
 
