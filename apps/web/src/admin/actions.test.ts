@@ -285,16 +285,14 @@ describe('the application actions', () => {
     expect(state?.values).toMatchObject({ notes: 'Called back', status: 'offer', company: '' });
   });
 
-  it('says to reload when an edit or an undo met an application that had changed, but not when a new code is taken', async () => {
+  it('says to reload when an edit or an undo was made on an older version, and not for any other conflict', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
-    api.updateApplication.mockResolvedValue({
-      kind: 'conflict',
-      message: "an application that is rejected can't become screening",
-    });
-    api.undoStatusChange.mockResolvedValue({
-      kind: 'conflict',
+    const stale = {
+      kind: 'stale',
       message: 'the application changed since that page loaded',
-    });
+    } as const;
+    api.updateApplication.mockResolvedValue(stale);
+    api.undoStatusChange.mockResolvedValue(stale);
     api.createApplication.mockResolvedValue({
       kind: 'conflict',
       message: 'code memh already belongs to another application',
@@ -304,12 +302,9 @@ describe('the application actions', () => {
     const undone = await undoStatus('memh', null, formOf({ version: '4' }));
     const added = await addApplication(null, formOf({ company: 'Acme' }));
 
-    expect(edited?.failure).toBe(
-      "an application that is rejected can't become screening. Reload the page to see the application as it is now.",
-    );
-    expect(undone).toBe(
-      'the application changed since that page loaded. Reload the page to see the application as it is now.',
-    );
+    const reload =
+      'the application changed since that page loaded. Reload the page to see the application as it is now.';
+    expect([edited?.failure, undone]).toEqual([reload, reload]);
     expect(added?.failure).toBe('code memh already belongs to another application');
   });
 

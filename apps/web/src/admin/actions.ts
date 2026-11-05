@@ -69,8 +69,6 @@ export type FormState = { failure: string; values: FormValues } | null;
 
 const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
 
-const changedElsewhere = '. Reload the page to see the application as it is now.';
-
 const applicationGone =
   'The session has ended or the application is gone. Run admin link for a new sign-in link.';
 
@@ -153,19 +151,15 @@ function editIn(form: FormData): ApplicationEditBody | null {
   };
 }
 
-function failureOf(
-  outcome: Exclude<ApplicationWrite, { kind: 'done' }>,
-  missing: string,
-  afterConflict = '',
-): string {
+function failureOf(outcome: Exclude<ApplicationWrite, { kind: 'done' }>, missing: string): string {
   if (outcome.kind === 'missing') {
     return missing;
   }
   if (outcome.kind === 'limited') {
     return `Too many changes. Try again in ${inMinutes(outcome.retryAfterSeconds)}.`;
   }
-  if (outcome.kind === 'conflict') {
-    return `${outcome.message}${afterConflict}`;
+  if (outcome.kind === 'stale') {
+    return `${outcome.message}. Reload the page to see the application as it is now.`;
   }
   return outcome.message;
 }
@@ -205,7 +199,7 @@ export async function editApplication(
     revalidatePath('/admin');
     return null;
   }
-  return refused(failureOf(outcome, applicationGone, changedElsewhere), form, editFields);
+  return refused(failureOf(outcome, applicationGone), form, editFields);
 }
 
 export async function undoStatus(
@@ -227,5 +221,5 @@ export async function undoStatus(
     revalidatePath('/admin');
     return null;
   }
-  return failureOf(outcome, applicationGone, changedElsewhere);
+  return failureOf(outcome, applicationGone);
 }

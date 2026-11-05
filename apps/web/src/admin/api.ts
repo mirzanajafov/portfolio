@@ -41,6 +41,7 @@ export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }
   | { kind: 'refused'; message: string }
   | { kind: 'conflict'; message: string }
+  | { kind: 'stale'; message: string }
   | { kind: 'limited'; retryAfterSeconds: number }
   | { kind: 'missing' };
 
@@ -189,6 +190,9 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
   }
   if (response.status === 409) {
     return { kind: 'conflict', message: adminRefusalSchema.parse(await response.json()).message };
+  }
+  if (response.status === 412) {
+    return { kind: 'stale', message: adminRefusalSchema.parse(await response.json()).message };
   }
   if (response.status === 429) {
     return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };

@@ -200,7 +200,7 @@ describe('the application writes', () => {
     });
   });
 
-  it('reads the written application, the reason for a 400 or a 409, the wait of a 429, and a 404', async () => {
+  it('reads the written application, the reason for a 400, a 409 or a 412, the wait of a 429, and a 404', async () => {
     expect(await createApplication(api, session, acme, answering(201, view))).toEqual({
       kind: 'done',
       application: view,
@@ -208,6 +208,9 @@ describe('the application writes', () => {
     expect(
       await updateApplication(api, session, 'memh', undo, answering(409, { message: 'no move' })),
     ).toEqual({ kind: 'conflict', message: 'no move' });
+    expect(
+      await undoStatusChange(api, session, 'memh', undo, answering(412, { message: 'changed' })),
+    ).toEqual({ kind: 'stale', message: 'changed' });
     expect(
       await createApplication(api, session, acme, answering(400, { message: 'bad day' })),
     ).toEqual({
