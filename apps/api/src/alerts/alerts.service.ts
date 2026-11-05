@@ -8,6 +8,8 @@ import { TELEGRAM, type Telegram } from './telegram.js';
 
 export type FirstView = { path: string; demo: string | null; notFound: boolean };
 
+const offTheSite = "a page that isn't on the site";
+
 @Injectable()
 export class AlertsService {
   private readonly demoNames: Map<string, string>;
@@ -24,21 +26,20 @@ export class AlertsService {
   async queueFirstVisit(
     tx: Prisma.TransactionClient,
     application: { company: string; role: string },
-    { path, demo, notFound }: FirstView,
+    firstView: FirstView,
     at: Date,
   ): Promise<void> {
     if (!this.telegram) {
       return;
     }
-    const firstPage =
-      (demo === null ? this.pageNameOf(path, notFound) : this.demoNames.get(demo)) ??
-      "a page that isn't on the site";
-    await tx.alert.create({
-      data: { createdAt: at, nextAttemptAt: at, text: firstVisitText(application, firstPage, at) },
-    });
+    const text = firstVisitText(application, this.firstPageOf(firstView), at);
+    await tx.alert.create({ data: { createdAt: at, nextAttemptAt: at, text } });
   }
 
-  private pageNameOf(path: string, notFound: boolean): string | undefined {
-    return notFound ? undefined : this.pageNames.get(path);
+  private firstPageOf({ path, demo, notFound }: FirstView): string {
+    if (demo !== null) {
+      return this.demoNames.get(demo) ?? offTheSite;
+    }
+    return notFound ? offTheSite : (this.pageNames.get(path) ?? offTheSite);
   }
 }

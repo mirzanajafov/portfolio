@@ -129,7 +129,12 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     if (retryAfterSeconds !== null) {
       const heldUntil = new Date(failedAt + retryAfterSeconds * 1000);
       await this.prisma.alert.updateMany({
-        where: { OR: [{ id: alert.id }, { nextAttemptAt: { lt: heldUntil } }] },
+        where: {
+          OR: [
+            { id: alert.id },
+            { nextAttemptAt: { lt: heldUntil }, createdAt: { gte: oldestSendable(now) } },
+          ],
+        },
         data: { nextAttemptAt: heldUntil },
       });
       this.log.warn(
