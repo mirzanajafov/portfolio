@@ -579,6 +579,7 @@ describe('reportText', () => {
             status: 'interview',
             daysToAnswer: 3,
           }),
+          anEntry({ code: 'k7mp', status: 'rejected', daysToAnswer: 0 }),
         ],
         score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: [],
@@ -590,6 +591,7 @@ describe('reportText', () => {
     expect(text).toContain(
       'Xsolla, Backend Engineer, applied 2026-10-29, code memh, referral, variant payments, interview, first answer after 3 days',
     );
+    expect(text).toContain('code k7mp, direct, variant base, rejected, first answer the same day');
     expect(text).toMatch(
       /By channel\s+applications\s+link opened\s+applied 14\+ days ago\s+answered, of those/,
     );

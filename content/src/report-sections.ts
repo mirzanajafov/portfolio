@@ -481,10 +481,7 @@ function guessText(guess: GuessedVisit, all: boolean): string {
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
-  const answer =
-    application.daysToAnswer === null
-      ? ''
-      : `, first answer after ${counted(application.daysToAnswer, 'day')}`;
+  const answer = answerText(application.daysToAnswer);
   const firstOpened = application.firstSeenOn ? `, first opened ${application.firstSeenOn}` : '';
   const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}, ${application.channel}, variant ${application.cvVariant}, ${application.status}${answer}${firstOpened}`;
   const parts = [
@@ -501,6 +498,15 @@ function applicationParts(application: ApplicationEntry, all: boolean): ReportPa
   return parts.length === 0
     ? [applicationLine(`${heading}: no visits yet`, code)]
     : [applicationLine(heading, code), ...parts];
+}
+
+function answerText(days: number | null): string {
+  if (days === null) {
+    return '';
+  }
+  return days === 0
+    ? ', first answer the same day'
+    : `, first answer after ${counted(days, 'day')}`;
 }
 
 function answeredText({ answered, oldEnough }: ApplicationTally): string {
