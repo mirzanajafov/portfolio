@@ -1,4 +1,4 @@
-import { geolocationCredit } from './analytics.ts';
+import { alertHours, geolocationCredit } from './analytics.ts';
 import {
   quickExitSeconds,
   readSeconds,
@@ -478,7 +478,10 @@ function guessText(guess: GuessedVisit, all: boolean): string {
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
-  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}`;
+  const firstOpened = application.firstSeen
+    ? `, first opened ${bakuTime(application.firstSeen)}`
+    : '';
+  const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}${firstOpened}`;
   const parts = [
     ...listed(application.visits, all, (visit) => [item(storyText(visit, all))]),
     ...listed(application.days, all, ({ day, visits, views }) => [
@@ -499,7 +502,7 @@ function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>)
   return `${confidence} ${String(outcomes.right)} right, ${String(outcomes.wrong)} wrong, ${String(outcomes.tied)} tied`;
 }
 
-function applications({ applications }: Report, all: boolean): ReportSection {
+function applications({ applications, alerts }: Report, all: boolean): ReportSection {
   const { list, score, unknownCodes } = applications;
   const { high, medium, low } = score.levels;
   return [
@@ -518,6 +521,13 @@ function applications({ applications }: Report, all: boolean): ReportSection {
           ...listed(unknownCodes, all, ({ code, visits, firstSeen }) => [
             item(`${code}: ${counted(visits, 'visit')}, first ${bakuTime(firstSeen)}`),
           ]),
+        ]
+      : []),
+    ...(alerts.givenUp > 0
+      ? [
+          line(
+            `Telegram alerts not sent within ${String(alertHours)} h and given up: ${String(alerts.givenUp)}`,
+          ),
         ]
       : []),
   ];

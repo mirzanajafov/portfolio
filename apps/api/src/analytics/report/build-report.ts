@@ -284,5 +284,10 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       askedIn(rows.questions),
       new Map(demos.map((demo) => [demo.slug, demo])),
     ),
+    alerts: {
+      givenUp: rows.givenUpAlerts
+        .filter(({ day }) => day >= from)
+        .reduce((sum, { count }) => sum + count, 0),
+    },
   };
 }

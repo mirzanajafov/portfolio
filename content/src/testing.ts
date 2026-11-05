@@ -216,6 +216,7 @@ export function aReport(overrides: Partial<Report> = {}): Report {
       score: { visits: 0, unplaced: 0, levels: noOutcomes() },
       unknownCodes: [],
     },
+    alerts: { givenUp: 0 },
     ...overrides,
   };
 }
@@ -226,6 +227,7 @@ export function anEntry(overrides: Partial<ApplicationEntry> = {}): ApplicationE
     company: 'Xsolla',
     role: 'Backend Engineer',
     appliedOn: '2026-10-29',
+    firstSeen: null,
     visits: [],
     days: [],
     guesses: [],

@@ -89,6 +89,7 @@ const applicationEntrySchema = z.object({
   company: z.string(),
   role: z.string(),
   appliedOn: day,
+  firstSeen: z.nullable(isoDate),
   visits: z.array(visitStorySchema),
   days: z.array(z.object({ day, visits: z.number(), views: z.number() })),
   guesses: z.array(guessedVisitSchema),
@@ -209,6 +210,7 @@ export const reportSchema = z.object({
     }),
     unknownCodes: z.array(z.object({ code: z.string(), visits: z.number(), firstSeen: isoDate })),
   }),
+  alerts: z.object({ givenUp: z.number() }),
 });
 
 export type Report = z.infer<typeof reportSchema>;
