@@ -526,7 +526,7 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
     ...(alerts.givenUp > 0
       ? [
           line(
-            `Telegram alerts not sent within ${String(alertHours)} h and given up: ${String(alerts.givenUp)}`,
+            `Telegram alerts given up in the period, not sent within ${String(alertHours)} h: ${String(alerts.givenUp)}`,
           ),
         ]
       : []),
