@@ -17,7 +17,25 @@ type SessionStart =
   | { kind: 'refused' }
   | { kind: 'limited'; retryAfterSeconds: number };
 
-export type ApplicationFields = Record<string, string | string[] | null>;
+export const applicationFieldNames = [
+  'company',
+  'role',
+  'appliedOn',
+  'channel',
+  'cvVariant',
+  'code',
+  'status',
+  'answeredOn',
+  'notes',
+  'country',
+  'city',
+  'atsHost',
+  'networks',
+] as const;
+
+export type ApplicationFieldName = (typeof applicationFieldNames)[number];
+
+export type ApplicationFields = Partial<Record<ApplicationFieldName, string | string[] | null>>;
 
 export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }

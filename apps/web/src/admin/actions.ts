@@ -12,6 +12,8 @@ import {
   startSession,
   undoStatusChange,
   updateApplication,
+  applicationFieldNames,
+  type ApplicationFieldName,
   type ApplicationFields,
   type ApplicationWrite,
 } from './api';
@@ -56,13 +58,11 @@ export async function signOut(): Promise<void> {
   redirect('/admin');
 }
 
-async function sessionToken(): Promise<string> {
-  const token = await tokenIn(sessionCookie);
-  if (token === undefined) {
-    notFound();
-  }
-  return token;
-}
+export type FormValues = Partial<Record<ApplicationFieldName, string>>;
+
+export type FormState = { failure: string; values: FormValues } | null;
+
+const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
 
 function registered(code: string): string {
   if (!refCode.test(code)) {
@@ -71,12 +71,16 @@ function registered(code: string): string {
   return code;
 }
 
-function textIn(form: FormData, name: string): string {
+function textIn(form: FormData, name: ApplicationFieldName): string {
   const value = form.get(name);
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function linesIn(form: FormData, name: string): string[] {
+function valuesOf(form: FormData): FormValues {
+  return Object.fromEntries(applicationFieldNames.map((name) => [name, textIn(form, name)]));
+}
+
+function linesIn(form: FormData, name: ApplicationFieldName): string[] {
   return textIn(form, name)
     .split('\n')
     .map((line) => line.trim())
@@ -84,27 +88,23 @@ function linesIn(form: FormData, name: string): string[] {
 }
 
 function newApplicationIn(form: FormData): ApplicationFields {
-  const given = (name: string) => {
-    const value = textIn(form, name);
-    return value === '' ? {} : { [name]: value };
-  };
+  const given = (name: ApplicationFieldName) => textIn(form, name) || undefined;
   return {
     company: textIn(form, 'company'),
     role: textIn(form, 'role'),
     appliedOn: textIn(form, 'appliedOn'),
     channel: textIn(form, 'channel'),
     cvVariant: textIn(form, 'cvVariant'),
-    ...given('code'),
-    ...given('country'),
-    ...given('city'),
-    ...given('atsHost'),
+    code: given('code'),
+    country: given('country'),
+    city: given('city'),
+    atsHost: given('atsHost'),
     networks: linesIn(form, 'networks'),
   };
 }
 
 function editIn(form: FormData): ApplicationFields {
-  const orNull = (name: string) => textIn(form, name) || null;
-  const answeredOn = textIn(form, 'answeredOn');
+  const orNull = (name: ApplicationFieldName) => textIn(form, name) || null;
   return {
     company: textIn(form, 'company'),
     role: textIn(form, 'role'),
@@ -112,7 +112,7 @@ function editIn(form: FormData): ApplicationFields {
     channel: textIn(form, 'channel'),
     cvVariant: textIn(form, 'cvVariant'),
     status: textIn(form, 'status'),
-    ...(answeredOn === '' ? {} : { answeredOn }),
+    answeredOn: textIn(form, 'answeredOn') || undefined,
     notes: textIn(form, 'notes'),
     country: orNull('country'),
     city: orNull('city'),
@@ -126,7 +126,7 @@ function failureOf(outcome: ApplicationWrite): string {
     redirect(`/admin/applications/${outcome.application.code}`);
   }
   if (outcome.kind === 'missing') {
-    notFound();
+    return 'The session has ended or the application is gone. Run admin link for a new sign-in link.';
   }
   if (outcome.kind === 'limited') {
     return `Too many changes. Try again in ${inMinutes(outcome.retryAfterSeconds)}.`;
@@ -134,24 +134,35 @@ function failureOf(outcome: ApplicationWrite): string {
   return outcome.message;
 }
 
-export async function addApplication(_failure: string | null, form: FormData): Promise<string> {
+export async function addApplication(_state: FormState, form: FormData): Promise<FormState> {
   await headersFromSite();
-  const token = await sessionToken();
-  return failureOf(await createApplication(apiUrl(), token, newApplicationIn(form)));
+  const token = await tokenIn(sessionCookie);
+  const failure =
+    token === undefined
+      ? sessionEnded
+      : failureOf(await createApplication(apiUrl(), token, newApplicationIn(form)));
+  return { failure, values: valuesOf(form) };
 }
 
 export async function editApplication(
   code: string,
-  _failure: string | null,
+  _state: FormState,
   form: FormData,
-): Promise<string> {
+): Promise<FormState> {
   await headersFromSite();
-  const token = await sessionToken();
-  return failureOf(await updateApplication(apiUrl(), token, registered(code), editIn(form)));
+  const token = await tokenIn(sessionCookie);
+  const failure =
+    token === undefined
+      ? sessionEnded
+      : failureOf(await updateApplication(apiUrl(), token, registered(code), editIn(form)));
+  return { failure, values: valuesOf(form) };
 }
 
 export async function undoStatus(code: string): Promise<string> {
   await headersFromSite();
-  const token = await sessionToken();
+  const token = await tokenIn(sessionCookie);
+  if (token === undefined) {
+    return sessionEnded;
+  }
   return failureOf(await undoStatusChange(apiUrl(), token, registered(code)));
 }

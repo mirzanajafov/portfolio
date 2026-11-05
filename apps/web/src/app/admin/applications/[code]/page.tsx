@@ -42,7 +42,7 @@ export default async function EditApplicationPage({
         </a>
       </header>
       {application.undoTo && <UndoForm code={code} undoTo={application.undoTo} />}
-      <EditApplicationForm application={application} />
+      <EditApplicationForm key={JSON.stringify(application)} application={application} />
     </main>
   );
 }

@@ -25,7 +25,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
 vi.mock('next/navigation', async () => (await import('./testing')).nextNavigation);
-vi.mock('./api', () => api);
+vi.mock(import('./api'), async (importOriginal) => ({ ...(await importOriginal()), ...api }));
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
   request.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
@@ -243,33 +243,49 @@ describe('the application actions', () => {
     expect(api.undoStatusChange).toHaveBeenCalledWith('http://api:3201', session, 'memh');
   });
 
-  it('shows the reason the API refused a write, and says how long to wait after too many', async () => {
+  it('shows the reason the API refused a write with what was typed, so the form can keep it', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.updateApplication.mockResolvedValue({ kind: 'refused', message: 'no move' });
-    expect(await editApplication('memh', null, formOf({}))).toBe('no move');
 
+    const state = await editApplication(
+      'memh',
+      null,
+      formOf({ notes: ' Called back ', status: 'offer' }),
+    );
+
+    expect(state?.failure).toBe('no move');
+    expect(state?.values).toMatchObject({ notes: 'Called back', status: 'offer', company: '' });
+  });
+
+  it('says how long to wait after too many changes', async () => {
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 600 });
+
     expect(await undoStatus('memh')).toBe('Too many changes. Try again in 10 minutes.');
   });
 
-  it('is a 404 when the API has no such application or session', async () => {
-    arriving('https://najafov.dev', { [sessionCookie.name]: session });
-    api.undoStatusChange.mockResolvedValue({ kind: 'missing' });
+  it('says the session has ended, keeping what was typed, when the cookie is gone or the API refuses the session', async () => {
+    arriving('https://najafov.dev', {});
+    const added = await addApplication(null, formOf({ company: 'Acme' }));
+    expect(added?.failure).toBe('The session has ended. Run admin link for a new sign-in link.');
+    expect(added?.values).toMatchObject({ company: 'Acme' });
+    expect(await undoStatus('memh')).toBe(
+      'The session has ended. Run admin link for a new sign-in link.',
+    );
+    expect(api.createApplication).not.toHaveBeenCalled();
 
-    await expect(undoStatus('memh')).rejects.toThrow('not found');
+    arriving('https://najafov.dev', { [sessionCookie.name]: session });
+    api.updateApplication.mockResolvedValue({ kind: 'missing' });
+    expect((await editApplication('memh', null, formOf({})))?.failure).toBe(
+      'The session has ended or the application is gone. Run admin link for a new sign-in link.',
+    );
   });
 
   it.each([
-    ['from another origin', 'https://evil.example', { [sessionCookie.name]: session }, 'memh'],
-    ['without a session', 'https://najafov.dev', {}, 'memh'],
-    [
-      'for a code a link could not carry',
-      'https://najafov.dev',
-      { [sessionCookie.name]: session },
-      '../session',
-    ],
-  ])('is a 404 %s, before it asks the API', async (_, origin, cookies, code) => {
-    arriving(origin, cookies);
+    ['from another origin', 'https://evil.example', 'memh'],
+    ['for a code a link could not carry', 'https://najafov.dev', '../session'],
+  ])('is a 404 %s, before it asks the API', async (_, origin, code) => {
+    arriving(origin, { [sessionCookie.name]: session });
 
     await expect(undoStatus(code)).rejects.toThrow('not found');
     await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
@@ -277,10 +293,9 @@ describe('the application actions', () => {
     expect(api.updateApplication).not.toHaveBeenCalled();
   });
 
-  it('is a 404 for an add from another origin or without a session', async () => {
+  it('is a 404 for an add from another origin', async () => {
     arriving('https://evil.example', { [sessionCookie.name]: session });
-    await expect(addApplication(null, formOf({}))).rejects.toThrow('not found');
-    arriving('https://najafov.dev', {});
+
     await expect(addApplication(null, formOf({}))).rejects.toThrow('not found');
     expect(api.createApplication).not.toHaveBeenCalled();
   });

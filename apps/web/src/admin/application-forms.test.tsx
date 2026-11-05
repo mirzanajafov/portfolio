@@ -32,13 +32,23 @@ describe('AddApplicationForm', () => {
     expect(screen.getByRole('textbox', { name: 'City' })).not.toBeRequired();
   });
 
-  it('shows why the API refused it under the button', async () => {
-    actions.addApplication.mockResolvedValue('appliedOn 2026-11-07 is after today in Baku');
+  it('shows why the API refused it under the button, and keeps what was typed', async () => {
+    actions.addApplication.mockResolvedValue({
+      failure: 'appliedOn 2026-11-07 is after today in Baku',
+      values: {
+        company: 'Acme',
+        role: 'Backend Engineer',
+        appliedOn: '2026-11-07',
+        channel: 'referral',
+        cvVariant: 'base',
+        city: 'Baku',
+      },
+    });
     render(<AddApplicationForm />);
     await userEvent.type(screen.getByRole('textbox', { name: 'Company' }), 'Acme');
     await userEvent.type(screen.getByRole('textbox', { name: 'Role' }), 'Backend Engineer');
     await userEvent.type(screen.getByLabelText('Applied on'), '2026-11-07');
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Channel' }), 'direct');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Channel' }), 'referral');
     await userEvent.type(screen.getByRole('textbox', { name: 'CV variant' }), 'base');
 
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -46,6 +56,9 @@ describe('AddApplicationForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'appliedOn 2026-11-07 is after today in Baku',
     );
+    expect(screen.getByRole('textbox', { name: 'Company' })).toHaveValue('Acme');
+    expect(screen.getByRole('combobox', { name: 'Channel' })).toHaveValue('referral');
+    expect(screen.getByRole('textbox', { name: 'City' })).toHaveValue('Baku');
   });
 });
 
@@ -78,6 +91,44 @@ describe('EditApplicationForm', () => {
     render(<EditApplicationForm application={anApplicationPage({ status: 'rejected' })} />);
 
     expect(optionsOf('Status')).toEqual(['rejected']);
+  });
+
+  it('needs an answer day once one is set, since an answer day can be corrected but not taken back', () => {
+    const { unmount } = render(<EditApplicationForm application={anApplicationPage()} />);
+    expect(screen.getByLabelText('First answer on')).not.toBeRequired();
+    unmount();
+
+    render(
+      <EditApplicationForm
+        application={anApplicationPage({ status: 'screening', answeredOn: '2026-11-02' })}
+      />,
+    );
+    expect(screen.getByLabelText('First answer on')).toBeRequired();
+  });
+
+  it('keeps the status and notes it sent when the API refuses the save', async () => {
+    actions.editApplication.mockResolvedValue({
+      failure: 'answeredOn 2026-10-01 is before appliedOn 2026-10-30',
+      values: {
+        company: 'Acme',
+        role: 'Backend Engineer',
+        appliedOn: '2026-10-30',
+        channel: 'direct',
+        cvVariant: 'base',
+        status: 'screening',
+        answeredOn: '2026-10-01',
+        notes: 'Called back',
+      },
+    });
+    render(<EditApplicationForm application={anApplicationPage()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'answeredOn 2026-10-01 is before appliedOn 2026-10-30',
+    );
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('screening');
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('Called back');
   });
 });
 
