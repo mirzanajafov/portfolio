@@ -24,7 +24,7 @@ export type EvalReport = {
   results: QuestionResult[];
 };
 
-async function answerOf(ask: AskService, question: string): Promise<AskOutcome> {
+export async function answerOf(ask: AskService, question: string): Promise<AskOutcome> {
   const { events, outcome } = ask.answer(question, new AbortController().signal);
   for await (const event of events) {
     if (event.type === 'done') {

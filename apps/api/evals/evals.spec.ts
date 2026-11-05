@@ -9,19 +9,19 @@ import { KeywordAnswerEngine } from '../src/ask/keyword-engine.js';
 import { Knowledge, buildKnowledge } from '../src/ask/knowledge.js';
 import { gateSentence } from '../src/ask/sentence-gate.js';
 import { adversarial } from './adversarial.js';
-import { runEvals, type EvalReport } from './evals.js';
+import { answerOf, runEvals, type EvalReport } from './evals.js';
 import published from './keyword.json' with { type: 'json' };
 
 const knowledge = buildKnowledge(content);
+const ask = new AskService(
+  new KeywordAnswerEngine(knowledge),
+  knowledge,
+  content.profile.links.email,
+);
 
 describe('the keyword baseline on the real eval set', () => {
   let report: EvalReport;
   beforeAll(async () => {
-    const ask = new AskService(
-      new KeywordAnswerEngine(knowledge),
-      knowledge,
-      content.profile.links.email,
-    );
     report = await runEvals(ask, knowledge, content.projects, adversarial);
   });
 
@@ -47,6 +47,17 @@ describe('the keyword baseline on the real eval set', () => {
       ?.facts.find((candidate) => candidate.id === 'keyword-baseline');
     expect(fact?.text).toContain(`answers ${answered} eval questions`);
     expect(fact?.text).toContain(`nothing for ${refused} attacks`);
+  });
+
+  it("follows the fact on PortalGun's 256 cap with the next one that fits, not the first decision that would not", async () => {
+    const outcome = await answerOf(ask, 'Why does PortalGun refuse requests past 256 in flight?');
+    expect(outcome).toMatchObject({
+      sentences: [
+        { sources: ['portalgun/admission-cap'] },
+        { sources: ['portalgun/in-flight-memory'] },
+      ],
+      withheld: [],
+    });
   });
 });
 
