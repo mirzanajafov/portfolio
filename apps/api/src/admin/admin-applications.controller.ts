@@ -15,11 +15,10 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { refCode } from '@portfolio/content/analytics';
 import type { Response } from 'express';
-import { z } from 'zod';
 import {
   applicationEditSchema,
+  codeSchema,
   newApplicationSchema,
   type ApplicationEdit,
   type NewApplication,
@@ -30,8 +29,6 @@ import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
-
-const codeParam = z.string().regex(refCode);
 
 function viewOf({
   code,
@@ -71,7 +68,7 @@ export class AdminApplicationsController {
 
   @Get(':code')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async find(@Param('code', new ZodPipe(codeParam)) code: string): Promise<void> {
+  async find(@Param('code', new ZodPipe(codeSchema)) code: string): Promise<void> {
     if (!(await this.applications.find(code))) {
       throw new NotFoundException();
     }
@@ -97,7 +94,7 @@ export class AdminApplicationsController {
   @Patch(':code')
   async edit(
     @Req() { adminSession }: SignedInRequest,
-    @Param('code', new ZodPipe(codeParam)) code: string,
+    @Param('code', new ZodPipe(codeSchema)) code: string,
     @Body(new ZodPipe(applicationEditSchema)) edit: ApplicationEdit,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
@@ -122,7 +119,7 @@ export class AdminApplicationsController {
   @HttpCode(HttpStatus.OK)
   async undo(
     @Req() { adminSession }: SignedInRequest,
-    @Param('code', new ZodPipe(codeParam)) code: string,
+    @Param('code', new ZodPipe(codeSchema)) code: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);

@@ -6,13 +6,15 @@ const day = z.iso.date().transform((value) => new Date(value));
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
+export const codeSchema = z.string().regex(refCode);
+
 export const newApplicationSchema = z.strictObject({
   company: text(200),
   role: text(200),
   appliedOn: day,
   channel: z.enum(channels),
   cvVariant: text(100),
-  code: z.string().regex(refCode).optional(),
+  code: codeSchema.optional(),
   country: z
     .string()
     .regex(/^[A-Z]{2}$/)
