@@ -50,6 +50,10 @@ export class AnalyticsReportService {
               atsHost: true,
               networks: true,
               firstSeenOn: true,
+              channel: true,
+              cvVariant: true,
+              status: true,
+              answeredOn: true,
             },
           }),
           rolledApplications: await tx.dailyApplication.findMany({

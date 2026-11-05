@@ -90,9 +90,22 @@ const applicationEntrySchema = z.object({
   role: z.string(),
   appliedOn: day,
   firstSeenOn: z.nullable(day),
+  channel: z.string(),
+  cvVariant: z.string(),
+  status: z.string(),
+  daysToAnswer: z.nullable(z.number()),
   visits: z.array(visitStorySchema),
   days: z.array(z.object({ day, visits: z.number(), views: z.number() })),
   guesses: z.array(guessedVisitSchema),
+});
+
+const applicationTallySchema = z.object({
+  name: z.string(),
+  applications: z.number(),
+  opened: z.number(),
+  oldEnough: z.number(),
+  answered: z.number(),
+  medianDays: z.nullable(z.number()),
 });
 
 const ratingSchema = z.enum(['good', 'needs improvement', 'poor']);
@@ -203,6 +216,8 @@ export const reportSchema = z.object({
   filter: z.array(z.object({ day, bot: z.number(), limited: z.number(), origin: z.number() })),
   applications: z.object({
     list: z.array(applicationEntrySchema),
+    byChannel: z.array(applicationTallySchema),
+    byVariant: z.array(applicationTallySchema),
     score: z.object({
       visits: z.number(),
       unplaced: z.number(),
@@ -222,5 +237,6 @@ export type Outcome = keyof z.infer<typeof outcomesSchema>;
 export type VisitStory = z.infer<typeof visitStorySchema>;
 export type GuessedVisit = z.infer<typeof guessedVisitSchema>;
 export type ApplicationEntry = z.infer<typeof applicationEntrySchema>;
+export type ApplicationTally = z.infer<typeof applicationTallySchema>;
 export type Rating = z.infer<typeof ratingSchema>;
 export type Vital = z.infer<typeof vitalSchema>;

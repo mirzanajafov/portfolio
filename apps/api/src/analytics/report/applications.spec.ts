@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo } from '../testing.js';
+import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
@@ -14,7 +14,7 @@ function sectionOf(
   rolled: RolledApplicationDay[] = [],
   asked = new Map<string, string[]>(),
 ) {
-  return applicationsOf(rows, applications, rolled, labels, asked, demos);
+  return applicationsOf(rows, applications, rolled, labels, asked, demos, now);
 }
 
 describe('applicationsOf', () => {
@@ -292,5 +292,74 @@ describe('applicationsOf', () => {
     expect(list[0]?.visits).toHaveLength(1);
     expect(list[0]?.guesses).toEqual([]);
     expect(score).toMatchObject({ visits: 1, levels: { medium: { right: 1 } } });
+  });
+
+  it('gives each application its channel, variant, status and the days to its first answer', () => {
+    const { list } = sectionOf(
+      [],
+      [
+        anApplication({
+          status: 'screening',
+          appliedOn: new Date('2026-10-20'),
+          answeredOn: new Date('2026-10-23'),
+        }),
+      ],
+    );
+
+    expect(list[0]).toMatchObject({
+      channel: 'direct',
+      cvVariant: 'base',
+      status: 'screening',
+      daysToAnswer: 3,
+    });
+  });
+
+  it('tallies by channel and by variant, counting answers only among applications past the guess window', () => {
+    const applied = (code: string, overrides: Partial<ApplicationRow>) =>
+      anApplication({ id: code, code, ...overrides });
+
+    const { byChannel, byVariant } = sectionOf(
+      [],
+      [
+        applied('kxqtz', {
+          channel: 'referral',
+          appliedOn: new Date('2026-10-01'),
+          answeredOn: new Date('2026-10-03'),
+          firstSeenOn: new Date('2026-10-02'),
+        }),
+        applied('mpw7r', { channel: 'referral', appliedOn: new Date('2026-10-16') }),
+        applied('memh', {
+          cvVariant: 'payments',
+          appliedOn: new Date('2026-10-25'),
+          answeredOn: new Date('2026-10-26'),
+        }),
+      ],
+    );
+
+    expect(byChannel).toEqual([
+      { name: 'referral', applications: 2, opened: 1, oldEnough: 2, answered: 1, medianDays: null },
+      { name: 'direct', applications: 1, opened: 0, oldEnough: 0, answered: 0, medianDays: null },
+    ]);
+    expect(byVariant.map(({ name, applications }) => [name, applications])).toEqual([
+      ['base', 2],
+      ['payments', 1],
+    ]);
+  });
+
+  it('gives the median days to an answer from three answers on', () => {
+    const answered = (code: string, answeredOn: string) =>
+      anApplication({
+        id: code,
+        code,
+        appliedOn: new Date('2026-10-01'),
+        answeredOn: new Date(answeredOn),
+      });
+    const two = [answered('kxqtz', '2026-10-03'), answered('mpw7r', '2026-10-10')];
+
+    const fromTwo = sectionOf([], two);
+    const fromThree = sectionOf([], [...two, answered('memh', '2026-10-05')]);
+
+    expect(fromTwo.byChannel[0]?.medianDays).toBeNull();
+    expect(fromThree.byChannel[0]?.medianDays).toBe(4);
   });
 });

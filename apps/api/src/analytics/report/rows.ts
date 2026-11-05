@@ -13,6 +13,10 @@ export type ApplicationRow = {
   atsHost: string | null;
   networks: string[];
   firstSeenOn: Date | null;
+  channel: string;
+  cvVariant: string;
+  status: string;
+  answeredOn: Date | null;
 };
 
 export type RolledApplicationDay = {

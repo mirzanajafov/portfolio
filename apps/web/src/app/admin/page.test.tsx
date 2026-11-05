@@ -103,6 +103,8 @@ describe('admin page', () => {
     api.fetchReport.mockResolvedValue(
       aReport({
         applications: {
+          byChannel: [],
+          byVariant: [],
           list: [anEntry(), anEntry({ code: 'kxqtz', company: 'Wolt' })],
           score: { visits: 0, unplaced: 0, levels: noOutcomes() },
           unknownCodes: [],
@@ -113,7 +115,9 @@ describe('admin page', () => {
     render(await open());
 
     expect(
-      screen.getByText('Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet'),
+      screen.getByText(
+        'Xsolla, Backend Engineer, applied 2026-10-29, code memh: no visits yet',
+      ),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open memh' })).toHaveAttribute(
       'href',

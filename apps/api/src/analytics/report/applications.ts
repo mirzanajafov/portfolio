@@ -1,18 +1,22 @@
 import type { DemoSite } from '@portfolio/content/analytics';
+import { guessWindowDays } from '@portfolio/content/applications';
 import {
   readSeconds,
+  type ApplicationTally,
   type GuessedVisit,
   type Outcome,
   type Report,
   type VisitStory,
 } from '@portfolio/content/report';
-import { dayOf, dayOrNull } from '../../common/days.js';
-import { rankedGroups } from '../statistics.js';
+import { bakuDay, dayOf, dayOrNull, daysAfter, daysBetween } from '../../common/days.js';
+import { median, rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
 
 type Asked = ReadonlyMap<string, readonly string[]>;
+
+const fewestAnswersForMedian = 3;
 
 type Demos = ReadonlyMap<string, DemoSite>;
 
@@ -103,6 +107,30 @@ function scoreOf(
   return { visits: coded.length, unplaced, levels };
 }
 
+function daysToAnswer({ appliedOn, answeredOn }: ApplicationRow): number | null {
+  return answeredOn ? daysBetween(appliedOn, answeredOn) : null;
+}
+
+function tallyBy(
+  applications: readonly ApplicationRow[],
+  keyOf: (application: ApplicationRow) => string,
+  now: Date,
+): ApplicationTally[] {
+  const lastOldEnough = daysAfter(bakuDay(now), -guessWindowDays);
+  return rankedGroups(applications, keyOf).map(([name, group]) => {
+    const oldEnough = group.filter(({ appliedOn }) => appliedOn <= lastOldEnough);
+    const answerDays = group.flatMap((application) => daysToAnswer(application) ?? []);
+    return {
+      name,
+      applications: group.length,
+      opened: group.filter(({ firstSeenOn }) => firstSeenOn !== null).length,
+      oldEnough: oldEnough.length,
+      answered: oldEnough.filter(({ answeredOn }) => answeredOn !== null).length,
+      medianDays: answerDays.length >= fewestAnswersForMedian ? median(answerDays) : null,
+    };
+  });
+}
+
 export function applicationsOf(
   rows: readonly VisitRow[],
   applications: readonly ApplicationRow[],
@@ -110,6 +138,7 @@ export function applicationsOf(
   labels: ReadonlyMap<string, string>,
   asked: Asked,
   demos: Demos,
+  now: Date,
 ): Report['applications'] {
   const guess = guesserFor(applications);
   const byCode = new Map(applications.map((application) => [application.code, application]));
@@ -164,6 +193,10 @@ export function applicationsOf(
         role: application.role,
         appliedOn: dayOf(application.appliedOn),
         firstSeenOn: dayOrNull(application.firstSeenOn),
+        channel: application.channel,
+        cvVariant: application.cvVariant,
+        status: application.status,
+        daysToAnswer: daysToAnswer(application),
         visits: coded
           .filter((each) => each.application.id === application.id)
           .map(({ visit }) => storyOf(visit, labels, asked, demos)),
@@ -173,6 +206,8 @@ export function applicationsOf(
           .map(({ day, visits: count, views }) => ({ day: dayOf(day), visits: count, views })),
         guesses: guessesOf.get(application.id) ?? [],
       })),
+    byChannel: tallyBy(applications, ({ channel }) => channel, now),
+    byVariant: tallyBy(applications, ({ cvVariant }) => cvVariant, now),
     score: scoreOf(coded.filter(sawTheSite), guess),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,

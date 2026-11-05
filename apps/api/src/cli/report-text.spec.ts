@@ -311,6 +311,8 @@ describe('reportText', () => {
     const text = reportText(
       aReport({
         applications: {
+          byChannel: [],
+          byVariant: [],
           list: [
             anEntry({
               visits: [
@@ -397,6 +399,8 @@ describe('reportText', () => {
     const questions = ['Line one\nline two', 'Kafka?', 'Go?', 'Rust?', 'Zig?'];
     const report = aReport({
       applications: {
+        byChannel: [],
+        byVariant: [],
         list: [anEntry({ visits: [aStory({ questions })] })],
         score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: [],
@@ -414,6 +418,8 @@ describe('reportText', () => {
     const text = reportText(
       aReport({
         applications: {
+          byChannel: [],
+          byVariant: [],
           list: [
             anEntry({
               guesses: [
@@ -454,6 +460,8 @@ describe('reportText', () => {
     const text = reportText(
       aReport({
         applications: {
+          byChannel: [],
+          byVariant: [],
           list: [
             anEntry({
               guesses: [
@@ -491,6 +499,8 @@ describe('reportText', () => {
     };
     const report = aReport({
       applications: {
+        byChannel: [],
+        byVariant: [],
         list: [anEntry({ guesses: [lowGuess] }), anEntry({ code: 'k7mpx', company: 'Wolt' })],
         score: { visits: 0, unplaced: 0, levels: noOutcomes() },
         unknownCodes: [],
@@ -509,6 +519,8 @@ describe('reportText', () => {
   it("says when an application's link was first opened, and how many alerts were given up", () => {
     const report = aReport({
       applications: {
+        byChannel: [],
+        byVariant: [],
         list: [
           anEntry({
             firstSeenOn: '2026-10-30',
@@ -532,6 +544,8 @@ describe('reportText', () => {
     const twelve = Array.from({ length: 12 }, (_, index) => index);
     const report = aReport({
       applications: {
+        byChannel: [],
+        byVariant: [],
         list: twelve.map((index) =>
           anEntry({
             code: `code${String(index)}`,
