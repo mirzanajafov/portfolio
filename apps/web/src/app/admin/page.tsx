@@ -6,8 +6,8 @@ import { signOut } from '@/admin/actions';
 import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { pill } from '@/admin/styles';
 import { ReportView } from '@/admin/report-view';
+import { pill } from '@/admin/styles';
 import { apiUrl } from '@/lib/forward-to-api';
 
 export const dynamic = 'force-dynamic';
