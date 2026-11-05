@@ -2,6 +2,7 @@
 
 import { siteUrl } from '@portfolio/content';
 import { refCode } from '@portfolio/content/analytics';
+import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiUrl } from '@/lib/forward-to-api';
@@ -12,10 +13,9 @@ import {
   startSession,
   undoStatusChange,
   updateApplication,
-  applicationFieldNames,
-  type ApplicationFieldName,
-  type ApplicationFields,
+  type ApplicationEditBody,
   type ApplicationWrite,
+  type NewApplicationBody,
 } from './api';
 
 async function headersFromSite(): Promise<Headers> {
@@ -58,11 +58,32 @@ export async function signOut(): Promise<void> {
   redirect('/admin');
 }
 
-export type FormValues = Partial<Record<ApplicationFieldName, string>>;
+const fieldNames = [
+  'company',
+  'role',
+  'appliedOn',
+  'channel',
+  'cvVariant',
+  'code',
+  'status',
+  'answeredOn',
+  'notes',
+  'country',
+  'city',
+  'atsHost',
+  'networks',
+] as const;
+
+type FieldName = (typeof fieldNames)[number];
+
+export type FormValues = Partial<Record<FieldName, string>>;
 
 export type FormState = { failure: string; values: FormValues } | null;
 
 const sessionEnded = 'The session has ended. Run admin link for a new sign-in link.';
+
+const applicationGone =
+  'The session has ended or the application is gone. Run admin link for a new sign-in link.';
 
 function validCode(code: string): string {
   if (!refCode.test(code)) {
@@ -71,24 +92,27 @@ function validCode(code: string): string {
   return code;
 }
 
-function textIn(form: FormData, name: ApplicationFieldName): string {
+function textIn(form: FormData, name: FieldName): string {
   const value = form.get(name);
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function valuesOf(form: FormData): FormValues {
-  return Object.fromEntries(applicationFieldNames.map((name) => [name, textIn(form, name)]));
-}
-
-function linesIn(form: FormData, name: ApplicationFieldName): string[] {
+function linesIn(form: FormData, name: FieldName): string[] {
   return textIn(form, name)
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line !== '');
 }
 
-function newApplicationIn(form: FormData): ApplicationFields {
-  const given = (name: ApplicationFieldName) => textIn(form, name) || undefined;
+function refused(failure: string, form: FormData): FormState {
+  return {
+    failure,
+    values: Object.fromEntries(fieldNames.map((name) => [name, textIn(form, name)])),
+  };
+}
+
+function newApplicationIn(form: FormData): NewApplicationBody {
+  const given = (name: FieldName) => textIn(form, name) || undefined;
   return {
     company: textIn(form, 'company'),
     role: textIn(form, 'role'),
@@ -103,8 +127,8 @@ function newApplicationIn(form: FormData): ApplicationFields {
   };
 }
 
-function editIn(form: FormData): ApplicationFields {
-  const orNull = (name: ApplicationFieldName) => textIn(form, name) || null;
+function editIn(form: FormData): ApplicationEditBody {
+  const orNull = (name: FieldName) => textIn(form, name) || null;
   return {
     company: textIn(form, 'company'),
     role: textIn(form, 'role'),
@@ -121,12 +145,9 @@ function editIn(form: FormData): ApplicationFields {
   };
 }
 
-function failureOf(outcome: ApplicationWrite): string {
-  if (outcome.kind === 'done') {
-    redirect(`/admin/applications/${outcome.application.code}`);
-  }
+function failureOf(outcome: Exclude<ApplicationWrite, { kind: 'done' }>, missing: string): string {
   if (outcome.kind === 'missing') {
-    return 'The session has ended or the application is gone. Run admin link for a new sign-in link.';
+    return missing;
   }
   if (outcome.kind === 'limited') {
     return `Too many changes. Try again in ${inMinutes(outcome.retryAfterSeconds)}.`;
@@ -137,11 +158,14 @@ function failureOf(outcome: ApplicationWrite): string {
 export async function addApplication(_state: FormState, form: FormData): Promise<FormState> {
   await headersFromSite();
   const token = await tokenIn(sessionCookie);
-  const failure =
-    token === undefined
-      ? sessionEnded
-      : failureOf(await createApplication(apiUrl(), token, newApplicationIn(form)));
-  return { failure, values: valuesOf(form) };
+  if (token === undefined) {
+    return refused(sessionEnded, form);
+  }
+  const outcome = await createApplication(apiUrl(), token, newApplicationIn(form));
+  if (outcome.kind === 'done') {
+    redirect(`/admin/applications/${outcome.application.code}`);
+  }
+  return refused(failureOf(outcome, sessionEnded), form);
 }
 
 export async function editApplication(
@@ -150,19 +174,30 @@ export async function editApplication(
   form: FormData,
 ): Promise<FormState> {
   await headersFromSite();
+  const target = validCode(code);
   const token = await tokenIn(sessionCookie);
-  const failure =
-    token === undefined
-      ? sessionEnded
-      : failureOf(await updateApplication(apiUrl(), token, validCode(code), editIn(form)));
-  return { failure, values: valuesOf(form) };
+  if (token === undefined) {
+    return refused(sessionEnded, form);
+  }
+  const outcome = await updateApplication(apiUrl(), token, target, editIn(form));
+  if (outcome.kind === 'done') {
+    revalidatePath(`/admin/applications/${target}`);
+    return null;
+  }
+  return refused(failureOf(outcome, applicationGone), form);
 }
 
-export async function undoStatus(code: string): Promise<string> {
+export async function undoStatus(code: string): Promise<string | null> {
   await headersFromSite();
+  const target = validCode(code);
   const token = await tokenIn(sessionCookie);
   if (token === undefined) {
     return sessionEnded;
   }
-  return failureOf(await undoStatusChange(apiUrl(), token, validCode(code)));
+  const outcome = await undoStatusChange(apiUrl(), token, target);
+  if (outcome.kind === 'done') {
+    revalidatePath(`/admin/applications/${target}`);
+    return null;
+  }
+  return failureOf(outcome, applicationGone);
 }

@@ -17,25 +17,33 @@ type SessionStart =
   | { kind: 'refused' }
   | { kind: 'limited'; retryAfterSeconds: number };
 
-export const applicationFieldNames = [
-  'company',
-  'role',
-  'appliedOn',
-  'channel',
-  'cvVariant',
-  'code',
-  'status',
-  'answeredOn',
-  'notes',
-  'country',
-  'city',
-  'atsHost',
-  'networks',
-] as const;
+export type NewApplicationBody = {
+  company: string;
+  role: string;
+  appliedOn: string;
+  channel: string;
+  cvVariant: string;
+  code?: string;
+  country?: string;
+  city?: string;
+  atsHost?: string;
+  networks: string[];
+};
 
-export type ApplicationFieldName = (typeof applicationFieldNames)[number];
-
-export type ApplicationFields = Partial<Record<ApplicationFieldName, string | string[] | null>>;
+export type ApplicationEditBody = Partial<{
+  company: string;
+  role: string;
+  appliedOn: string;
+  channel: string;
+  cvVariant: string;
+  status: string;
+  answeredOn: string;
+  notes: string;
+  country: string | null;
+  city: string | null;
+  atsHost: string | null;
+  networks: string[];
+}>;
 
 export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }
@@ -45,6 +53,11 @@ export type ApplicationWrite =
 
 const timeoutMs = 5_000;
 const reportTimeoutMs = 30_000;
+
+function retryAfterOf(response: Response): number {
+  const seconds = Number(response.headers.get('retry-after'));
+  return seconds > 0 ? seconds : 60;
+}
 
 function unexpected(what: string, { status }: Response): Error {
   return new Error(`the API answered ${String(status)} to ${what}`);
@@ -69,7 +82,7 @@ export async function startSession(
     return { kind: 'refused' };
   }
   if (response.status === 429) {
-    return { kind: 'limited', retryAfterSeconds: Number(response.headers.get('retry-after')) };
+    return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };
   }
   if (response.status !== 201) {
     throw unexpected('a sign-in', response);
@@ -175,7 +188,7 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
     return { kind: 'refused', message: adminRefusalSchema.parse(await response.json()).message };
   }
   if (response.status === 429) {
-    return { kind: 'limited', retryAfterSeconds: Number(response.headers.get('retry-after')) };
+    return { kind: 'limited', retryAfterSeconds: retryAfterOf(response) };
   }
   if (response.status === 404) {
     return { kind: 'missing' };
@@ -183,11 +196,15 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
   throw unexpected(what, response);
 }
 
-function sending(method: 'POST' | 'PATCH', token: string, fields?: ApplicationFields): RequestInit {
+function sending(
+  method: 'POST' | 'PATCH',
+  token: string,
+  body?: NewApplicationBody | ApplicationEditBody,
+): RequestInit {
   return {
     method,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: fields && JSON.stringify(fields),
+    body: body && JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   };
 }
@@ -195,10 +212,10 @@ function sending(method: 'POST' | 'PATCH', token: string, fields?: ApplicationFi
 export async function createApplication(
   apiUrl: string,
   token: string,
-  fields: ApplicationFields,
+  body: NewApplicationBody,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationWrite> {
-  const response = await fetchImpl(`${apiUrl}/admin/applications`, sending('POST', token, fields));
+  const response = await fetchImpl(`${apiUrl}/admin/applications`, sending('POST', token, body));
   return outcomeOf('a new application', response);
 }
 
@@ -206,12 +223,12 @@ export async function updateApplication(
   apiUrl: string,
   token: string,
   code: string,
-  fields: ApplicationFields,
+  body: ApplicationEditBody,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationWrite> {
   const response = await fetchImpl(
     `${apiUrl}/admin/applications/${code}`,
-    sending('PATCH', token, fields),
+    sending('PATCH', token, body),
   );
   return outcomeOf('an edit', response);
 }

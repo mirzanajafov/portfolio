@@ -10,6 +10,7 @@ import {
   sessionExpiry,
   startSession,
   undoStatusChange,
+  type NewApplicationBody,
 } from './api';
 
 const api = 'http://api:3201';
@@ -170,17 +171,25 @@ describe('fetchApplication', () => {
 
 describe('the application writes', () => {
   const view = anApplicationView();
+  const acme: NewApplicationBody = {
+    company: 'Acme',
+    role: 'Backend Engineer',
+    appliedOn: '2026-10-30',
+    channel: 'direct',
+    cvVariant: 'base',
+    networks: [],
+  };
 
   it('sends the fields as JSON with the session as a bearer, to the route of each write', async () => {
     const fetchImpl = answering(200, view);
 
-    await createApplication(api, session, { company: 'Acme' }, fetchImpl);
+    await createApplication(api, session, acme, fetchImpl);
     await updateApplication(api, session, 'memh', { notes: 'Called back' }, fetchImpl);
     await undoStatusChange(api, session, 'memh', fetchImpl);
 
     const calls = fetchImpl.mock.calls.map(([url, init]) => [url, init?.method, init?.body]);
     expect(calls).toEqual([
-      ['http://api:3201/admin/applications', 'POST', '{"company":"Acme"}'],
+      ['http://api:3201/admin/applications', 'POST', JSON.stringify(acme)],
       ['http://api:3201/admin/applications/memh', 'PATCH', '{"notes":"Called back"}'],
       ['http://api:3201/admin/applications/memh/undo', 'POST', undefined],
     ]);
@@ -191,7 +200,7 @@ describe('the application writes', () => {
   });
 
   it('reads the written application, the reason for a 400 or a 409, the wait of a 429, and a 404', async () => {
-    expect(await createApplication(api, session, {}, answering(201, view))).toEqual({
+    expect(await createApplication(api, session, acme, answering(201, view))).toEqual({
       kind: 'done',
       application: view,
     });
@@ -199,7 +208,7 @@ describe('the application writes', () => {
       await updateApplication(api, session, 'memh', {}, answering(409, { message: 'no move' })),
     ).toEqual({ kind: 'refused', message: 'no move' });
     expect(
-      await createApplication(api, session, {}, answering(400, { message: 'bad day' })),
+      await createApplication(api, session, acme, answering(400, { message: 'bad day' })),
     ).toEqual({
       kind: 'refused',
       message: 'bad day',
@@ -210,6 +219,16 @@ describe('the application writes', () => {
     expect(await undoStatusChange(api, session, 'memh', answering(404))).toEqual({
       kind: 'missing',
     });
+  });
+
+  it('waits a minute after a 429 that names no wait, or one it cannot read', async () => {
+    expect(await undoStatusChange(api, session, 'memh', answering(429))).toEqual({
+      kind: 'limited',
+      retryAfterSeconds: 60,
+    });
+    expect(
+      await undoStatusChange(api, session, 'memh', answering(429, {}, { 'retry-after': 'soon' })),
+    ).toEqual({ kind: 'limited', retryAfterSeconds: 60 });
   });
 
   it('fails on any other answer', async () => {

@@ -23,9 +23,12 @@ const api = vi.hoisted(() => ({
   undoStatusChange: vi.fn<typeof undoStatusChange>(),
 }));
 
+const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
+
 vi.mock('next/headers', async () => (await import('./testing')).nextHeaders);
 vi.mock('next/navigation', async () => (await import('./testing')).nextNavigation);
-vi.mock(import('./api'), async (importOriginal) => ({ ...(await importOriginal()), ...api }));
+vi.mock('next/cache', () => cache);
+vi.mock('./api', () => api);
 
 function arriving(origin: string | null, cookies: Record<string, string>) {
   request.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
@@ -45,6 +48,7 @@ beforeEach(() => {
   api.createApplication.mockReset();
   api.updateApplication.mockReset();
   api.undoStatusChange.mockReset();
+  cache.revalidatePath.mockClear();
 });
 
 afterEach(() => {
@@ -198,7 +202,7 @@ describe('the application actions', () => {
     });
   });
 
-  it('edits with every field of the form, clearing an emptied hint and leaving out an empty answer day', async () => {
+  it('edits with every field of the form, clearing an emptied hint and leaving out an empty answer day, then shows the page as it now is', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.updateApplication.mockResolvedValue(done);
     const form = formOf({
@@ -216,9 +220,8 @@ describe('the application actions', () => {
       networks: '',
     });
 
-    await expect(editApplication('memh', null, form)).rejects.toThrow(
-      'redirect to /admin/applications/memh',
-    );
+    expect(await editApplication('memh', null, form)).toBeNull();
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
     expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
       company: 'Acme',
       role: 'Backend Engineer',
@@ -234,12 +237,13 @@ describe('the application actions', () => {
     });
   });
 
-  it('undoes the last move and opens the page again', async () => {
+  it('undoes the last move, clears an earlier refusal and shows the page as it now is', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue(done);
 
-    await expect(undoStatus('memh')).rejects.toThrow('redirect to /admin/applications/memh');
+    expect(await undoStatus('memh')).toBeNull();
     expect(api.undoStatusChange).toHaveBeenCalledWith('http://api:3201', session, 'memh');
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
   });
 
   it('shows the reason the API refused a write with what was typed, so the form can keep it', async () => {
@@ -278,13 +282,28 @@ describe('the application actions', () => {
     expect((await editApplication('memh', null, formOf({})))?.failure).toBe(
       'The session has ended or the application is gone. Run admin link for a new sign-in link.',
     );
+    api.createApplication.mockResolvedValue({ kind: 'missing' });
+    expect((await addApplication(null, formOf({})))?.failure).toBe(
+      'The session has ended. Run admin link for a new sign-in link.',
+    );
   });
 
   it.each([
-    ['from another origin', 'https://evil.example', 'memh'],
-    ['for a code a link could not carry', 'https://najafov.dev', '../session'],
-  ])('is a 404 %s, before it asks the API', async (_, origin, code) => {
-    arriving(origin, { [sessionCookie.name]: session });
+    ['from another origin', 'https://evil.example', { [sessionCookie.name]: session }, 'memh'],
+    [
+      'for a code a link could not carry',
+      'https://najafov.dev',
+      { [sessionCookie.name]: session },
+      '../session',
+    ],
+    [
+      'for a code a link could not carry, even without a session',
+      'https://najafov.dev',
+      {},
+      'Memh!',
+    ],
+  ])('is a 404 %s, before it asks the API', async (_, origin, cookies, code) => {
+    arriving(origin, cookies);
 
     await expect(undoStatus(code)).rejects.toThrow('not found');
     await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
