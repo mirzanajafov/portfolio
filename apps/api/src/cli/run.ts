@@ -1,6 +1,5 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { siteUrl } from '@portfolio/content';
 import { adminLinkMinutes } from '@portfolio/content/admin';
 import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
@@ -55,23 +54,12 @@ async function runApplication(
     );
     return 1;
   }
-  const site = { webUrl: env.WEB_URL, token: env.CV_RENDER_TOKEN };
-  if (command.name === 'application cv') {
-    if (!(await applications.find(command.code))) {
-      process.stderr.write(`no application has code ${command.code}\n`);
-      return 1;
-    }
-    process.stdout.write(await fetchApplicationCv(command.code, site));
-    return 0;
-  }
-  const outcome = await applications.add(command.application);
-  if (outcome.kind !== 'added') {
-    process.stderr.write(`${outcome.reason}\n`);
+  if (!(await applications.find(command.code))) {
+    process.stderr.write(`no application has code ${command.code}\n`);
     return 1;
   }
-  const { company, code } = outcome.application;
-  process.stderr.write(`${company}: ${code}, ${siteUrl}/?r=${code}\n`);
-  process.stdout.write(await fetchApplicationCv(code, site));
+  const site = { webUrl: env.WEB_URL, token: env.CV_RENDER_TOKEN };
+  process.stdout.write(await fetchApplicationCv(command.code, site));
   return 0;
 }
 
@@ -95,8 +83,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n\n${usage}\n`);
     return 2;
   }
-  const writesPdf = command.name === 'application add' || command.name === 'application cv';
-  if (writesPdf && process.stdout.isTTY) {
+  if (command.name === 'application cv' && process.stdout.isTTY) {
     process.stderr.write(
       'stdout is a terminal, so send it to a file (and leave out -t when this runs through docker exec)\n',
     );
@@ -108,11 +95,6 @@ export async function runCli(args: readonly string[]): Promise<number> {
   } catch (error) {
     if (error instanceof CvFetchError) {
       process.stderr.write(`${error.message}\n`);
-      if (command.name === 'application add') {
-        process.stderr.write(
-          `${error.code} is registered, so application cv ${error.code} writes its CV once the site answers\n`,
-        );
-      }
       return 1;
     }
     throw error;

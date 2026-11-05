@@ -1,14 +1,6 @@
 import { reasonOf } from '../common/error-reason.js';
 
-export class CvFetchError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-  }
-}
+export class CvFetchError extends Error {}
 
 export async function fetchApplicationCv(
   code: string,
@@ -17,7 +9,6 @@ export async function fetchApplicationCv(
 ): Promise<Buffer> {
   const fail = (error: unknown): never => {
     throw new CvFetchError(
-      code,
       `the site at ${webUrl} did not send the CV of ${code} (${reasonOf(error)})`,
       { cause: error },
     );
@@ -27,10 +18,7 @@ export async function fetchApplicationCv(
     signal: AbortSignal.timeout(10_000),
   }).catch(fail);
   if (!response.ok) {
-    throw new CvFetchError(
-      code,
-      `the site answered ${String(response.status)} for the CV of ${code}`,
-    );
+    throw new CvFetchError(`the site answered ${String(response.status)} for the CV of ${code}`);
   }
   return Buffer.from(await response.arrayBuffer().catch(fail));
 }

@@ -1,70 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseCommand } from './command.js';
 
-const required = [
-  '--company',
-  'Acme',
-  '--role',
-  'Backend Engineer',
-  '--applied',
-  '2026-10-30',
-  '--channel',
-  'referral',
-  '--variant',
-  'base 2026-10-30',
-];
-
 describe('parseCommand', () => {
-  it('turns the flags of application add into an application', () => {
-    expect(
-      parseCommand([
-        'application',
-        'add',
-        ...required,
-        '--code',
-        'memh',
-        '--country',
-        'AZ',
-        '--city',
-        'Baku',
-        '--ats',
-        'acme.wd3.myworkdayjobs.com',
-        '--network',
-        'ACME-NET',
-        '--network',
-        'ACME-VPN',
-      ]),
-    ).toEqual({
-      name: 'application add',
-      application: {
-        company: 'Acme',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-30'),
-        channel: 'referral',
-        cvVariant: 'base 2026-10-30',
-        code: 'memh',
-        country: 'AZ',
-        city: 'Baku',
-        atsHost: 'acme.wd3.myworkdayjobs.com',
-        networks: ['ACME-NET', 'ACME-VPN'],
-      },
-    });
-  });
-
-  it('leaves the hints out when none are given', () => {
-    expect(parseCommand(['application', 'add', ...required])).toEqual({
-      name: 'application add',
-      application: {
-        company: 'Acme',
-        role: 'Backend Engineer',
-        appliedOn: new Date('2026-10-30'),
-        channel: 'referral',
-        cvVariant: 'base 2026-10-30',
-        networks: [],
-      },
-    });
-  });
-
   it('reads report for the last week unless told how many days', () => {
     expect(parseCommand(['report'])).toEqual({ name: 'report', days: 7, all: false });
     expect(parseCommand(['report', '--days', '30', '--all'])).toEqual({
@@ -74,20 +11,9 @@ describe('parseCommand', () => {
     });
   });
 
-  it('keeps only the lowercase host of an ATS link pasted whole', () => {
-    expect(
-      parseCommand([
-        'application',
-        'add',
-        ...required,
-        '--ats',
-        'https://Boards.Greenhouse.io/acme/jobs/1',
-      ]),
-    ).toMatchObject({ application: { atsHost: 'boards.greenhouse.io' } });
-  });
-
-  it('reads list and cv', () => {
+  it('reads list, export and cv', () => {
     expect(parseCommand(['application', 'list'])).toEqual({ name: 'application list' });
+    expect(parseCommand(['application', 'export'])).toEqual({ name: 'application export' });
     expect(parseCommand(['application', 'cv', 'memh'])).toEqual({
       name: 'application cv',
       code: 'memh',
@@ -99,67 +25,9 @@ describe('parseCommand', () => {
     expect(parseCommand(['admin', 'revoke'])).toEqual({ name: 'admin revoke' });
   });
 
-  it('names the field that is wrong', () => {
-    expect(() =>
-      parseCommand([
-        'application',
-        'add',
-        '--company',
-        'Acme',
-        '--role',
-        'Dev',
-        '--applied',
-        '30.10.2026',
-        '--channel',
-        'direct',
-        '--variant',
-        'base',
-      ]),
-    ).toThrow(/appliedOn/);
-  });
-
   it.each([
-    [
-      'without a role',
-      [
-        'application',
-        'add',
-        '--company',
-        'Acme',
-        '--applied',
-        '2026-10-30',
-        '--channel',
-        'direct',
-        '--variant',
-        'base',
-      ],
-    ],
-    [
-      'without a channel',
-      [
-        'application',
-        'add',
-        '--company',
-        'Acme',
-        '--role',
-        'Dev',
-        '--applied',
-        '2026-10-30',
-        '--variant',
-        'base',
-      ],
-    ],
-    [
-      'with a channel the CSV has no name for',
-      ['application', 'add', ...required, '--channel', 'friend'],
-    ],
+    ['for application add, which moved to /admin', ['application', 'add', '--company', 'Acme']],
     ['with arguments export does not take', ['application', 'export', '--all']],
-    [
-      'with a country that is not two capital letters',
-      ['application', 'add', ...required, '--country', 'az'],
-    ],
-    ['with a flag it does not know', ['application', 'add', ...required, '--salary', '1']],
-    ['with an ATS that is not a host', ['application', 'add', ...required, '--ats', 'my ats']],
     ['with a code a link could not carry', ['application', 'cv', 'Memh!']],
     ['with two codes', ['application', 'cv', 'memh', 'kxqtz']],
     ['with arguments list does not take', ['application', 'list', '--all']],
