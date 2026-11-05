@@ -162,7 +162,7 @@ async function lockedApplication(
   tx: Prisma.TransactionClient,
   code: string,
 ): Promise<Application | null> {
-  await tx.$queryRaw`SELECT id FROM "Application" WHERE code = ${code} FOR UPDATE`;
+  await tx.$executeRaw`SELECT 1 FROM "Application" WHERE code = ${code} FOR UPDATE`;
   return tx.application.findUnique({ where: { code } });
 }
 
