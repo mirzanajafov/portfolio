@@ -227,7 +227,7 @@ export function anEntry(overrides: Partial<ApplicationEntry> = {}): ApplicationE
     company: 'Xsolla',
     role: 'Backend Engineer',
     appliedOn: '2026-10-29',
-    firstSeen: null,
+    firstSeenOn: null,
     visits: [],
     days: [],
     guesses: [],

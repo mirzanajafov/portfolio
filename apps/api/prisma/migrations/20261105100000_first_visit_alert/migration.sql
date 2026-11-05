@@ -1,4 +1,4 @@
-ALTER TABLE "Application" ADD COLUMN "firstSeenAt" TIMESTAMP(3);
+ALTER TABLE "Application" ADD COLUMN "firstSeenOn" DATE;
 
 CREATE TABLE "Alert" (
     "id" UUID NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE "GivenUpAlerts" (
 
 CREATE INDEX "Alert_nextAttemptAt_idx" ON "Alert"("nextAttemptAt");
 
-UPDATE "Application" AS a SET "firstSeenAt" = LEAST(
-    (SELECT min(p."createdAt") FROM "PageView" AS p WHERE p.ref = a.code),
-    (SELECT min(d.day)::timestamp(3) FROM "DailyApplication" AS d WHERE d."applicationId" = a.id)
+UPDATE "Application" AS a SET "firstSeenOn" = LEAST(
+    (SELECT min(p."createdAt")::date FROM "PageView" AS p WHERE p.ref = a.code),
+    (SELECT min(d.day) FROM "DailyApplication" AS d WHERE d."applicationId" = a.id)
 );

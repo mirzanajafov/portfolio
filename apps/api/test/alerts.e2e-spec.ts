@@ -55,7 +55,7 @@ async function startOverWithXsolla(prisma: PrismaService): Promise<void> {
 }
 
 const firstSeen = (prisma: PrismaService) =>
-  prisma.application.findUnique({ where: { code: 'memh' }, select: { firstSeenAt: true } });
+  prisma.application.findUnique({ where: { code: 'memh' }, select: { firstSeenOn: true } });
 
 describe('first-visit alerts against a real database and a fake Bot API', () => {
   const bot = fakeBotApi();
@@ -101,7 +101,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
 
     expect(bot.received).toEqual([message(firstCv)]);
     expect(await prisma.alert.count()).toBe(0);
-    expect(await firstSeen(prisma)).toEqual({ firstSeenAt: new Date('2026-10-02T12:00:00Z') });
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
   });
 
   it('sends one message when two first views arrive at once', async () => {
@@ -133,7 +133,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     await sendDue();
 
     expect(bot.received).toEqual([]);
-    expect(await firstSeen(prisma)).toEqual({ firstSeenAt: null });
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
   });
 
   it('tries again a minute after a failure and sends the message once', async () => {
@@ -167,8 +167,14 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     await sendDue();
     expect(bot.received).toHaveLength(1);
     expect(
-      (await prisma.alert.findMany()).map(({ nextAttemptAt }) => nextAttemptAt.toISOString()),
-    ).toEqual(['2026-10-02T12:00:07.000Z', '2026-10-02T12:00:07.000Z']);
+      (await prisma.alert.findMany()).map(({ attempts, nextAttemptAt }) => [
+        attempts,
+        nextAttemptAt.toISOString(),
+      ]),
+    ).toEqual([
+      [0, '2026-10-02T12:00:07.000Z'],
+      [0, '2026-10-02T12:00:07.000Z'],
+    ]);
 
     at('2026-10-02T12:00:07Z');
     await sendDue();
@@ -190,6 +196,7 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     at('2026-10-03T12:04:00Z');
     await sendDue();
     expect(bot.received).toHaveLength(3);
+    await sender().giveUpOld();
     expect(await prisma.alert.count()).toBe(0);
     expect(await prisma.givenUpAlerts.findMany()).toEqual([
       { day: new Date('2026-10-03'), count: 1 },
@@ -209,16 +216,33 @@ describe('first visits while alerts are off', () => {
     await app.close();
   });
 
+  it('gives up an alert left from when alerts were on', async () => {
+    await startOverWithXsolla(prisma);
+    await prisma.alert.create({
+      data: {
+        text: 'Xsolla, Backend Engineer: someone opened your link',
+        createdAt: new Date('2026-10-01T11:59:59Z'),
+        nextAttemptAt: new Date('2026-10-01T12:00:00Z'),
+      },
+    });
+    await app.get(AlertSenderService).giveUpOld();
+
+    expect(await prisma.alert.count()).toBe(0);
+    expect(await prisma.givenUpAlerts.findMany()).toEqual([
+      { day: new Date('2026-10-02'), count: 1 },
+    ]);
+  });
+
   it('still notes the first visit but writes no alert, so turning alerts on later sends no old ones', async () => {
     await startOverWithXsolla(prisma);
     await sendEvent(app, aCodedView()).expect(204);
 
-    expect(await firstSeen(prisma)).toEqual({ firstSeenAt: new Date('2026-10-02T12:00:00Z') });
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
     expect(await prisma.alert.count()).toBe(0);
   });
 });
 
-describe('the migration that adds firstSeenAt', () => {
+describe('the migration that adds firstSeenOn', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
 
@@ -283,13 +307,13 @@ describe('the migration that adds firstSeenAt', () => {
 
     expect(
       await prisma.application.findMany({
-        select: { code: true, firstSeenAt: true },
+        select: { code: true, firstSeenOn: true },
         orderBy: { code: 'asc' },
       }),
     ).toEqual([
-      { code: 'rolled', firstSeenAt: new Date('2026-09-20T00:00:00Z') },
-      { code: 'unopened', firstSeenAt: null },
-      { code: 'viewed', firstSeenAt: new Date('2026-10-04T10:15:00Z') },
+      { code: 'rolled', firstSeenOn: new Date('2026-09-20') },
+      { code: 'unopened', firstSeenOn: null },
+      { code: 'viewed', firstSeenOn: new Date('2026-10-04') },
     ]);
   });
 });

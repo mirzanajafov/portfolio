@@ -197,7 +197,7 @@ model Application {
   city        String?
   atsHost     String?
   networks    String[]
-  firstSeenAt DateTime?
+  firstSeenOn DateTime?          @db.Date
   days        DailyApplication[]
 }
 

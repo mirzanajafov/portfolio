@@ -84,7 +84,7 @@ export function anApplication(overrides: Partial<ApplicationRow> = {}): Applicat
     city: null,
     atsHost: null,
     networks: [],
-    firstSeenAt: null,
+    firstSeenOn: null,
     ...overrides,
   };
 }

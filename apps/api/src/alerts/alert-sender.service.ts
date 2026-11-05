@@ -13,11 +13,12 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { TELEGRAM, sendMessage, type Telegram } from './telegram.js';
 
 const sendEveryMs = 10_000;
+const giveUpEveryMs = 60 * 60 * 1000;
 const leaseMs = 60_000;
 const firstRetrySeconds = 60;
 const longestRetrySeconds = 60 * 60;
 
-type DueAlert = { id: string; text: string; attempts: number; createdAt: Date };
+type DueAlert = { id: string; text: string; attempts: number };
 
 export function retryDelaySeconds(attempts: number, retryAfterSeconds: number | null): number {
   return (
@@ -25,10 +26,14 @@ export function retryDelaySeconds(attempts: number, retryAfterSeconds: number | 
   );
 }
 
+function oldestSendable(now: Date): Date {
+  return new Date(now.getTime() - alertHours * 60 * 60 * 1000);
+}
+
 @Injectable()
 export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(AlertSenderService.name);
-  private stop?: () => void;
+  private readonly stops: (() => void)[] = [];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -37,13 +42,18 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
+    this.stops.push(
+      runEvery(giveUpEveryMs, 'giving up old alerts', () => this.giveUpOld(), this.log),
+    );
     if (this.telegram) {
-      this.stop = runEvery(sendEveryMs, 'sending alerts', () => this.sendDue(), this.log);
+      this.stops.push(runEvery(sendEveryMs, 'sending alerts', () => this.sendDue(), this.log));
     }
   }
 
   onModuleDestroy(): void {
-    this.stop?.();
+    for (const stop of this.stops) {
+      stop();
+    }
   }
 
   async sendDue(): Promise<void> {
@@ -57,56 +67,59 @@ export class AlertSenderService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async giveUpOld(): Promise<void> {
+    const now = this.clock.now();
+    const givenUp = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.alert.deleteMany({
+        where: { createdAt: { lt: oldestSendable(now) } },
+      });
+      if (count > 0) {
+        await tx.$executeRaw`
+          INSERT INTO "GivenUpAlerts" (day, count) VALUES (${dayOf(now)}::date, ${count})
+          ON CONFLICT (day) DO UPDATE SET count = "GivenUpAlerts".count + ${count}`;
+      }
+      return count;
+    });
+    if (givenUp > 0) {
+      this.log.warn(`gave up ${String(givenUp)} alerts not sent within ${String(alertHours)} h`);
+    }
+  }
+
   private async sendNext(telegram: Telegram): Promise<boolean> {
     const now = this.clock.now();
     const [alert] = await this.prisma.$queryRaw<DueAlert[]>`
       UPDATE "Alert" SET "nextAttemptAt" = ${new Date(now.getTime() + leaseMs)}
       WHERE id = (
         SELECT id FROM "Alert"
-        WHERE "nextAttemptAt" <= ${now}
+        WHERE "nextAttemptAt" <= ${now} AND "createdAt" >= ${oldestSendable(now)}
         ORDER BY "nextAttemptAt"
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING id, text, attempts, "createdAt"`;
+      RETURNING id, text, attempts`;
     if (!alert) {
       return false;
     }
-    if (now.getTime() - alert.createdAt.getTime() > alertHours * 60 * 60 * 1000) {
-      await this.giveUp(alert.id, now);
-      return true;
-    }
     const delivery = await sendMessage(telegram, alert.text);
     if (delivery.kind === 'sent') {
-      await this.prisma.alert.delete({ where: { id: alert.id } });
+      await this.prisma.alert.deleteMany({ where: { id: alert.id } });
       return true;
     }
-    const attempts = alert.attempts + 1;
+    const rateLimited = delivery.retryAfterSeconds !== null;
+    const attempts = rateLimited ? alert.attempts : alert.attempts + 1;
     const delaySeconds = retryDelaySeconds(attempts, delivery.retryAfterSeconds);
-    const retryAt = new Date(now.getTime() + delaySeconds * 1000);
-    await this.prisma.alert.update({
+    const retryAt = new Date(this.clock.now().getTime() + delaySeconds * 1000);
+    await this.prisma.alert.updateMany({
       where: { id: alert.id },
       data: { attempts, nextAttemptAt: retryAt },
     });
-    if (delivery.retryAfterSeconds !== null) {
+    if (rateLimited) {
       await this.prisma.alert.updateMany({
         where: { nextAttemptAt: { lt: retryAt } },
         data: { nextAttemptAt: retryAt },
       });
     }
-    this.log.warn(
-      `alert not sent (${delivery.reason}), attempt ${String(attempts)}, next in ${String(delaySeconds)} s`,
-    );
+    this.log.warn(`alert not sent (${delivery.reason}), next try in ${String(delaySeconds)} s`);
     return false;
-  }
-
-  private async giveUp(id: string, now: Date): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.alert.delete({ where: { id } }),
-      this.prisma.$executeRaw`
-        INSERT INTO "GivenUpAlerts" (day) VALUES (${dayOf(now)}::date)
-        ON CONFLICT (day) DO UPDATE SET count = "GivenUpAlerts".count + 1`,
-    ]);
-    this.log.warn(`gave up an alert not sent within ${String(alertHours)} h`);
   }
 }

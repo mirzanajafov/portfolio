@@ -89,7 +89,7 @@ const applicationEntrySchema = z.object({
   company: z.string(),
   role: z.string(),
   appliedOn: day,
-  firstSeen: z.nullable(isoDate),
+  firstSeenOn: z.nullable(day),
   visits: z.array(visitStorySchema),
   days: z.array(z.object({ day, visits: z.number(), views: z.number() })),
   guesses: z.array(guessedVisitSchema),

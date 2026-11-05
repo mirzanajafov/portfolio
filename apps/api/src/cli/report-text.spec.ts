@@ -511,7 +511,7 @@ describe('reportText', () => {
       applications: {
         list: [
           anEntry({
-            firstSeen: new Date('2026-10-30T10:07:00Z'),
+            firstSeenOn: '2026-10-30',
             days: [{ day: '2026-10-30', visits: 1, views: 2 }],
           }),
         ],
@@ -522,7 +522,7 @@ describe('reportText', () => {
     });
     const text = reportText(report, { all: false });
     expect(text).toContain(
-      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened 2026-10-30 14:07',
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened on UTC day 2026-10-30',
     );
     expect(text).toContain('Telegram alerts given up in the period, not sent within 24 h: 2');
     expect(reportText(aReport(), { all: false })).not.toContain('given up');

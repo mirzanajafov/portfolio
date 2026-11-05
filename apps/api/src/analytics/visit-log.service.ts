@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AlertsService } from '../alerts/alerts.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dayOf } from './days.js';
+import { dayOf, utcDay } from './days.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -64,8 +64,8 @@ export class VisitLogService {
     at: Date,
   ): Promise<void> {
     const [application] = await tx.application.updateManyAndReturn({
-      where: { code, firstSeenAt: null },
-      data: { firstSeenAt: at },
+      where: { code, firstSeenOn: null },
+      data: { firstSeenOn: utcDay(at) },
       select: { company: true, role: true },
     });
     if (application) {

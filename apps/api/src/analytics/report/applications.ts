@@ -163,7 +163,7 @@ export function applicationsOf(
         company: application.company,
         role: application.role,
         appliedOn: dayOf(application.appliedOn),
-        firstSeen: application.firstSeenAt,
+        firstSeenOn: application.firstSeenOn === null ? null : dayOf(application.firstSeenOn),
         visits: coded
           .filter((each) => each.application.id === application.id)
           .map(({ visit }) => storyOf(visit, labels, asked, demos)),

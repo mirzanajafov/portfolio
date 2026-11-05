@@ -12,7 +12,7 @@ export type ApplicationRow = {
   city: string | null;
   atsHost: string | null;
   networks: string[];
-  firstSeenAt: Date | null;
+  firstSeenOn: Date | null;
 };
 
 export type RolledApplicationDay = {

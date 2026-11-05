@@ -478,8 +478,8 @@ function guessText(guess: GuessedVisit, all: boolean): string {
 function applicationParts(application: ApplicationEntry, all: boolean): ReportPart[] {
   const guesses = application.guesses.filter(({ confidence }) => all || confidence !== 'low');
   const lowHidden = application.guesses.length - guesses.length;
-  const firstOpened = application.firstSeen
-    ? `, first opened ${bakuTime(application.firstSeen)}`
+  const firstOpened = application.firstSeenOn
+    ? `, first opened on UTC day ${application.firstSeenOn}`
     : '';
   const heading = `${application.company}, ${application.role}, applied ${application.appliedOn}, code ${application.code}${firstOpened}`;
   const parts = [

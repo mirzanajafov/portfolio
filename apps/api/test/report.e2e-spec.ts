@@ -271,7 +271,7 @@ describe('the visitor report against a real database', () => {
     const report = await reports.build(7);
 
     const [xsolla] = report.applications.list;
-    expect(xsolla?.firstSeen).toEqual(new Date('2026-10-02T12:00:00Z'));
+    expect(xsolla?.firstSeenOn).toBe('2026-10-02');
     expect(xsolla?.visits.map(({ pages }) => pages.map(({ path }) => path))).toEqual([['/']]);
     expect(xsolla?.guesses).toMatchObject([
       {

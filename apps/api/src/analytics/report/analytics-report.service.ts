@@ -49,7 +49,7 @@ export class AnalyticsReportService {
               city: true,
               atsHost: true,
               networks: true,
-              firstSeenAt: true,
+              firstSeenOn: true,
             },
           }),
           rolledApplications: await tx.dailyApplication.findMany({
