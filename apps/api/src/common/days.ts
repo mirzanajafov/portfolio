@@ -1,4 +1,10 @@
+import { inBaku } from '@portfolio/content/time';
+
 const dayMs = 24 * 60 * 60 * 1000;
+
+export function bakuDay(at: Date): Date {
+  return utcDay(inBaku(at));
+}
 
 export function utcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));

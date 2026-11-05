@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { isAnswer, nextStatuses, statuses, type Status } from '@portfolio/content/applications';
-import { inBaku } from '@portfolio/content/time';
 import { ClockService } from '../common/clock.service.js';
-import { dayOf, dayOrNull, utcDay } from '../common/days.js';
+import { bakuDay, dayOf, dayOrNull } from '../common/days.js';
 import { ApplicationField, Prisma, type Application } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ApplicationEdit, NewApplication } from './application.schema.js';
@@ -75,7 +74,7 @@ export class ApplicationsService {
   ) {}
 
   async add({ code, ...application }: NewApplication): Promise<AddOutcome> {
-    if (application.appliedOn > utcDay(inBaku(this.clock.now()))) {
+    if (application.appliedOn > bakuDay(this.clock.now())) {
       return {
         kind: 'invalid',
         reason: `appliedOn ${dayOf(application.appliedOn)} is after today in Baku`,
@@ -123,7 +122,7 @@ export class ApplicationsService {
       if (status !== current.status && !allowed.includes(status)) {
         return { kind: 'refused', from: current.status, to: status, allowed };
       }
-      const today = utcDay(inBaku(at));
+      const today = bakuDay(at);
       const answered = current.answeredOn ?? (isAnswer(current.status, status) ? today : null);
       const refusal = answerDayRefusal(edit.answeredOn, answered, current.appliedOn, today);
       if (refusal) {
