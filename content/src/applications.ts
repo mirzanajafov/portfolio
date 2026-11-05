@@ -14,6 +14,8 @@ export const statuses = [
 
 export type Status = (typeof statuses)[number];
 
+export const guessWindowDays = 14;
+
 export const nextStatuses: Record<Status, readonly Status[]> = {
   sent: ['screening', 'interview', 'offer', 'rejected', 'withdrawn'],
   screening: ['interview', 'offer', 'rejected', 'withdrawn'],

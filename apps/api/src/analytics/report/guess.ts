@@ -1,3 +1,4 @@
+import { guessWindowDays } from '@portfolio/content/applications';
 import type { Confidence, Signal } from '@portfolio/content/report';
 import { inBaku } from '@portfolio/content/time';
 import { daysBetween } from '../../common/days.js';
@@ -14,7 +15,6 @@ type Prepared = { application: ApplicationRow; names: string[]; city: string; at
 
 type Seen = { network: string[]; city: string };
 
-const windowDays = 14;
 const strength: Record<Confidence, number> = { low: 1, medium: 2, high: 3 };
 const folds: Record<string, string> = { ə: 'e', ı: 'i', ø: 'o', ł: 'l', ß: 'ss', æ: 'ae', đ: 'd' };
 
@@ -114,7 +114,7 @@ export function guesserFor(
     const matches = prepared
       .flatMap((each) => {
         const daysAfter = daysBetween(each.application.appliedOn, inBaku(visit.startedAt));
-        if (daysAfter < 0 || daysAfter > windowDays) {
+        if (daysAfter < 0 || daysAfter > guessWindowDays) {
           return [];
         }
         return matchOf(visit, seen, each, daysAfter) ?? [];
