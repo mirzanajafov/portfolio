@@ -1,3 +1,4 @@
+import { caseStudiesIn } from './case-studies.ts';
 import type { CaseStudy, Content } from './schema.ts';
 
 export const analyticsDays = 30;
@@ -78,10 +79,8 @@ export function pageNames({ projects }: Content): Map<string, string> {
     ['/cv', 'the CV'],
     ['/privacy', 'the privacy page'],
   ]);
-  for (const { slug, name, caseStudy } of projects) {
-    if (caseStudy) {
-      names.set(`/projects/${slug}`, `the ${name} case study`);
-    }
+  for (const { slug, name } of caseStudiesIn(projects).projectsWithCaseStudy) {
+    names.set(`/projects/${slug}`, `the ${name} case study`);
   }
   return names;
 }

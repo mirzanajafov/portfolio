@@ -64,6 +64,12 @@ describe('parseEnv for Telegram alerts', () => {
     },
   );
 
+  it('refuses an API address with a path or a trailing slash, which would break the bot URL', () => {
+    expect(() => parseEnv({ ...base, TELEGRAM_API_URL: 'https://api.telegram.org/' })).toThrow(
+      /TELEGRAM_API_URL/,
+    );
+  });
+
   it('reads an empty value as unset, the way Compose passes a variable the server does not have', () => {
     expect(
       telegramPair(parseEnv({ ...base, TELEGRAM_BOT_TOKEN: '', TELEGRAM_CHAT_ID: '' })),

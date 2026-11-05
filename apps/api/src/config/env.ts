@@ -31,7 +31,13 @@ const envSchema = z
     EVENTS_PER_ADDRESS_10_MIN: positive(300),
     EVENTS_PER_ADDRESS_DAY: positive(3000),
     EVENTS_PER_DAY: positive(20_000),
-    TELEGRAM_API_URL: z.url().default('https://api.telegram.org'),
+    TELEGRAM_API_URL: z
+      .url()
+      .refine(
+        (url) => new URL(url).origin === url,
+        'must be an origin, such as https://api.telegram.org',
+      )
+      .default('https://api.telegram.org'),
     TELEGRAM_BOT_TOKEN: unsetWhenEmpty,
     TELEGRAM_CHAT_ID: unsetWhenEmpty,
   })

@@ -18,7 +18,7 @@ export class AlertsService {
     @Inject(CONTENT) content: Content,
   ) {
     this.demoNames = new Map(
-      [...demoSites(content).values()].map(({ slug, name }) => [slug, name]),
+      [...demoSites(content).values()].map(({ slug, name }) => [slug, `the ${name} demo`]),
     );
     this.pageNames = pageNames(content);
   }
@@ -33,9 +33,8 @@ export class AlertsService {
       return;
     }
     const firstPage =
-      demo === null
-        ? (this.pageNames.get(path) ?? "a page that isn't on the site")
-        : `the ${this.demoNames.get(demo) ?? demo} demo`;
+      (demo === null ? this.pageNames.get(path) : this.demoNames.get(demo)) ??
+      "a page that isn't on the site";
     await tx.alert.create({
       data: { createdAt: at, nextAttemptAt: at, text: firstVisitText(application, firstPage, at) },
     });
