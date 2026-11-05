@@ -117,26 +117,25 @@ function newApplicationIn(form: FormData): NewApplicationBody {
   };
 }
 
+function editedValue(form: FormData, name: FieldName): string | string[] | null {
+  if (name === 'networks') {
+    return linesIn(form, name);
+  }
+  const value = textIn(form, name);
+  const hint = name === 'country' || name === 'city' || name === 'atsHost';
+  return hint && value === '' ? null : value;
+}
+
 function editIn(form: FormData): ApplicationEditBody | null {
-  const changed = (name: FieldName) => textIn(form, name) !== shownIn(form, name);
-  if (!editFields.some(changed)) {
+  const comparable = (name: FieldName) =>
+    name === 'networks' ? linesIn(form, name).join('\n') : textIn(form, name);
+  const changed = editFields.filter((name) => comparable(name) !== shownIn(form, name));
+  if (changed.length === 0) {
     return null;
   }
-  const text = (name: FieldName) => (changed(name) ? textIn(form, name) : undefined);
-  const hint = (name: FieldName) => (changed(name) ? textIn(form, name) || null : undefined);
   return {
-    company: text('company'),
-    role: text('role'),
-    appliedOn: text('appliedOn'),
-    channel: text('channel'),
-    cvVariant: text('cvVariant'),
-    status: text('status'),
-    answeredOn: text('answeredOn'),
-    notes: text('notes'),
-    country: hint('country'),
-    city: hint('city'),
-    atsHost: hint('atsHost'),
-    networks: changed('networks') ? linesIn(form, 'networks') : undefined,
+    version: Number(cleaned(form.get('version'))),
+    ...Object.fromEntries(changed.map((name) => [name, editedValue(form, name)])),
   };
 }
 
@@ -204,8 +203,9 @@ export async function undoStatus(
   if (token === undefined) {
     return sessionEnded;
   }
-  const move = { from: cleaned(form.get('from')), to: cleaned(form.get('to')) };
-  const outcome = await undoStatusChange(apiUrl(), token, target, move);
+  const outcome = await undoStatusChange(apiUrl(), token, target, {
+    version: Number(cleaned(form.get('version'))),
+  });
   if (outcome.kind === 'done') {
     revalidatePath(`/admin/applications/${target}`);
     return null;

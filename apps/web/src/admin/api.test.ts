@@ -171,7 +171,7 @@ describe('fetchApplication', () => {
 
 describe('the application writes', () => {
   const view = anApplicationView();
-  const move = { from: 'screening', to: 'sent' };
+  const undo = { version: 3 };
   const acme: NewApplicationBody = {
     company: 'Acme',
     role: 'Backend Engineer',
@@ -185,14 +185,14 @@ describe('the application writes', () => {
     const fetchImpl = answering(200, view);
 
     await createApplication(api, session, acme, fetchImpl);
-    await updateApplication(api, session, 'memh', { notes: 'Called back' }, fetchImpl);
-    await undoStatusChange(api, session, 'memh', move, fetchImpl);
+    await updateApplication(api, session, 'memh', { version: 3, notes: 'Called back' }, fetchImpl);
+    await undoStatusChange(api, session, 'memh', undo, fetchImpl);
 
     const calls = fetchImpl.mock.calls.map(([url, init]) => [url, init?.method, init?.body]);
     expect(calls).toEqual([
       ['http://api:3201/admin/applications', 'POST', JSON.stringify(acme)],
-      ['http://api:3201/admin/applications/memh', 'PATCH', '{"notes":"Called back"}'],
-      ['http://api:3201/admin/applications/memh/undo', 'POST', JSON.stringify(move)],
+      ['http://api:3201/admin/applications/memh', 'PATCH', '{"version":3,"notes":"Called back"}'],
+      ['http://api:3201/admin/applications/memh/undo', 'POST', JSON.stringify(undo)],
     ]);
     expect(fetchImpl.mock.calls[0]?.[1]?.headers).toEqual({
       authorization: `Bearer ${session}`,
@@ -206,7 +206,7 @@ describe('the application writes', () => {
       application: view,
     });
     expect(
-      await updateApplication(api, session, 'memh', {}, answering(409, { message: 'no move' })),
+      await updateApplication(api, session, 'memh', undo, answering(409, { message: 'no move' })),
     ).toEqual({ kind: 'conflict', message: 'no move' });
     expect(
       await createApplication(api, session, acme, answering(400, { message: 'bad day' })),
@@ -219,17 +219,17 @@ describe('the application writes', () => {
         api,
         session,
         'memh',
-        move,
+        undo,
         answering(429, {}, { 'retry-after': '600' }),
       ),
     ).toEqual({ kind: 'limited', retryAfterSeconds: 600 });
-    expect(await undoStatusChange(api, session, 'memh', move, answering(404))).toEqual({
+    expect(await undoStatusChange(api, session, 'memh', undo, answering(404))).toEqual({
       kind: 'missing',
     });
   });
 
   it('waits a minute after a 429 that names no wait, or one it cannot read', async () => {
-    expect(await undoStatusChange(api, session, 'memh', move, answering(429))).toEqual({
+    expect(await undoStatusChange(api, session, 'memh', undo, answering(429))).toEqual({
       kind: 'limited',
       retryAfterSeconds: 60,
     });
@@ -238,14 +238,14 @@ describe('the application writes', () => {
         api,
         session,
         'memh',
-        move,
+        undo,
         answering(429, {}, { 'retry-after': 'soon' }),
       ),
     ).toEqual({ kind: 'limited', retryAfterSeconds: 60 });
   });
 
   it('fails on any other answer', async () => {
-    await expect(undoStatusChange(api, session, 'memh', move, answering(500))).rejects.toThrow(
+    await expect(undoStatusChange(api, session, 'memh', undo, answering(500))).rejects.toThrow(
       'the API answered 500 to an undo',
     );
   });

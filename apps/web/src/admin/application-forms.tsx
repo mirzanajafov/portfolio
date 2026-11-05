@@ -134,6 +134,7 @@ export function EditApplicationForm({ application }: { application: ApplicationV
       <Field label="Notes" wide>
         <textarea name="notes" rows={4} defaultValue={values.notes} className={input} />
       </Field>
+      <input type="hidden" name="version" value={application.version} />
       <Fields values={values} choosing={false} />
       <div className="flex flex-col items-start gap-4 sm:col-span-2">
         <button type="submit" disabled={pending} className={submit}>
@@ -147,11 +148,11 @@ export function EditApplicationForm({ application }: { application: ApplicationV
 
 export function UndoForm({
   code,
-  status,
+  version,
   undoTo,
 }: {
   code: string;
-  status: Status;
+  version: number;
   undoTo: Status;
 }) {
   const [failure, action, pending] = useActionState<string | null, FormData>(
@@ -160,13 +161,8 @@ export function UndoForm({
   );
   return (
     <form action={action} className="flex flex-col items-start gap-2">
-      <input type="hidden" name="from" value={status} />
-      <input type="hidden" name="to" value={undoTo} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-full border border-line px-4 py-2 hover:border-accent disabled:opacity-50"
-      >
+      <input type="hidden" name="version" value={version} />
+      <button type="submit" disabled={pending} className="rounded-full border border-line px-4 py-2 hover:border-accent disabled:opacity-50">
         Undo the last move, back to {undoTo}
       </button>
       <Failure failure={failure} />

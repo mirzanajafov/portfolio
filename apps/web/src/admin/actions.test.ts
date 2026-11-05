@@ -221,10 +221,10 @@ describe('the application actions', () => {
     const asShown = Object.fromEntries(
       Object.entries(shown).map(([name, value]) => [`shown.${name}`, value]),
     );
-    return formOf({ ...shown, ...asShown, ...fields });
+    return formOf({ ...shown, ...asShown, version: '4', ...fields });
   }
 
-  it('sends only what the edit changed, clearing an emptied hint, then shows the page as it now is', async () => {
+  it('sends only what the edit changed with the version the page loaded, clearing an emptied hint, then shows the page as it now is', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.updateApplication.mockResolvedValue(done);
     const form = editFormOf({
@@ -237,6 +237,7 @@ describe('the application actions', () => {
     expect(await editApplication('memh', null, form)).toBeNull();
     expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
     expect(api.updateApplication).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
+      version: 4,
       channel: 'referral',
       status: 'screening',
       country: null,
@@ -244,11 +245,12 @@ describe('the application actions', () => {
     });
   });
 
-  it('asks the API for nothing when nothing changed, and reads a CRLF the browser sent as the LF it was shown', async () => {
+  it('asks the API for nothing when nothing changed, reading a CRLF as the LF it was shown and network lines as the list they make', async () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     const form = editFormOf({
       notes: 'First line\r\nSecond line',
       'shown.notes': 'First line\nSecond line',
+      networks: ' ACME-NET \n\n',
     });
 
     expect(await editApplication('memh', null, form)).toBeNull();
@@ -259,10 +261,9 @@ describe('the application actions', () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue(done);
 
-    expect(await undoStatus('memh', null, formOf({ from: 'screening', to: 'sent' }))).toBeNull();
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBeNull();
     expect(api.undoStatusChange).toHaveBeenCalledWith('http://api:3201', session, 'memh', {
-      from: 'screening',
-      to: 'sent',
+      version: 4,
     });
     expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/applications/memh');
   });
@@ -297,7 +298,7 @@ describe('the application actions', () => {
     });
 
     const edited = await editApplication('memh', null, editFormOf({ status: 'screening' }));
-    const undone = await undoStatus('memh', null, formOf({ from: 'screening', to: 'sent' }));
+    const undone = await undoStatus('memh', null, formOf({ version: '4' }));
     const added = await addApplication(null, formOf({ company: 'Acme' }));
 
     expect(edited?.failure).toBe(
@@ -313,7 +314,7 @@ describe('the application actions', () => {
     arriving('https://najafov.dev', { [sessionCookie.name]: session });
     api.undoStatusChange.mockResolvedValue({ kind: 'limited', retryAfterSeconds: 600 });
 
-    expect(await undoStatus('memh', null, formOf({ from: 'screening', to: 'sent' }))).toBe(
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBe(
       'Too many changes. Try again in 10 minutes.',
     );
   });
@@ -323,7 +324,7 @@ describe('the application actions', () => {
     const added = await addApplication(null, formOf({ company: 'Acme' }));
     expect(added?.failure).toBe('The session has ended. Run admin link for a new sign-in link.');
     expect(added?.values).toMatchObject({ company: 'Acme' });
-    expect(await undoStatus('memh', null, formOf({ from: 'screening', to: 'sent' }))).toBe(
+    expect(await undoStatus('memh', null, formOf({ version: '4' }))).toBe(
       'The session has ended. Run admin link for a new sign-in link.',
     );
     expect(api.createApplication).not.toHaveBeenCalled();
@@ -358,9 +359,7 @@ describe('the application actions', () => {
   ])('is a 404 %s, before it asks the API', async (_, origin, cookies, code) => {
     arriving(origin, cookies);
 
-    await expect(undoStatus(code, null, formOf({ from: 'screening', to: 'sent' }))).rejects.toThrow(
-      'not found',
-    );
+    await expect(undoStatus(code, null, formOf({ version: '4' }))).rejects.toThrow('not found');
     await expect(editApplication(code, null, formOf({}))).rejects.toThrow('not found');
     expect(api.undoStatusChange).not.toHaveBeenCalled();
     expect(api.updateApplication).not.toHaveBeenCalled();

@@ -11,6 +11,7 @@ import {
   type ApplicationView,
 } from '@portfolio/content/applications';
 import { reportSchema, type Report } from '@portfolio/content/report';
+import type { editFields } from './application-fields';
 
 type SessionStart =
   | { kind: 'signed in'; token: string; expiresAt: Date }
@@ -30,22 +31,11 @@ export type NewApplicationBody = {
   networks: string[];
 };
 
-export type ApplicationEditBody = Partial<{
-  company: string;
-  role: string;
-  appliedOn: string;
-  channel: string;
-  cvVariant: string;
-  status: string;
-  answeredOn: string;
-  notes: string;
-  country: string | null;
-  city: string | null;
-  atsHost: string | null;
-  networks: string[];
-}>;
+export type ApplicationEditBody = { version: number } & Partial<
+  Record<(typeof editFields)[number], string | string[] | null>
+>;
 
-export type UndoMove = { from: string; to: string };
+export type UndoBody = { version: number };
 
 export type ApplicationWrite =
   | { kind: 'done'; application: ApplicationView }
@@ -212,7 +202,7 @@ async function outcomeOf(what: string, response: Response): Promise<ApplicationW
 function sending(
   method: 'POST' | 'PATCH',
   token: string,
-  body: NewApplicationBody | ApplicationEditBody | UndoMove,
+  body: NewApplicationBody | ApplicationEditBody | UndoBody,
 ): RequestInit {
   return {
     method,
@@ -250,12 +240,12 @@ export async function undoStatusChange(
   apiUrl: string,
   token: string,
   code: string,
-  move: UndoMove,
+  body: UndoBody,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApplicationWrite> {
   const response = await fetchImpl(
     `${apiUrl}/admin/applications/${code}/undo`,
-    sending('POST', token, move),
+    sending('POST', token, body),
   );
   return outcomeOf('an undo', response);
 }

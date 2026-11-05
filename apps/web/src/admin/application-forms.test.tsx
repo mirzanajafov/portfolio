@@ -145,16 +145,14 @@ describe('EditApplicationForm', () => {
 });
 
 describe('UndoForm', () => {
-  it('says where an undo goes, sends the status it was shown for, and says why it could not', async () => {
-    actions.undoStatus.mockResolvedValue(
-      'the application is sent now, not screening, so that undo is out of date',
-    );
-    render(<UndoForm code="memh" status="screening" undoTo="sent" />);
+  it('says where an undo goes, sends the version it was shown, and says why it could not', async () => {
+    actions.undoStatus.mockResolvedValue('the application changed since that page loaded');
+    render(<UndoForm code="memh" version={4} undoTo="sent" />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Undo the last move, back to sent' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('so that undo is out of date');
+    expect(await screen.findByRole('alert')).toHaveTextContent('changed since that page loaded');
     const [code, , form] = actions.undoStatus.mock.calls[0] ?? [];
-    expect([code, form?.get('from'), form?.get('to')]).toEqual(['memh', 'screening', 'sent']);
+    expect([code, form?.get('version')]).toEqual(['memh', '4']);
   });
 });

@@ -48,7 +48,7 @@ export default async function EditApplicationPage({
       </header>
       <Fragment key={JSON.stringify(application)}>
         {application.undoTo && (
-          <UndoForm code={code} status={application.status} undoTo={application.undoTo} />
+          <UndoForm code={code} version={application.version} undoTo={application.undoTo} />
         )}
         <EditApplicationForm application={application} />
       </Fragment>
