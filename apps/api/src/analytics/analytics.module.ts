@@ -1,4 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
+import { AlertsModule } from '../alerts/alerts.module.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
 import { EventsController } from './events.controller.js';
@@ -9,7 +10,7 @@ import { VisitLogService } from './visit-log.service.js';
 import { VisitorSaltModule } from './visitor-salt.module.js';
 
 @Module({
-  imports: [RateLimitModule, VisitorSaltModule],
+  imports: [AlertsModule, RateLimitModule, VisitorSaltModule],
   controllers: [EventsController],
   providers: [
     {

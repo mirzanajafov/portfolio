@@ -1,10 +1,18 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
 export const chrome =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 
 export const address = '203.0.113.7';
+
+export const aView = (overrides: Record<string, unknown> = {}) => ({
+  type: 'view',
+  id: randomUUID(),
+  path: '/',
+  ...overrides,
+});
 
 export type Sender = { ip?: string; userAgent?: string | null; headers?: Record<string, string> };
 

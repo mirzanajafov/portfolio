@@ -1,22 +1,13 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import {
-  afterAll,
-  afterEach,
-  assert,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { CliModule } from '../src/cli/cli.module.js';
 import { runCli } from '../src/cli/run.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { listenLocally } from './local-server.js';
 
 vi.mock(import('../src/applications/code.js'), () => ({ newCode: () => 'k7mpx' }));
 
@@ -63,10 +54,7 @@ describe('the CLI commands', () => {
       asked.push(request.url ?? '');
       answer(request, response);
     });
-    await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
-    const address = site.address();
-    assert(address !== null && typeof address === 'object');
-    siteAddress = `http://127.0.0.1:${String(address.port)}`;
+    siteAddress = await listenLocally(site);
   });
 
   afterAll(async () => {

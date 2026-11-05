@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { inBaku } from '@portfolio/content/time';
+import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
+import { dayOf, utcDay } from '../common/days.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dayOf } from './days.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -16,9 +18,14 @@ type EventOf<T extends AnalyticsEvent['type']> = Extract<AnalyticsEvent, { type:
 
 type FollowUp = Exclude<AnalyticsEvent, { type: 'view' }>;
 
+type UnseenApplication = { id: string; code: string; createdAt: Date };
+
 @Injectable()
 export class VisitLogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly alerts: AlertsService,
+  ) {}
 
   async recordView(
     event: EventOf<'view'>,
@@ -26,25 +33,56 @@ export class VisitLogService {
     demo: string | null,
     at: Date,
   ): Promise<void> {
-    await this.prisma.visit.createMany({
-      data: [{ visitor: key, startedAt: at, ...visit }],
-      skipDuplicates: true,
+    const unseen =
+      event.ref === undefined
+        ? null
+        : await this.prisma.application.findFirst({
+            where: { code: event.ref, firstSeenOn: null },
+            select: { id: true, code: true, createdAt: true },
+          });
+    const write = async (db: Prisma.TransactionClient) => {
+      await db.visit.createMany({
+        data: [{ visitor: key, startedAt: at, ...visit }],
+        skipDuplicates: true,
+      });
+      const { count } = await db.pageView.createMany({
+        data: [
+          {
+            id: event.id,
+            createdAt: at,
+            visitor: key,
+            path: event.path,
+            notFound: event.notFound,
+            referrerHost: event.referrer,
+            ref: event.ref,
+            demo,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      if (count > 0 && unseen) {
+        const firstView = { path: event.path, demo, notFound: event.notFound };
+        await this.noteFirstVisit(db, unseen, firstView, at);
+      }
+    };
+    await (unseen ? this.prisma.$transaction(write) : write(this.prisma));
+  }
+
+  private async noteFirstVisit(
+    tx: Prisma.TransactionClient,
+    unseen: UnseenApplication,
+    firstView: FirstView,
+    at: Date,
+  ): Promise<void> {
+    const recordedBefore = await earliestDayRecordedBefore(tx, unseen, at);
+    const [application] = await tx.application.updateManyAndReturn({
+      where: { id: unseen.id, firstSeenOn: null },
+      data: { firstSeenOn: recordedBefore ?? utcDay(inBaku(at)) },
+      select: { company: true, role: true },
     });
-    await this.prisma.pageView.createMany({
-      data: [
-        {
-          id: event.id,
-          createdAt: at,
-          visitor: key,
-          path: event.path,
-          notFound: event.notFound,
-          referrerHost: event.referrer,
-          ref: event.ref,
-          demo,
-        },
-      ],
-      skipDuplicates: true,
-    });
+    if (application && !recordedBefore) {
+      await this.alerts.queueFirstVisit(tx, application, firstView, at);
+    }
   }
 
   async record(event: FollowUp, demo: string | null, at: Date): Promise<void> {
@@ -124,6 +162,29 @@ export class VisitLogService {
         });
     }
   }
+}
+
+async function earliestDayRecordedBefore(
+  tx: Prisma.TransactionClient,
+  { id, code, createdAt }: UnseenApplication,
+  at: Date,
+): Promise<Date | null> {
+  const view = await tx.pageView.findFirst({
+    where: { ref: code, createdAt: { gte: createdAt, lt: at } },
+    orderBy: { createdAt: 'asc' },
+    select: { createdAt: true },
+  });
+  const rolled = await tx.dailyApplication.findFirst({
+    where: { applicationId: id, day: { gte: utcDay(createdAt) } },
+    orderBy: { day: 'asc' },
+    select: { day: true },
+  });
+  const viewDay = view ? utcDay(inBaku(view.createdAt)) : null;
+  const rolledDay = rolled?.day ?? null;
+  if (viewDay === null || rolledDay === null) {
+    return viewDay ?? rolledDay;
+  }
+  return viewDay < rolledDay ? viewDay : rolledDay;
 }
 
 async function ignoringUnknownView(write: Promise<unknown>): Promise<void> {

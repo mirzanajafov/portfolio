@@ -253,7 +253,7 @@ describe('the visitor report against a real database', () => {
     expect(report.rollupBehind).toBeNull();
   });
 
-  it('puts a coded visit and a guessed one under the company the application went to, and the site reads both back', async () => {
+  it('puts a coded visit and a guessed one under the company the application went to, with when its link was first opened, and the site reads both back', async () => {
     await prisma.application.create({
       data: {
         code: 'memh',
@@ -271,6 +271,7 @@ describe('the visitor report against a real database', () => {
     const report = await reports.build(7);
 
     const [xsolla] = report.applications.list;
+    expect(xsolla?.firstSeenOn).toBe('2026-10-02');
     expect(xsolla?.visits.map(({ pages }) => pages.map(({ path }) => path))).toEqual([['/']]);
     expect(xsolla?.guesses).toMatchObject([
       {

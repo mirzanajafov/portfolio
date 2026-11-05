@@ -2,9 +2,9 @@ import type { Content } from '@portfolio/content';
 import { demoSites, readingBlocks } from '@portfolio/content/analytics';
 import { askLogDays } from '@portfolio/content/ask';
 import { readSeconds, type Report, type Totals, type Week } from '@portfolio/content/report';
+import { dayOf, daysAfter, mondayOf, utcDay } from '../../common/days.js';
 import { outboundLinks } from '../links.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
-import { dayOf, daysAfter, mondayOf, utcDay } from '../days.js';
 import { firstRawDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
@@ -284,5 +284,10 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
       askedIn(rows.questions),
       new Map(demos.map((demo) => [demo.slug, demo])),
     ),
+    alerts: {
+      givenUp: rows.givenUpAlerts
+        .filter(({ day }) => day >= from)
+        .reduce((sum, { count }) => sum + count, 0),
+    },
   };
 }

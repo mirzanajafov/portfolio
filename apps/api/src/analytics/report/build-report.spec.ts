@@ -1,7 +1,7 @@
 import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import type { DayTotals } from '../day-totals.js';
-import { utcDay } from '../days.js';
+import { utcDay } from '../../common/days.js';
 import { aDemoView, anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
@@ -44,6 +44,7 @@ function reportOf(
       dropped: [],
       applications: [],
       rolledApplications: [],
+      givenUpAlerts: [],
       ...rows,
     },
     content,
@@ -400,6 +401,18 @@ describe('buildReport', () => {
       { day: '2026-10-29', bot: 3, limited: 1, origin: 0 },
       { day: '2026-10-30', bot: 2, limited: 0, origin: 4 },
     ]);
+  });
+
+  it('adds up the alerts given up in the period', () => {
+    const report = reportOf([], {
+      days: 2,
+      givenUpAlerts: [
+        { day: new Date('2026-10-27'), count: 9 },
+        { day: new Date('2026-10-28'), count: 1 },
+        { day: new Date('2026-10-30'), count: 2 },
+      ],
+    });
+    expect(report.alerts).toEqual({ givenUp: 3 });
   });
 
   describe('the demos', () => {

@@ -1,8 +1,10 @@
+import { caseStudiesIn } from './case-studies.ts';
 import type { CaseStudy, Content } from './schema.ts';
 
 export const analyticsDays = 30;
 export const dailyTotalsMonths = 25;
 export const backupDays = 7;
+export const alertHours = 24;
 export const refCode = /^[a-z0-9]{3,16}$/;
 export const hostName = /^(?=.{1,253}$)(?:[a-z0-9-]{1,63}\.)*[a-z0-9-]{1,63}$/;
 export const errorMessageMaxLength = 200;
@@ -69,6 +71,24 @@ function caseStudyBlocks({ demo, demoCaption, decisions }: CaseStudy): string[] 
     'proof',
     'next',
   ];
+}
+
+export function demoNames(content: Content): Map<string, string> {
+  return new Map(
+    [...demoSites(content).values()].map(({ slug, name }) => [slug, `the ${name} demo`]),
+  );
+}
+
+export function pageNames({ projects }: Content): Map<string, string> {
+  const names = new Map([
+    ['/', 'the home page'],
+    ['/cv', 'the CV'],
+    ['/privacy', 'the privacy page'],
+  ]);
+  for (const { slug, name } of caseStudiesIn(projects).projectsWithCaseStudy) {
+    names.set(`/projects/${slug}`, `the ${name} case study`);
+  }
+  return names;
 }
 
 export function readingBlocks({ projects }: Content): Map<string, string[]> {

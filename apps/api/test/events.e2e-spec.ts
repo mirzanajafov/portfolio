@@ -6,7 +6,7 @@ import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
 import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
-import { address, chrome, sendEvent } from './send-event.js';
+import { aView, address, chrome, sendEvent } from './send-event.js';
 import { FixedClock, knownPlaces, siteOrigin, startApp } from './start-app.js';
 
 const headlessChrome =
@@ -24,13 +24,6 @@ const nothingWritten = {
 const fromElsewhere = { Origin: 'https://example.com' };
 
 const fromTheDemo = { Origin: 'https://tuner.najafov.dev' };
-
-const aView = (overrides: Record<string, unknown> = {}) => ({
-  type: 'view',
-  id: randomUUID(),
-  path: '/',
-  ...overrides,
-});
 
 describe('POST /events against a real database', () => {
   let app: NestExpressApplication;

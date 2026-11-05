@@ -1,6 +1,6 @@
 import type { Confidence, Signal } from '@portfolio/content/report';
 import { inBaku } from '@portfolio/content/time';
-import { daysBetween } from '../days.js';
+import { daysBetween } from '../../common/days.js';
 import type { VisitRow } from '../visits.js';
 import type { ApplicationRow } from './rows.js';
 

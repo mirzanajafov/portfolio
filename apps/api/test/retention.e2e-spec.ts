@@ -34,7 +34,7 @@ describe('retention against a real database', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo", "DailyApplication", "Application" CASCADE`;
+    await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "LinkClick", "ClientError", "DroppedEvents", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo", "DailyApplication", "GivenUpAlerts", "Application" CASCADE`;
   });
 
   it('keeps a day raw until it is 30 full days old, then rolls it up and deletes its visits with their page views, clicks and errors', async () => {
@@ -242,7 +242,7 @@ describe('retention against a real database', () => {
     ]);
   });
 
-  it("deletes daily totals and dropped counters after 25 months, but keeps an application's", async () => {
+  it("deletes daily totals and the dropped and given-up counters after 25 months, but keeps an application's", async () => {
     const memh = await prisma.application.create({
       data: {
         code: 'memh',
@@ -280,6 +280,7 @@ describe('retention against a real database', () => {
       ],
     });
     await prisma.droppedEvents.create({ data: { day: oldDay, reason: 'bot', count: 3 } });
+    await prisma.givenUpAlerts.create({ data: { day: oldDay, count: 2 } });
     await prisma.dailyApplication.create({
       data: { day: oldDay, applicationId: memh.id, visits: 1, views: 1 },
     });
@@ -291,6 +292,7 @@ describe('retention against a real database', () => {
     expect(await prisma.dailySource.count()).toBe(0);
     expect((await prisma.dailyDemo.findMany()).map(({ day }) => day)).toEqual([keptDay]);
     expect(await prisma.droppedEvents.count()).toBe(0);
+    expect(await prisma.givenUpAlerts.count()).toBe(0);
     expect(await prisma.dailyApplication.count()).toBe(1);
   });
 });

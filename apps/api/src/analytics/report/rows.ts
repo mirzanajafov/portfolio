@@ -12,6 +12,7 @@ export type ApplicationRow = {
   city: string | null;
   atsHost: string | null;
   networks: string[];
+  firstSeenOn: Date | null;
 };
 
 export type RolledApplicationDay = {
@@ -29,4 +30,5 @@ export type ReportRows = {
   dropped: { day: Date; reason: DropReason; count: number }[];
   applications: ApplicationRow[];
   rolledApplications: RolledApplicationDay[];
+  givenUpAlerts: { day: Date; count: number }[];
 };

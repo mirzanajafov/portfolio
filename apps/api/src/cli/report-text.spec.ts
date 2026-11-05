@@ -506,6 +506,28 @@ describe('reportText', () => {
     );
   });
 
+  it("says when an application's link was first opened, and how many alerts were given up", () => {
+    const report = aReport({
+      applications: {
+        list: [
+          anEntry({
+            firstSeenOn: '2026-10-30',
+            days: [{ day: '2026-10-30', visits: 1, views: 2 }],
+          }),
+        ],
+        score: { visits: 0, unplaced: 0, levels: noOutcomes() },
+        unknownCodes: [],
+      },
+      alerts: { givenUp: 2 },
+    });
+    const text = reportText(report, { all: false });
+    expect(text).toContain(
+      'Xsolla, Backend Engineer, applied 2026-10-29, code memh, first opened 2026-10-30',
+    );
+    expect(text).toContain('Telegram alerts given up in the period, not sent within 24 h: 2');
+    expect(reportText(aReport(), { all: false })).not.toContain('given up');
+  });
+
   it('cuts the applications, their visits and the unknown codes at ten unless asked for all', () => {
     const twelve = Array.from({ length: 12 }, (_, index) => index);
     const report = aReport({
