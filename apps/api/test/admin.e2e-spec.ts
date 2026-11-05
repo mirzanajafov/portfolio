@@ -293,11 +293,14 @@ describe('admin sign-in against a real database', () => {
       });
     });
 
-    it('refuses an application with a channel career has no name for, a field it does not know, or a taken code', async () => {
+    it('refuses an application with a channel career has no name for, a field it does not know, a day after today in Baku, or a taken code', async () => {
       const token = await signedIn();
 
       await write('post', '', token, { ...acme, code: 'kxqtz', channel: 'friend' }).expect(400);
       await write('post', '', token, { ...acme, code: 'kxqtz', salary: 1 }).expect(400);
+      await write('post', '', token, { ...acme, code: 'kxqtz', appliedOn: '2026-10-03' }).expect(
+        400,
+      );
       await write('post', '', token, acme).expect(409);
     });
 

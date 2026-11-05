@@ -24,8 +24,11 @@ import {
   type ApplicationEdit,
   type NewApplication,
 } from '../applications/application.schema.js';
-import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
-import { ClockService } from '../common/clock.service.js';
+import {
+  ApplicationsService,
+  CodeTakenError,
+  FutureApplicationError,
+} from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
@@ -68,7 +71,6 @@ export class AdminApplicationsController {
   constructor(
     private readonly sessions: AdminSessionsService,
     private readonly applications: ApplicationsService,
-    private readonly clock: ClockService,
   ) {}
 
   @Get(':code')
@@ -92,6 +94,9 @@ export class AdminApplicationsController {
       if (error instanceof CodeTakenError) {
         throw new ConflictException(error.message);
       }
+      if (error instanceof FutureApplicationError) {
+        throw new BadRequestException(error.message);
+      }
       throw error;
     }
   }
@@ -104,7 +109,7 @@ export class AdminApplicationsController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    const outcome = await this.applications.edit(code, edit, this.clock.now());
+    const outcome = await this.applications.edit(code, edit);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
     }
@@ -128,7 +133,7 @@ export class AdminApplicationsController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
     await this.admitWrite(adminSession, res);
-    const outcome = await this.applications.undo(code, this.clock.now());
+    const outcome = await this.applications.undo(code);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
     }

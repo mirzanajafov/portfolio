@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { isAnswer, nextStatuses, statuses, type Status } from '@portfolio/content/applications';
 import { inBaku } from '@portfolio/content/time';
-import { dayOrNull, utcDay } from '../common/days.js';
+import { ClockService } from '../common/clock.service.js';
+import { dayOf, dayOrNull, utcDay } from '../common/days.js';
 import {
   ApplicationField,
   Prisma,
@@ -51,11 +52,23 @@ export class CodeTakenError extends Error {
   }
 }
 
+export class FutureApplicationError extends Error {
+  constructor(appliedOn: Date) {
+    super(`appliedOn ${dayOf(appliedOn)} is after today in Baku`);
+  }
+}
+
 @Injectable()
 export class ApplicationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: ClockService,
+  ) {}
 
   async add({ code, ...application }: NewApplication): Promise<Application> {
+    if (application.appliedOn > utcDay(inBaku(this.clock.now()))) {
+      throw new FutureApplicationError(application.appliedOn);
+    }
     const tries = code === undefined ? maxDraws : 1;
     for (let attempt = 1; ; attempt += 1) {
       const candidate = code ?? newCode();
@@ -82,7 +95,8 @@ export class ApplicationsService {
     });
   }
 
-  edit(code: string, edit: ApplicationEdit, at: Date): Promise<EditOutcome> {
+  edit(code: string, edit: ApplicationEdit): Promise<EditOutcome> {
+    const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {
@@ -106,7 +120,8 @@ export class ApplicationsService {
     });
   }
 
-  undo(code: string, at: Date): Promise<UndoOutcome> {
+  undo(code: string): Promise<UndoOutcome> {
+    const at = this.clock.now();
     return this.prisma.$transaction(async (tx) => {
       const current = await lockedApplication(tx, code);
       if (!current) {

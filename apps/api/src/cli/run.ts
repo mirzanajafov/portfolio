@@ -5,7 +5,11 @@ import { adminLinkMinutes } from '@portfolio/content/admin';
 import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
-import { ApplicationsService, CodeTakenError } from '../applications/applications.service.js';
+import {
+  ApplicationsService,
+  CodeTakenError,
+  FutureApplicationError,
+} from '../applications/applications.service.js';
 import { applicationsCsv } from '../applications/csv.js';
 import { dayOf } from '../common/days.js';
 import { ENV, type Env } from '../config/env.js';
@@ -101,7 +105,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
   try {
     return await run(command, app);
   } catch (error) {
-    if (error instanceof CodeTakenError) {
+    if (error instanceof CodeTakenError || error instanceof FutureApplicationError) {
       process.stderr.write(`${error.message}\n`);
       return 1;
     }
