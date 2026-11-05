@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Application } from '../generated/prisma/client.js';
 import { applicationsCsv } from './csv.js';
 
-const anApplication = (overrides: Partial<Application> = {}): Application => ({
+const anApplicationRow = (overrides: Partial<Application> = {}): Application => ({
   id: '019a3b6e-0000-7000-8000-000000000001',
   code: 'memh',
   company: 'Acme',
@@ -30,13 +30,13 @@ describe('applicationsCsv', () => {
   });
 
   it('writes an unanswered application with a blank days to first answer', () => {
-    expect(applicationsCsv([anApplication()]).split('\n')[1]).toBe(
+    expect(applicationsCsv([anApplicationRow()]).split('\n')[1]).toBe(
       'Acme,Backend Engineer,2026-10-30,base 2026-10-30,direct,memh,sent,,',
     );
   });
 
   it('counts the days from applying to the first answer', () => {
-    const answered = anApplication({ status: 'screening', answeredOn: new Date('2026-11-04') });
+    const answered = anApplicationRow({ status: 'screening', answeredOn: new Date('2026-11-04') });
     expect(applicationsCsv([answered]).split('\n')[1]).toBe(
       'Acme,Backend Engineer,2026-10-30,base 2026-10-30,direct,memh,screening,5,',
     );
@@ -45,7 +45,7 @@ describe('applicationsCsv', () => {
   it('quotes a field with a comma, a quote or a line break, and doubles its quotes', () => {
     const notes = 'Applied through the form, "website" field.\nSecond line.';
     const role = 'Middle/Senior Fullstack Developer, Baku';
-    expect(applicationsCsv([anApplication({ role, notes })])).toBe(
+    expect(applicationsCsv([anApplicationRow({ role, notes })])).toBe(
       'company,role,date,cv_variant,channel,ref,status,days_to_first_answer,notes\n' +
         'Acme,"Middle/Senior Fullstack Developer, Baku",2026-10-30,base 2026-10-30,direct,memh,sent,,' +
         '"Applied through the form, ""website"" field.\nSecond line."\n',
