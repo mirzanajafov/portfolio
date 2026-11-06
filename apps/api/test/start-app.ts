@@ -10,9 +10,11 @@ import { CONTENT } from '../src/content.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { fixtureContent } from './content.fixture.js';
 
+export const awsAddress = '203.0.113.44';
+
 export const knownPlaces = new Map<string, Place>([
   ['203.0.113.7', { country: 'AZ', city: 'Baku', network: 'Example Telecom' }],
-  ['203.0.113.44', { country: 'US', city: 'Ashburn', network: 'Amazon.com, Inc.' }],
+  [awsAddress, { country: 'US', city: 'Ashburn', network: 'Amazon.com, Inc.' }],
 ]);
 
 const placeLookup = {

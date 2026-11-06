@@ -3,6 +3,7 @@ import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { bakuDay, dayOf, utcDay } from '../common/days.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { dataCenterOf, dataCenters } from './data-centers.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -33,7 +34,7 @@ export class VisitLogService {
     at: Date,
   ): Promise<void> {
     const unseen =
-      event.ref === undefined
+      event.ref === undefined || dataCenterOf(visit) !== null
         ? null
         : await this.prisma.application.findFirst({
             where: { code: event.ref, firstSeenOn: null },
@@ -169,7 +170,11 @@ async function earliestDayRecordedBefore(
   at: Date,
 ): Promise<Date | null> {
   const view = await tx.pageView.findFirst({
-    where: { ref: code, createdAt: { gte: createdAt, lt: at } },
+    where: {
+      ref: code,
+      createdAt: { gte: createdAt, lt: at },
+      visit: { OR: [{ network: null }, { network: { notIn: dataCenters } }] },
+    },
     orderBy: { createdAt: 'asc' },
     select: { createdAt: true },
   });

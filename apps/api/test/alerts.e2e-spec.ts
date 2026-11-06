@@ -8,7 +8,7 @@ import { newSession } from './admin-session.js';
 import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
-import { FixedClock, startApp } from './start-app.js';
+import { FixedClock, awsAddress, startApp } from './start-app.js';
 
 type Reply = { status: number; body: object };
 
@@ -114,6 +114,40 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(bot.received).toEqual([]);
     expect(await prisma.alert.count()).toBe(0);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+  });
+
+  it('sends nothing and marks no first visit for a coded view from a data center, and sends the message for the person after it', async () => {
+    await sendEvent(app, aCodedView(), { ip: awsAddress }).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+
+    at('2026-10-02T12:05:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-10-02 16:05 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+    expect(await prisma.pageView.count({ where: { ref: 'memh' } })).toBe(2);
+  });
+
+  it('lets no data-center view the day before date back the first visit by a person', async () => {
+    await sendEvent(app, aCodedView(), { ip: awsAddress }).expect(204);
+    at('2026-10-03T12:00:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-10-03 16:00 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-03') });
   });
 
   it('sends one message when two first views arrive at once', async () => {
