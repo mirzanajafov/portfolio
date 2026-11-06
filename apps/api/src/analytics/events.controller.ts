@@ -1,7 +1,7 @@
 import { Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { callerOf } from '../common/caller.js';
-import { TooManyRequestsException } from '../rate-limit/too-many-requests.exception.js';
+import { TooManyRequestsException } from '../common/too-many-requests.exception.js';
 import { EventPipe, PostedEvent } from './event.pipe.js';
 import type { SourcedEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';

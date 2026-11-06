@@ -17,8 +17,8 @@ import type { Request } from 'express';
 import { z } from 'zod';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { clientAddress } from '../common/caller.js';
+import { TooManyRequestsException } from '../common/too-many-requests.exception.js';
 import { ZodPipe } from '../common/zod.pipe.js';
-import { TooManyRequestsException } from '../rate-limit/too-many-requests.exception.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
 
