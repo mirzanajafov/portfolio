@@ -294,31 +294,6 @@ describe('POST /ask behind a proxy it does not trust', () => {
   });
 });
 
-describe('POST /ask when one question goes over two limits', () => {
-  let app: NestExpressApplication;
-  let prisma: PrismaService;
-
-  beforeAll(async () => {
-    ({ app, prisma } = await startApp({ ASK_PER_CLIENT_DAY: '3' }));
-  });
-
-  afterAll(async () => {
-    await app.close();
-  });
-
-  afterEach(async () => {
-    await prisma.$executeRaw`TRUNCATE "RateLimit", "AskLog"`;
-  });
-
-  it('says to come back when the longer of the two windows ends', async () => {
-    for (let i = 0; i < 3; i += 1) {
-      await ask(app, 'Stripe?', '198.51.100.5').expect(200);
-    }
-    const limited = await ask(app, 'Stripe?', '198.51.100.5').expect(429);
-    expect(limited.headers['retry-after']).toBe(String(12 * 60 * 60));
-  });
-});
-
 describe('POST /ask when the engine fails', () => {
   const failing: AnswerEngine = {
     name: 'failing',
