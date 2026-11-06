@@ -10,7 +10,7 @@ import { firstRawDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
-import { inOrder, secondsOf, type Visit } from '../visits.js';
+import { inOrder, type Visit, type VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import { demosOf } from './demos.js';
 import { qualityOf } from './quality.js';
@@ -223,13 +223,20 @@ function audienceOf(visits: readonly Visit[]): Report['audience'] {
   };
 }
 
-function dataCentersOf(visits: readonly Visit[]): Report['dataCenters'] {
-  return rankedGroups(visits, ({ network }) => network ?? '').map(([owner, group]) => ({
-    owner,
-    visits: group.length,
-    pageViews: group.reduce((total, { views }) => total + views.length, 0),
-    medianSeconds: median(group.map(secondsOf)),
-  }));
+function dataCentersOf(
+  visits: readonly { owner: string; visit: VisitRow }[],
+): Report['dataCenters'] {
+  return rankedGroups(visits, ({ owner }) => owner).map(([owner, group]) => {
+    const pages = group.map(({ visit }) => [...visit.views, ...visit.demoViews]);
+    return {
+      owner,
+      visits: group.length,
+      pageViews: pages.reduce((total, { length }) => total + length, 0),
+      medianSeconds: median(
+        pages.map((each) => each.reduce((total, { activeSeconds }) => total + activeSeconds, 0)),
+      ),
+    };
+  });
 }
 
 function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] {
@@ -253,10 +260,12 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const today = utcDay(now);
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
-  const people = everyVisit.filter((visit) => dataCenterOf(visit) === null);
-  const fromDataCenters = startedBetween(everyVisit, from, now).filter(
-    (visit) => dataCenterOf(visit) !== null,
-  );
+  const peopleRows = rows.visits.filter((visit) => dataCenterOf(visit) === null);
+  const people = peopleRows.flatMap(inOrder);
+  const fromDataCenters = startedBetween(rows.visits, from, now).flatMap((visit) => {
+    const owner = dataCenterOf(visit);
+    return owner === null ? [] : [{ owner, visit }];
+  });
   const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
   const demos = [...demoSites(content).values()];
   const visits = startedBetween(people, from, now);
@@ -292,11 +301,7 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    demos: demosOf(
-      startedBetween(rows.visits, from, now).filter((visit) => dataCenterOf(visit) === null),
-      dayTotals(visits),
-      demos,
-    ),
+    demos: demosOf(startedBetween(peopleRows, from, now), dayTotals(visits), demos),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
     dataCenters: dataCentersOf(fromDataCenters),

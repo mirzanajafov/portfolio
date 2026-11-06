@@ -147,7 +147,7 @@ describe('buildReport', () => {
     });
   });
 
-  it('counts people in the period, the overview, the demos and the audience, and lists data-center visits apart by owner', () => {
+  it('counts people in the period, the overview, the demos and the audience, and lists every data-center visit apart by owner, demo pages included', () => {
     const fromAmazon = (visitor: string) =>
       aVisit([aView({ activeSeconds: 0 }), aView({ path: '/cv', activeSeconds: 0 })], {
         visitor,
@@ -160,14 +160,20 @@ describe('buildReport', () => {
       fromAmazon('aws 1'),
       fromAmazon('aws 2'),
       aVisit([aView({ activeSeconds: 0 })], { visitor: 'gcp', network: 'Google LLC' }),
+      aVisit([], {
+        visitor: 'scanner',
+        network: 'Microsoft Corporation',
+        demoViews: [aDemoView({ activeSeconds: 0 })],
+      }),
     ]);
-    expect(report.period).toMatchObject({ visits: 1, dataCenterVisits: 3 });
+    expect(report.period).toMatchObject({ visits: 1, dataCenterVisits: 4 });
     expect(report.overview.today).toMatchObject({ visits: 1, pageViews: 1, openedDemo: 0 });
-    expect(report.demos.opened).toBe(0);
+    expect(report.demos).toMatchObject({ opened: 0, demoOnly: 0 });
     expect(report.audience.countries).toEqual([{ name: 'AZ', visits: 1 }]);
     expect(report.dataCenters).toEqual([
-      { owner: 'Amazon.com, Inc.', visits: 2, pageViews: 4, medianSeconds: 0 },
+      { owner: 'Amazon.com, Inc.', visits: 2, pageViews: 6, medianSeconds: 20 },
       { owner: 'Google LLC', visits: 1, pageViews: 1, medianSeconds: 0 },
+      { owner: 'Microsoft Corporation', visits: 1, pageViews: 1, medianSeconds: 0 },
     ]);
   });
 
