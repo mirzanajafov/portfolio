@@ -5,15 +5,17 @@ import { bodyCell, headCell } from './styles';
 
 type Heading = { id: string; text: string; label: string };
 
-type Shown = { heading: Heading | null; parts: ReportPart[]; titledTable: boolean };
+type TextPart = Exclude<ReportPart, { kind: 'table' }>;
+
+export type TitledSection = { heading: Heading | null; parts: ReportPart[]; titledTable: boolean };
 
 const letter = /\p{L}/u;
 
-function titleOf([first, ...rest]: ReportSection): string | null {
+function titleOf([first]: ReportSection): string | null {
   if (first?.kind === 'table') {
     return first.rows[0]?.[0] ?? null;
   }
-  return first?.kind === 'line' && rest.length > 0 ? first.text : null;
+  return first?.kind === 'line' ? first.text : null;
 }
 
 function slugOf(label: string): string {
@@ -23,8 +25,11 @@ function slugOf(label: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function shownOf(sections: readonly ReportSection[]): Shown[] {
-  const taken = new Map<string, number>();
+export function titledSections(
+  sections: readonly ReportSection[],
+  reservedIds: readonly string[],
+): TitledSection[] {
+  const taken = new Set(reservedIds);
   return sections.map((section) => {
     const text = titleOf(section);
     if (text === null) {
@@ -32,23 +37,34 @@ function shownOf(sections: readonly ReportSection[]): Shown[] {
     }
     const label = text.split(/[:,]/)[0]?.trim() ?? text;
     const slug = slugOf(label);
-    const seen = taken.get(slug) ?? 0;
-    taken.set(slug, seen + 1);
+    let id = slug;
+    for (let next = 2; taken.has(id); next += 1) {
+      id = `${slug}-${String(next)}`;
+    }
+    taken.add(id);
     const titledTable = section[0]?.kind === 'table';
     return {
-      heading: { id: seen === 0 ? slug : `${slug}-${String(seen + 1)}`, text, label },
+      heading: { id, text, label },
       parts: titledTable ? section : section.slice(1),
       titledTable,
     };
   });
 }
 
-function Table({ rows: [head = [], ...body], titled }: { rows: string[][]; titled: boolean }) {
+function Table({
+  rows: [head = [], ...body],
+  label,
+  titled,
+}: {
+  rows: string[][];
+  label: string;
+  titled: boolean;
+}) {
   const alignOf = (column: number) => (column === 0 ? 'text-left' : 'text-right whitespace-nowrap');
   const figuresOf = (column: number, cell: string) =>
     column === 0 || letter.test(cell) ? '' : 'tabular-nums';
   return (
-    <ScrollRegion label={head[0] ?? ''}>
+    <ScrollRegion label={label}>
       <table className="text-sm">
         <thead>
           <tr>
@@ -78,17 +94,13 @@ function Table({ rows: [head = [], ...body], titled }: { rows: string[][]; title
   );
 }
 
-function Part({ part, titled }: { part: ReportPart; titled: boolean }) {
+function Text({ part }: { part: TextPart }) {
   switch (part.kind) {
-    case 'table':
-      return <Table rows={part.rows} titled={titled} />;
     case 'line':
-      return (
-        <p className={part.indent ? 'max-w-[75ch] pl-4 text-sm' : 'max-w-[75ch]'}>{part.text}</p>
-      );
+      return <p className={part.indent ? 'pl-4 text-sm' : undefined}>{part.text}</p>;
     case 'application':
       return (
-        <p className="max-w-[75ch]">
+        <p>
           {part.text}{' '}
           <Link
             className="ml-1 text-sm whitespace-nowrap underline underline-offset-4"
@@ -101,41 +113,42 @@ function Part({ part, titled }: { part: ReportPart; titled: boolean }) {
         </p>
       );
     case 'more':
-      return (
-        <p className={`max-w-[75ch] text-sm text-muted ${part.indent ? 'pl-4' : ''}`}>
-          {part.text}
-        </p>
-      );
+      return <p className={`text-sm text-muted ${part.indent ? 'pl-4' : ''}`}>{part.text}</p>;
     case 'none':
-      return <p className="max-w-[75ch] text-sm text-muted">{part.text}</p>;
+      return <p className="text-sm text-muted">{part.text}</p>;
   }
 }
 
-export function headingsOf(sections: readonly ReportSection[]): Heading[] {
-  return shownOf(sections).flatMap(({ heading }) => (heading ? [heading] : []));
-}
-
-export function ReportView({ sections }: { sections: readonly ReportSection[] }) {
+export function ReportView({ sections }: { sections: readonly TitledSection[] }) {
   return (
     <div>
-      {shownOf(sections).map(({ heading, parts, titledTable }, index) =>
-        parts.length === 1 && parts[0]?.kind === 'none' ? (
-          <section key={index} className="mt-3">
-            <Part part={parts[0]} titled={false} />
+      {sections.map(({ heading, parts, titledTable }, index) =>
+        heading === null ? (
+          <section key={index} className="mt-3 [&>p]:max-w-[75ch]">
+            {parts.map((part, position) =>
+              part.kind === 'table' ? null : <Text key={position} part={part} />,
+            )}
           </section>
         ) : (
           <section
             key={index}
-            className="mt-8 flex flex-col gap-3 border-t border-line pt-8 break-words first:mt-0"
+            className="mt-8 flex flex-col gap-3 border-t border-line pt-8 break-words first:mt-0 [&>h2]:max-w-[75ch] [&>p]:max-w-[75ch]"
           >
-            {heading && (
-              <h2 id={heading.id} className="max-w-[75ch] scroll-mt-4 text-lg font-semibold">
-                {heading.text}
-              </h2>
+            <h2 id={heading.id} className="scroll-mt-4 text-lg font-semibold">
+              {heading.text}
+            </h2>
+            {parts.map((part, position) =>
+              part.kind === 'table' ? (
+                <Table
+                  key={position}
+                  rows={part.rows}
+                  label={heading.label}
+                  titled={titledTable && position === 0}
+                />
+              ) : (
+                <Text key={position} part={part} />
+              ),
             )}
-            {parts.map((part, position) => (
-              <Part key={position} part={part} titled={titledTable && position === 0} />
-            ))}
           </section>
         ),
       )}

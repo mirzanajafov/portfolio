@@ -6,7 +6,7 @@ import { signOut } from '@/admin/actions';
 import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { headingsOf, ReportView } from '@/admin/report-view';
+import { ReportView, titledSections } from '@/admin/report-view';
 import { pill } from '@/admin/styles';
 import { apiUrl } from '@/lib/forward-to-api';
 
@@ -46,8 +46,11 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   if (!expiresAt || !applications || !report) {
     notFound();
   }
-  const sections = reportSections(report, { all: view.all });
-  const jumps = [{ id: 'application-list', label: 'Application list' }, ...headingsOf(sections)];
+  const sections = titledSections(reportSections(report, { all: view.all }), ['application-list']);
+  const jumps = [
+    { id: 'application-list', label: 'Application list' },
+    ...sections.flatMap(({ heading }) => (heading ? [heading] : [])),
+  ];
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:px-8">
       <header className="flex flex-col gap-4">
