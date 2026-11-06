@@ -1,8 +1,9 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
+import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { newSession } from './admin-session.js';
 import { anApplication } from './applications.js';
@@ -134,6 +135,39 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     ]);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
     expect(await prisma.pageView.count({ where: { ref: 'memh' } })).toBe(2);
+  });
+
+  it('keeps the first visit and its one message when a data-center view comes after the person', async () => {
+    await sendEvent(app, aCodedView()).expect(204);
+    at('2026-10-02T12:05:00Z');
+    await sendEvent(app, aCodedView({ path: '/' }), { ip: awsAddress }).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([message(firstCv)]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+  });
+
+  it('never opens an application that only data centers saw, not even once the day is rolled up, and a person after that gets the message', async () => {
+    onTestFinished(async () => {
+      await prisma.$executeRaw`TRUNCATE "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo", "DailyApplication"`;
+    });
+    await sendEvent(app, aCodedView(), { ip: awsAddress }).expect(204);
+    at('2026-11-02T12:00:00Z');
+    await app.get(RetentionService).cleanup();
+
+    expect(await prisma.pageView.count()).toBe(0);
+    expect(await prisma.dailyApplication.count()).toBe(0);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-11-02 16:00 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-11-02') });
   });
 
   it('lets no data-center view the day before date back the first visit by a person', async () => {
