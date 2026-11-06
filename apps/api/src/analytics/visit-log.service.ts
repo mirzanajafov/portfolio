@@ -3,7 +3,7 @@ import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { bakuDay, dayOf, utcDay } from '../common/days.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { byPeople, dataCenterOf } from './data-centers.js';
+import { byPeople } from './data-centers.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -34,7 +34,7 @@ export class VisitLogService {
     at: Date,
   ): Promise<void> {
     const unseen =
-      event.ref === undefined || dataCenterOf(visit) !== null
+      event.ref === undefined
         ? null
         : await this.prisma.application.findFirst({
             where: { code: event.ref, firstSeenOn: null },
@@ -60,7 +60,7 @@ export class VisitLogService {
         ],
         skipDuplicates: true,
       });
-      if (count > 0 && unseen) {
+      if (count > 0 && unseen && (await byAPerson(db, key))) {
         const firstView = { path: event.path, demo, notFound: event.notFound };
         await this.noteFirstVisit(db, unseen, firstView, at);
       }
@@ -162,6 +162,10 @@ export class VisitLogService {
         });
     }
   }
+}
+
+async function byAPerson(db: Prisma.TransactionClient, visitor: string): Promise<boolean> {
+  return (await db.visit.count({ where: { visitor, ...byPeople() } })) > 0;
 }
 
 async function earliestDayRecordedBefore(
