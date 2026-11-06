@@ -3,7 +3,7 @@ import { AlertsService, type FirstView } from '../alerts/alerts.service.js';
 import { bakuDay, dayOf, utcDay } from '../common/days.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dataCenterOf, dataCenters } from './data-centers.js';
+import { byPeople, dataCenterOf } from './data-centers.js';
 import type { AnalyticsEvent } from './event.schema.js';
 import type { Place } from './place-lookup.js';
 import type { Browser, Device } from './user-agent.js';
@@ -173,7 +173,7 @@ async function earliestDayRecordedBefore(
     where: {
       ref: code,
       createdAt: { gte: createdAt, lt: at },
-      visit: { OR: [{ network: null }, { network: { notIn: dataCenters } }] },
+      visit: byPeople(),
     },
     orderBy: { createdAt: 'asc' },
     select: { createdAt: true },
