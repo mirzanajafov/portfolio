@@ -145,7 +145,9 @@ function section(
   after: readonly ReportPart[] = [],
 ): ReportSection {
   if (rows.length === 0) {
-    return none(`${title}: none`);
+    return after.length === 0
+      ? none(`${title}: none`)
+      : titled(heading, line(`${title}: none`), after);
   }
   const [opening, ...rest] = tableParts(title, columns, rows, all);
   return titled(heading, opening, [...rest, ...after]);
