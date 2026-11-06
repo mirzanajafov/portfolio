@@ -239,6 +239,14 @@ describe('POST /events against a real database', () => {
     });
   });
 
+  it('counts an event from a page on another site as that, even from a signed-in browser', async () => {
+    const signedIn = { Authorization: `Bearer ${await newSession(app)}` };
+    await sendEvent(app, aView(), { headers: { ...signedIn, ...fromElsewhere } }).expect(204);
+
+    const { dropped } = await everything();
+    expect(dropped).toEqual([expect.objectContaining({ reason: 'origin', count: 1 })]);
+  });
+
   it('records nothing at all for a signed-in browser that sends Sec-GPC, not even a count', async () => {
     const signedIn = { Authorization: `Bearer ${await newSession(app)}`, 'Sec-GPC': '1' };
     const before = await everything();

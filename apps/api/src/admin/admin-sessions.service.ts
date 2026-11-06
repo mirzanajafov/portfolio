@@ -83,14 +83,12 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
     return spent ? { kind: 'signed in', session } : { kind: 'refused' };
   }
 
-  find(token: string): Promise<AdminSession | null> {
-    return this.prisma.adminSession.findUnique({
-      where: { hash: hashOf(token), expiresAt: { gt: this.clock.now() } },
-    });
-  }
-
-  async signedIn(token: string | undefined): Promise<boolean> {
-    return token !== undefined && (await this.find(token)) !== null;
+  async find(token: string | undefined): Promise<AdminSession | null> {
+    return token === undefined
+      ? null
+      : this.prisma.adminSession.findUnique({
+          where: { hash: hashOf(token), expiresAt: { gt: this.clock.now() } },
+        });
   }
 
   admitWrite({ hash }: AdminSession): Promise<Verdict> {

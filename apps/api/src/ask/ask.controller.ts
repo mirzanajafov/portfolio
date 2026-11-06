@@ -47,7 +47,7 @@ export class AskController {
     if (verdict.kind === 'limited') {
       throw new TooManyRequestsException('too many questions', verdict.retryAfterSeconds);
     }
-    const signedIn = await this.sessions.signedIn(caller.sessionToken);
+    const signedIn = (await this.sessions.find(caller.sessionToken)) !== null;
     const agent = visitorAgent(caller);
     const visitor = agent === null ? null : keys.visitor(caller.ip, agent);
 

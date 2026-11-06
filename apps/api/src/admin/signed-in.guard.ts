@@ -17,8 +17,7 @@ export class SignedInGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request & { adminSession?: AdminSession }>();
-    const token = sessionTokenOf(request);
-    const session = token === undefined ? null : await this.sessions.find(token);
+    const session = await this.sessions.find(sessionTokenOf(request));
     if (!session) {
       throw new NotFoundException();
     }

@@ -29,12 +29,12 @@ export class EventsService {
       return { kind: 'accepted' };
     }
     const now = this.clock.now();
-    if (await this.sessions.signedIn(caller.sessionToken)) {
-      await this.visits.countDropped('own', now);
-      return { kind: 'accepted' };
-    }
     if (source.kind === 'elsewhere') {
       await this.visits.countDropped('origin', now);
+      return { kind: 'accepted' };
+    }
+    if ((await this.sessions.find(caller.sessionToken)) !== null) {
+      await this.visits.countDropped('own', now);
       return { kind: 'accepted' };
     }
     const userAgent = visitorAgent(caller);
