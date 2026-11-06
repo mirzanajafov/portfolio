@@ -1,14 +1,15 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
+import { RetentionService } from '../src/analytics/retention.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { newSession } from './admin-session.js';
 import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
-import { FixedClock, startApp } from './start-app.js';
+import { FixedClock, awsAddress, knownPlaces, startApp } from './start-app.js';
 
 type Reply = { status: number; body: object };
 
@@ -52,7 +53,7 @@ const register = (prisma: PrismaService, code: string, company: string) =>
   });
 
 async function startOverWithXsolla(prisma: PrismaService): Promise<void> {
-  await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "Application", "Alert", "GivenUpAlerts" CASCADE`;
+  await prisma.$executeRaw`TRUNCATE "RateLimit", "Visit", "PageView", "Application", "Alert", "GivenUpAlerts", "DailyVisits", "DailyPage", "DailySource", "DailyCountry", "DailyClick", "DailyDemo" CASCADE`;
   await register(prisma, 'memh', 'Xsolla');
 }
 
@@ -114,6 +115,70 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(bot.received).toEqual([]);
     expect(await prisma.alert.count()).toBe(0);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+  });
+
+  it('sends nothing and marks no first visit for a coded view from a data center, and sends the message for the person after it', async () => {
+    await sendEvent(app, aCodedView({ path: '/' }), { ip: awsAddress }).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+
+    at('2026-10-02T12:05:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-10-02 16:05 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+    expect(await prisma.pageView.count({ where: { ref: 'memh' } })).toBe(2);
+  });
+
+  it('keeps the first visit and its one message when a data-center view comes after the person', async () => {
+    await sendEvent(app, aCodedView()).expect(204);
+    at('2026-10-02T12:05:00Z');
+    await sendEvent(app, aCodedView({ path: '/' }), { ip: awsAddress }).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([message(firstCv)]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+  });
+
+  it('never opens an application that only data centers saw, not even once the day is rolled up, and a person after that gets the message', async () => {
+    await sendEvent(app, aCodedView(), { ip: awsAddress }).expect(204);
+    at('2026-11-02T12:00:00Z');
+    await app.get(RetentionService).cleanup();
+
+    expect(await prisma.pageView.count()).toBe(0);
+    expect(await prisma.dailyApplication.count()).toBe(0);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
+
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-11-02 16:00 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-11-02') });
+  });
+
+  it('lets no data-center view the day before date back the first visit by a person', async () => {
+    await sendEvent(app, aCodedView({ path: '/' }), { ip: awsAddress }).expect(204);
+    at('2026-10-03T12:00:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([
+      message(
+        'Xsolla, Backend Engineer: someone opened your link, first the CV, at 2026-10-03 16:00 Baku time.',
+      ),
+    ]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-03') });
   });
 
   it('sends one message when two first views arrive at once', async () => {
@@ -180,6 +245,50 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(bot.received).toEqual([]);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-01') });
   });
+
+  it('dates the first visit back to the earliest view by a person that older code recorded, past an earlier data-center view, and sends no message', async () => {
+    const recorded = (visitor: string, network: string | null, at: string) =>
+      prisma.visit.create({
+        data: {
+          visitor,
+          startedAt: new Date(at),
+          device: 'desktop',
+          browser: 'chrome',
+          network,
+          views: {
+            create: [{ id: randomUUID(), createdAt: new Date(at), path: '/', ref: 'memh' }],
+          },
+        },
+      });
+    await recorded('scanner', 'Amazon.com, Inc.', '2026-10-01T10:00:00Z');
+    await recorded('person', null, '2026-10-02T06:00:00Z');
+    await sendEvent(app, aCodedView()).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+  });
+
+  it.each([
+    ['a person', 'Example Telecom', 'Amazon.com, Inc.', 1],
+    ['a data center', 'Amazon.com, Inc.', 'Example Telecom', 0],
+  ])(
+    'judges a coded view by the network stored with its visit (%s), not by what the lookup says later',
+    async (_, stored, later, messages) => {
+      const address = '198.51.100.77';
+      onTestFinished(() => {
+        knownPlaces.delete(address);
+      });
+      knownPlaces.set(address, { country: 'US', city: null, network: stored });
+      await sendEvent(app, aView(), { ip: address }).expect(204);
+      knownPlaces.set(address, { country: 'US', city: null, network: later });
+      at('2026-10-02T12:05:00Z');
+      await sendEvent(app, aCodedView(), { ip: address }).expect(204);
+      await sendDue();
+
+      expect(bot.received).toHaveLength(messages);
+    },
+  );
 
   it('sends no message when older code rolled up an earlier day of the application, and notes that day', async () => {
     const xsolla = await prisma.application.findUniqueOrThrow({ where: { code: 'memh' } });
