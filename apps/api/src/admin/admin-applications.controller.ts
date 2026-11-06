@@ -28,7 +28,7 @@ import { ApplicationsService } from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
-import { TooManyRequestsException } from '../rate-limit/too-many-requests.filter.js';
+import { TooManyRequestsException } from '../rate-limit/too-many-requests.exception.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
 

@@ -1,15 +1,7 @@
-import { Catch, HttpException, HttpStatus, type ArgumentsHost } from '@nestjs/common';
+import { Catch, type ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import type { Response } from 'express';
-
-export class TooManyRequestsException extends HttpException {
-  constructor(
-    message: string,
-    readonly retryAfterSeconds: number,
-  ) {
-    super({ message, retryAfterSeconds }, HttpStatus.TOO_MANY_REQUESTS);
-  }
-}
+import { TooManyRequestsException } from './too-many-requests.exception.js';
 
 @Catch(TooManyRequestsException)
 export class TooManyRequestsFilter extends BaseExceptionFilter<TooManyRequestsException> {
