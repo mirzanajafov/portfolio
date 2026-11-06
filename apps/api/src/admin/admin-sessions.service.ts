@@ -6,7 +6,11 @@ import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import type { AdminSession } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { RateLimiterService, type Verdict } from '../rate-limit/rate-limiter.service.js';
+import {
+  RateLimiterService,
+  type Limited,
+  type Verdict,
+} from '../rate-limit/rate-limiter.service.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 const linkLastsMs = adminLinkMinutes * 60 * 1000;
@@ -17,7 +21,7 @@ const writesPerTenMinutes = 60;
 type SignIn =
   | { kind: 'signed in'; session: { token: string; expiresAt: Date } }
   | { kind: 'refused' }
-  | { kind: 'limited'; retryAfterSeconds: number };
+  | Limited;
 
 function newToken(): string {
   return randomBytes(32).toString('base64url');
@@ -61,8 +65,8 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
       [{ key: `admin:10m:${client}`, limit: signInsPerTenMinutes, windowSeconds: 600 }],
       [],
     );
-    if (!verdict.allowed) {
-      return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
+    if (verdict.kind === 'limited') {
+      return verdict;
     }
     const session = { token: newToken(), expiresAt: new Date(now.getTime() + sessionLastsMs) };
     const spent = await this.prisma.$transaction(async (tx) => {

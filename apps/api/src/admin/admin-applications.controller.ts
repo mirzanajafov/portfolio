@@ -157,7 +157,7 @@ export class AdminApplicationsController {
 
   private async admitWrite(session: AdminSession): Promise<void> {
     const verdict = await this.sessions.admitWrite(session);
-    if (!verdict.allowed) {
+    if (verdict.kind === 'limited') {
       throw new TooManyRequestsException('too many changes', verdict.retryAfterSeconds);
     }
   }
