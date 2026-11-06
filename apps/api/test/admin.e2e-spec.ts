@@ -653,6 +653,7 @@ describe('admin sign-in against a real database', () => {
       const refused = await edit(token, { notes: 'one too many' }, 429);
 
       expect(refused.headers['retry-after']).toBe('600');
+      expect(refused.body).toEqual({ message: 'too many changes', retryAfterSeconds: 600 });
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
         notes: '60',
       });
