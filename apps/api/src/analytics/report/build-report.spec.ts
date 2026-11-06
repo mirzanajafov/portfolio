@@ -393,13 +393,14 @@ describe('buildReport', () => {
         { day: new Date('2026-10-29'), reason: 'limited', count: 1 },
         { day: new Date('2026-10-30'), reason: 'bot', count: 2 },
         { day: new Date('2026-10-30'), reason: 'origin', count: 4 },
+        { day: new Date('2026-10-30'), reason: 'own', count: 6 },
         { day: new Date('2026-10-27'), reason: 'bot', count: 9 },
       ],
     });
     expect(report.filter).toEqual([
-      { day: '2026-10-28', bot: 5, limited: 0, origin: 0 },
-      { day: '2026-10-29', bot: 3, limited: 1, origin: 0 },
-      { day: '2026-10-30', bot: 2, limited: 0, origin: 4 },
+      { day: '2026-10-28', bot: 5, limited: 0, origin: 0, own: 0 },
+      { day: '2026-10-29', bot: 3, limited: 1, origin: 0, own: 0 },
+      { day: '2026-10-30', bot: 2, limited: 0, origin: 4, own: 6 },
     ]);
   });
 

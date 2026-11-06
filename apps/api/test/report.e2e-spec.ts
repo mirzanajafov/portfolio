@@ -161,7 +161,7 @@ describe('the visitor report against a real database', () => {
       visits: 1,
       days: [{ day: '2026-10-02', questions: 1, refused: 0 }],
     });
-    expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0, origin: 0 }]);
+    expect(report.filter).toEqual([{ day: '2026-10-02', bot: 1, limited: 0, origin: 0, own: 0 }]);
     expect(throughJson(report)).toEqual(report);
   });
 

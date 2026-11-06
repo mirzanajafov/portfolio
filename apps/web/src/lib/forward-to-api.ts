@@ -6,6 +6,7 @@ type Forward = {
   url: string;
   fetchImpl: typeof fetch;
   signal?: AbortSignal;
+  token?: string;
 };
 
 export function apiUrl(): string {
@@ -45,7 +46,7 @@ async function readCapped(request: Request): Promise<string | null> {
 
 export async function forwardToApi(
   request: Request,
-  { url, fetchImpl, signal }: Forward,
+  { url, fetchImpl, signal, token }: Forward,
   respond: (upstream: Response) => Response,
 ): Promise<Response> {
   const body = await readCapped(request);
@@ -58,6 +59,9 @@ export async function forwardToApi(
     if (value) {
       headers[name] = value;
     }
+  }
+  if (token !== undefined) {
+    headers.authorization = `Bearer ${token}`;
   }
   let upstream: Response;
   try {

@@ -89,6 +89,10 @@ export class AdminSessionsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  async signedIn(token: string | undefined): Promise<boolean> {
+    return token !== undefined && (await this.find(token)) !== null;
+  }
+
   admitWrite({ hash }: AdminSession): Promise<Verdict> {
     return this.limiter.admit(
       [

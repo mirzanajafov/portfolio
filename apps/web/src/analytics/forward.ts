@@ -7,6 +7,7 @@ const demoOrigins = new Set(demoSites(content).keys());
 export async function forwardEvent(
   request: Request,
   apiUrl: string,
+  token: string | undefined,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response> {
   const response = await forwardToApi(
@@ -15,6 +16,7 @@ export async function forwardEvent(
       url: `${apiUrl}/events`,
       fetchImpl,
       signal: AbortSignal.timeout(5_000),
+      token,
     },
     () => new Response(null, { status: 204 }),
   );

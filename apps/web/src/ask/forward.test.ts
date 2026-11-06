@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { forwardAsk } from './forward';
 
+const session = 's'.repeat(43);
+
 const ask = (body: string, headers: Record<string, string> = {}) =>
   new Request('http://site/api/ask', { method: 'POST', body, headers });
 
 describe('forwardAsk', () => {
-  it('passes the question, the caller address and the origin to the API, stops when the visitor does, and streams the answer back', async () => {
+  it('passes the question, the caller address, the origin and the admin session to the API, stops when the visitor does, and streams the answer back', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('data: {}\n\n', { status: 200 }),
     );
@@ -17,7 +19,7 @@ describe('forwardAsk', () => {
       origin: 'https://najafov.dev',
       cookie: 'unrelated=1',
     });
-    const response = await forwardAsk(request, 'http://api:3201', fetchImpl);
+    const response = await forwardAsk(request, 'http://api:3201', session, fetchImpl);
     expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBe(request.signal);
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://api:3201/ask',
@@ -31,6 +33,7 @@ describe('forwardAsk', () => {
           'sec-gpc': '1',
           dnt: '1',
           origin: 'https://najafov.dev',
+          authorization: `Bearer ${session}`,
         },
       }),
     );
@@ -41,7 +44,7 @@ describe('forwardAsk', () => {
 
   it('refuses an oversized body without bothering the API', async () => {
     const fetchImpl = vi.fn<typeof fetch>();
-    const response = await forwardAsk(ask('x'.repeat(2_001)), 'http://api', fetchImpl);
+    const response = await forwardAsk(ask('x'.repeat(2_001)), 'http://api', undefined, fetchImpl);
     expect(response.status).toBe(413);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -50,14 +53,14 @@ describe('forwardAsk', () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => {
       throw new TypeError('fetch failed');
     });
-    expect((await forwardAsk(ask('{}'), 'http://api', fetchImpl)).status).toBe(503);
+    expect((await forwardAsk(ask('{}'), 'http://api', undefined, fetchImpl)).status).toBe(503);
   });
 
   it('passes a rate limit through with only the time to wait', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
       async () => new Response('{}', { status: 429, headers: { 'retry-after': '420' } }),
     );
-    const response = await forwardAsk(ask('{}'), 'http://api', fetchImpl);
+    const response = await forwardAsk(ask('{}'), 'http://api', undefined, fetchImpl);
     expect(response.status).toBe(429);
     expect(response.headers.get('retry-after')).toBe('420');
     expect(await response.text()).toBe('');
@@ -65,6 +68,6 @@ describe('forwardAsk', () => {
 
   it('keeps a validation error a validation error', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}', { status: 400 }));
-    expect((await forwardAsk(ask('{}'), 'http://api', fetchImpl)).status).toBe(400);
+    expect((await forwardAsk(ask('{}'), 'http://api', undefined, fetchImpl)).status).toBe(400);
   });
 });

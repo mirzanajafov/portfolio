@@ -1,10 +1,12 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
+import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
 import { dailyKey, keyed } from '../src/analytics/visitor-key.js';
 import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
 import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { newSession, unknownToken } from './admin-session.js';
 import { fixtureContent } from './content.fixture.js';
 import { aView, address, chrome, sendEvent } from './send-event.js';
 import { FixedClock, knownPlaces, siteOrigin, startApp } from './start-app.js';
@@ -221,6 +223,56 @@ describe('POST /events against a real database', () => {
   it('refuses an invalid event from another site before anything is written', async () => {
     await sendEvent(app, { type: 'view', path: '/' }, { headers: fromElsewhere }).expect(400);
     expect(await everything()).toEqual(nothingWritten);
+  });
+
+  it('only counts the events of a browser signed in to /admin, and writes nothing else', async () => {
+    const signedIn = { Authorization: `Bearer ${await newSession(app)}` };
+    const before = await everything();
+    const view = aView({ ref: 'memh' });
+    await sendEvent(app, view, { headers: signedIn }).expect(204);
+    const click = { type: 'click', view: view.id, href: '/cv.pdf' };
+    await sendEvent(app, click, { headers: signedIn }).expect(204);
+
+    expect(await everything()).toEqual({
+      ...before,
+      dropped: [expect.objectContaining({ reason: 'own', count: 2 })],
+    });
+  });
+
+  it('records nothing at all for a signed-in browser that sends Sec-GPC, not even a count', async () => {
+    const signedIn = { Authorization: `Bearer ${await newSession(app)}`, 'Sec-GPC': '1' };
+    const before = await everything();
+    await sendEvent(app, aView(), { headers: signedIn }).expect(204);
+
+    expect(await everything()).toEqual(before);
+  });
+
+  it.each([
+    ['a malformed token', async () => 'short'],
+    ['an unknown token', async () => unknownToken()],
+    [
+      'a revoked session',
+      async () => {
+        const token = await newSession(app);
+        await app.get(AdminSessionsService).revokeAll();
+        return token;
+      },
+    ],
+    [
+      'an expired session',
+      async () => {
+        const token = await newSession(app);
+        clock.current = new Date('2026-11-01T12:00:00Z');
+        return token;
+      },
+    ],
+  ])('records a browser with %s like any visitor', async (_, tokenOf) => {
+    const token = await tokenOf();
+    await sendEvent(app, aView(), { headers: { Authorization: `Bearer ${token}` } }).expect(204);
+
+    const { visits, dropped } = await everything();
+    expect(visits).toHaveLength(1);
+    expect(dropped).toEqual([]);
   });
 
   it("records a demo's page view under its project, in the same visit as the site's pages", async () => {

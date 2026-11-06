@@ -122,11 +122,11 @@ describe('reportText', () => {
 
   it('gives each reason for dropping events its own column', () => {
     const text = reportText(
-      aReport({ filter: [{ day: '2026-10-30', bot: 3, limited: 1, origin: 5 }] }),
+      aReport({ filter: [{ day: '2026-10-30', bot: 3, limited: 1, origin: 5, own: 2 }] }),
       { all: false },
     );
-    expect(text).toMatch(/^Filtered out, UTC day +bots +limited +other sites$/m);
-    expect(text).toMatch(/^2026-10-30 +3 +1 +5$/m);
+    expect(text).toMatch(/^Filtered out, UTC day +bots +limited +other sites +mine$/m);
+    expect(text).toMatch(/^2026-10-30 +3 +1 +5 +2$/m);
   });
 
   it('says how many site visits opened a demo, and lists each demo with its steps, each count before its label, and where its own visits came from', () => {

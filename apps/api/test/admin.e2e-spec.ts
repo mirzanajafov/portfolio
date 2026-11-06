@@ -6,12 +6,13 @@ import {
   applicationViewSchema,
 } from '@portfolio/content/applications';
 import { reportSchema } from '@portfolio/content/report';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { unknownToken } from './admin-session.js';
 import { anApplication } from './applications.js';
 import { address } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -23,8 +24,6 @@ const later = (ms: number) => new Date(start.getTime() + ms);
 const minutes = (count: number) => count * 60 * 1000;
 
 const days = (count: number) => count * 24 * 60 * 60 * 1000;
-
-const unknownToken = () => randomBytes(32).toString('base64url');
 
 describe('admin sign-in against a real database', () => {
   let app: NestExpressApplication;

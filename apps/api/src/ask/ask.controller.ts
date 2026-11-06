@@ -3,6 +3,7 @@ import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
+import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { callerOf, visitorAgent } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
@@ -25,6 +26,7 @@ export class AskController {
     private readonly ask: AskService,
     private readonly limits: AskLimitsService,
     private readonly askLog: AskLogService,
+    private readonly sessions: AdminSessionsService,
     private readonly salts: VisitorSaltService,
     private readonly clock: ClockService,
   ) {}
@@ -45,6 +47,7 @@ export class AskController {
     if (verdict.kind === 'limited') {
       throw new TooManyRequestsException('too many questions', verdict.retryAfterSeconds);
     }
+    const signedIn = await this.sessions.signedIn(caller.sessionToken);
     const agent = visitorAgent(caller);
     const visitor = agent === null ? null : keys.visitor(caller.ip, agent);
 
@@ -67,12 +70,14 @@ export class AskController {
     } finally {
       res.end();
     }
-    await this.askLog.record({
-      visitor,
-      createdAt: askedAt,
-      question,
-      ...outcome,
-      durationMs: Math.round(performance.now() - started),
-    });
+    if (!signedIn) {
+      await this.askLog.record({
+        visitor,
+        createdAt: askedAt,
+        question,
+        ...outcome,
+        durationMs: Math.round(performance.now() - started),
+      });
+    }
   }
 }
