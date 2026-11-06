@@ -16,6 +16,7 @@ describe('forwardEvent', () => {
         dnt: '1',
         origin: 'https://najafov.dev',
         cookie: 'unrelated=1',
+        authorization: 'Bearer forged',
       },
     });
     const response = await forwardEvent(request, 'http://api:3201', session, fetchImpl);

@@ -18,6 +18,7 @@ describe('forwardAsk', () => {
       dnt: '1',
       origin: 'https://najafov.dev',
       cookie: 'unrelated=1',
+      authorization: 'Bearer forged',
     });
     const response = await forwardAsk(request, 'http://api:3201', session, fetchImpl);
     expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBe(request.signal);
