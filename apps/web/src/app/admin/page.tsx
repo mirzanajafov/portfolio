@@ -6,7 +6,7 @@ import { signOut } from '@/admin/actions';
 import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { ReportView } from '@/admin/report-view';
+import { headingsOf, ReportView } from '@/admin/report-view';
 import { pill } from '@/admin/styles';
 import { apiUrl } from '@/lib/forward-to-api';
 
@@ -46,6 +46,8 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   if (!expiresAt || !applications || !report) {
     notFound();
   }
+  const sections = reportSections(report, { all: view.all });
+  const jumps = [{ id: 'application-list', label: 'Application list' }, ...headingsOf(sections)];
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:px-8">
       <header className="flex flex-col gap-4">
@@ -74,17 +76,30 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
             {view.all ? 'Cut long lists' : 'Show everything'}
           </Link>
         </nav>
+        <nav aria-label="Sections">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {jumps.map(({ id, label }) => (
+              <li key={id}>
+                <a href={`#${id}`} className="underline underline-offset-4">
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </header>
       <section className="flex flex-col gap-3 border-t border-line pt-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">Applications</h2>
+          <h2 id="application-list" className="scroll-mt-4 text-2xl font-semibold tracking-tight">
+            Applications
+          </h2>
           <Link href="/admin/add" prefetch={false} className={pill}>
             Add an application
           </Link>
         </div>
         <ApplicationList applications={applications} />
       </section>
-      <ReportView sections={reportSections(report, { all: view.all })} />
+      <ReportView sections={sections} />
     </main>
   );
 }

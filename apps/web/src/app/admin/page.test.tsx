@@ -1,5 +1,5 @@
 import { anApplicationView, aReport, anEntry, someApplications } from '@portfolio/content/testing';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { request } from '@/admin/testing';
@@ -45,6 +45,21 @@ afterEach(() => {
 });
 
 describe('admin page', () => {
+  it('links from the top to the application list and to every report section with a heading', async () => {
+    render(await open());
+
+    const jumps = within(screen.getByRole('navigation', { name: 'Sections' }));
+    expect(jumps.getByRole('link', { name: 'Application list' })).toHaveAttribute(
+      'href',
+      '#application-list',
+    );
+    expect(jumps.getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '#overview');
+    expect(screen.getByRole('heading', { level: 2, name: 'Applications' })).toHaveAttribute(
+      'id',
+      'application-list',
+    );
+  });
+
   it('says until when the session lasts in Baku time, and shows the report under it', async () => {
     render(await open());
 

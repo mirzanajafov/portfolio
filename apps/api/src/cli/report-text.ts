@@ -27,6 +27,7 @@ function partLines(part: ReportPart): string[] {
     case 'line':
       return [`${margin(part)}${part.text}`];
     case 'application':
+    case 'none':
       return [part.text];
     case 'more':
       return [`${margin(part)}${part.text}, --all shows them`];

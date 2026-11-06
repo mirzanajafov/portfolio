@@ -1,5 +1,7 @@
 import type { ApplicationView } from '@portfolio/content/applications';
 import Link from 'next/link';
+import { ScrollRegion } from './scroll-region';
+import { bodyCell, headCell } from './styles';
 
 const columns = [
   'Application',
@@ -16,15 +18,15 @@ export function ApplicationList({ applications }: { applications: ApplicationVie
     return <p className="text-muted">No applications yet.</p>;
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <ScrollRegion label="Applications">
+      <table className="text-sm">
         <thead>
           <tr>
-            {columns.map((column) => (
+            {columns.map((column, index) => (
               <th
                 key={column}
                 scope="col"
-                className="px-2 py-1 text-left font-semibold whitespace-nowrap"
+                className={`${headCell(index)} text-left whitespace-nowrap`}
               >
                 {column}
               </th>
@@ -34,7 +36,7 @@ export function ApplicationList({ applications }: { applications: ApplicationVie
         <tbody>
           {applications.map((application) => (
             <tr key={application.code} className="border-t border-line">
-              <td className="px-2 py-1">
+              <td className={`${bodyCell(0)} whitespace-nowrap`}>
                 <Link
                   href={`/admin/applications/${application.code}`}
                   prefetch={false}
@@ -43,20 +45,22 @@ export function ApplicationList({ applications }: { applications: ApplicationVie
                   {application.company}, {application.role}
                 </Link>
               </td>
-              <td className="px-2 py-1 whitespace-nowrap tabular-nums">{application.appliedOn}</td>
-              <td className="px-2 py-1">{application.channel}</td>
-              <td className="px-2 py-1">{application.cvVariant}</td>
-              <td className="px-2 py-1">{application.status}</td>
-              <td className="px-2 py-1 whitespace-nowrap tabular-nums">
+              <td className={`${bodyCell(1)} whitespace-nowrap tabular-nums`}>
+                {application.appliedOn}
+              </td>
+              <td className={bodyCell(2)}>{application.channel}</td>
+              <td className={bodyCell(3)}>{application.cvVariant}</td>
+              <td className={bodyCell(4)}>{application.status}</td>
+              <td className={`${bodyCell(5)} whitespace-nowrap tabular-nums`}>
                 {application.answeredOn ?? '-'}
               </td>
-              <td className="px-2 py-1 whitespace-nowrap tabular-nums">
+              <td className={`${bodyCell(6)} whitespace-nowrap tabular-nums`}>
                 {application.firstSeenOn ?? '-'}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

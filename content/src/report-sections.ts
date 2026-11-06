@@ -22,7 +22,8 @@ export type ReportPart =
   | { kind: 'line'; text: string; indent: boolean }
   | { kind: 'application'; text: string; code: string }
   | { kind: 'table'; rows: string[][] }
-  | { kind: 'more'; text: string; indent: boolean };
+  | { kind: 'more'; text: string; indent: boolean }
+  | { kind: 'none'; text: string };
 
 export type ReportSection = ReportPart[];
 
@@ -71,6 +72,10 @@ function line(text: string): ReportPart {
   return { kind: 'line', text: printable(text), indent: false };
 }
 
+function none(title: string): ReportPart {
+  return { kind: 'none', text: printable(`${title}: none`) };
+}
+
 function item(text: string): ReportPart {
   return { kind: 'line', text: printable(text), indent: true };
 }
@@ -109,7 +114,7 @@ function section(
   all: boolean,
 ): ReportSection {
   if (rows.length === 0) {
-    return [line(`${title}: none`)];
+    return [none(title)];
   }
   const shown = shownOf(rows, all);
   const hidden = rows.length - shown.length;
@@ -281,7 +286,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function demos({ period: { visits }, demos }: Report): ReportSection {
   const { opened, didStep, demoOnly, list } = demos;
   if (list.length === 0) {
-    return [line('Demos: none')];
+    return [none('Demos')];
   }
   return [
     line(
@@ -368,7 +373,7 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
 
 function dataCenters({ dataCenters: { list, demoOnly } }: Report, all: boolean): ReportSection {
   if (list.length === 0 && demoOnly === 0) {
-    return [line('Data centers: none')];
+    return [none('Data centers')];
   }
   return [
     ...(list.length > 0
@@ -611,7 +616,7 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
 
 function filter({ filter }: Report): ReportSection {
   if (filter.length === 0) {
-    return [line('Filtered out: none')];
+    return [none('Filtered out')];
   }
   return [
     table([
