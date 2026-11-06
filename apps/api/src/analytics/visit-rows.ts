@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { daysAfter, utcDay } from '../common/days.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { dataCenterOf } from './data-centers.js';
 import { firstRawDay } from './retention.js';
 import { browsers, devices } from './user-agent.js';
 import type { VisitRow } from './visits.js';
@@ -55,6 +56,7 @@ export async function findVisits(
     );
     return {
       ...visit,
+      dataCenter: dataCenterOf(visit),
       device: knownDevice.parse(device),
       browser: knownBrowser.parse(browser),
       views: onTheSite,

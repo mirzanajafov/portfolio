@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo, now } from '../testing.js';
+import {
+  aDemoSite,
+  aDemoView,
+  anApplication,
+  aView,
+  aVisit,
+  hoursAgo,
+  inDataCenter,
+  now,
+} from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
@@ -121,8 +130,11 @@ describe('applicationsOf', () => {
     const amazon = applied('k7mpx', { company: 'Amazon', networks: ['Amazon.com, Inc.'] });
     const { list, score } = sectionOf(
       [
-        aVisit([aView({ ref: 'memh' })], { visitor: 'scanner', network: 'Microsoft Corporation' }),
-        aVisit([aView()], { visitor: 'recruiter', network: 'Amazon.com, Inc.' }),
+        aVisit([aView({ ref: 'memh' })], {
+          visitor: 'scanner',
+          ...inDataCenter('Microsoft Corporation'),
+        }),
+        aVisit([aView()], { visitor: 'recruiter', ...inDataCenter('Amazon.com, Inc.') }),
       ],
       [anApplication(), amazon],
     );

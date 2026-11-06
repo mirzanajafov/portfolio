@@ -35,27 +35,36 @@ describe('reportText', () => {
     );
   });
 
-  it('says under the period how many visits were people and how many came from data centers', () => {
-    const report = aReport({ period: { ...aReport().period, visits: 13, dataCenterVisits: 9 } });
+  const twoOwners: Report['dataCenters'] = {
+    demoOnly: 1,
+    list: [
+      { owner: 'Amazon.com, Inc.', visits: 6, pageViews: 7, medianSeconds: 0 },
+      { owner: 'Google LLC', visits: 3, pageViews: 3, medianSeconds: null },
+    ],
+  };
+
+  it('says under the period how many site visits were people and how many came from data centers', () => {
+    const report = aReport({ period: { ...aReport().period, visits: 13 }, dataCenters: twoOwners });
     expect(reportText(report, { all: false })).toContain(
       'Baku time\n13 visits by people, 9 from data centers kept apart\n',
     );
   });
 
-  it('lists the data centers apart, and says they are told apart only in the raw days', () => {
-    const text = reportText(
-      aReport({
-        dataCenters: [
-          { owner: 'Amazon.com, Inc.', visits: 6, pageViews: 7, medianSeconds: 0 },
-          { owner: 'Google LLC', visits: 3, pageViews: 3, medianSeconds: null },
-        ],
-      }),
-      { all: false },
-    );
+  it('lists the data centers apart with the ones that saw only a demo, and says they are told apart only in the raw days', () => {
+    const text = reportText(aReport({ dataCenters: twoOwners }), { all: false });
     expect(text).toMatch(/^Data centers +visits +page views +median s$/m);
     expect(text).toMatch(/^Amazon\.com, Inc\. +6 +7 +0$/m);
-    expect(text).toMatch(/^Google LLC +3 +3 +-$/m);
-    expect(text).toContain('Data-center visits are told apart only within the last 30 days.');
+    expect(text).toMatch(
+      /^Google LLC +3 +3 +-\n1 data-center visit saw only a demo\nData-center visits are told apart only within the last 30 days\.$/m,
+    );
+  });
+
+  it('says when data-center visits saw only a demo, and adds no note when there were none', () => {
+    const onlyDemos = reportText(aReport({ dataCenters: { demoOnly: 2, list: [] } }), {
+      all: false,
+    });
+    expect(onlyDemos).toContain('2 data-center visits saw only a demo');
+    expect(onlyDemos).not.toContain('Data centers: none');
     expect(reportText(aReport(), { all: false })).not.toContain('told apart');
   });
 
@@ -74,7 +83,6 @@ describe('reportText', () => {
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
           visits: 14,
-          dataCenterVisits: 0,
         },
         overview: { today: someVisits(2), current: someVisits(12), previous: null },
       }),
@@ -407,7 +415,7 @@ describe('reportText', () => {
         '  2026-10-30 15:00 (data center: Microsoft Corporation): / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
         '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00 (data center: Amazon.com, Inc.): / 30 s',
-        'Guesses checked on 3 coded visits to the site: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
+        'Guesses checked on 3 coded visits to the site by people: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
       ].join('\n'),
     );
     expect(text).toContain(

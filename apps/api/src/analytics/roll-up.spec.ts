@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rollUp } from './roll-up.js';
-import { aDemoSite, aDemoView, aView, aVisit, hoursAgo } from './testing.js';
+import { aDemoSite, aDemoView, aView, aVisit, hoursAgo, inDataCenter } from './testing.js';
 
 describe('rollUp', () => {
   it("adds up the day's visits and keeps every visit's seconds", () => {
@@ -193,14 +193,14 @@ describe('rollUp', () => {
     ]);
   });
 
-  it('rolls up people only, but still counts a data-center visit that came in with a code', () => {
+  it('rolls up people only, a coded data-center visit included', () => {
     const day = rollUp(
       [
         aVisit([aView({ activeSeconds: 30 })], { visitor: 'person', country: 'AZ' }),
         aVisit([aView({ ref: 'memh', activeSeconds: 0 })], {
           visitor: 'scanner',
           country: 'US',
-          network: 'Microsoft Corporation',
+          ...inDataCenter('Microsoft Corporation'),
           demoViews: [aDemoView()],
         }),
       ],
@@ -210,7 +210,7 @@ describe('rollUp', () => {
     expect(day.countries).toEqual([{ country: 'AZ', visits: 1 }]);
     expect(day.pages.map(({ views }) => views)).toEqual([1]);
     expect(day.demos).toEqual([]);
-    expect(day.applications).toEqual([{ code: 'memh', visits: 1, views: 2 }]);
+    expect(day.applications).toEqual([]);
   });
 
   it('counts a visit that went from the CV straight to a demo for its code', () => {

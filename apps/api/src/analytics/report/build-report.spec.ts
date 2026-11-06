@@ -2,7 +2,16 @@ import { aCaseStudy, aProject, contentOf } from '@portfolio/content/testing';
 import { describe, expect, it } from 'vitest';
 import type { DayTotals } from '../day-totals.js';
 import { utcDay } from '../../common/days.js';
-import { aDemoView, anApplication, aView, aVisit, daysAgo, hoursAgo, now } from '../testing.js';
+import {
+  aDemoView,
+  anApplication,
+  aView,
+  aVisit,
+  daysAgo,
+  hoursAgo,
+  inDataCenter,
+  now,
+} from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { buildReport } from './build-report.js';
 import type { ReportRows } from './rows.js';
@@ -147,34 +156,52 @@ describe('buildReport', () => {
     });
   });
 
-  it('counts people in the period, the overview, the demos and the audience, and lists every data-center visit apart by owner, demo pages included', () => {
+  it('counts people in the period, the overview, the demos and the audience, and lists data-center visits apart by owner the same way, demo pages included and demo-only ones counted apart', () => {
     const fromAmazon = (visitor: string) =>
       aVisit([aView({ activeSeconds: 0 }), aView({ path: '/cv', activeSeconds: 0 })], {
         visitor,
         country: 'US',
-        network: 'Amazon.com, Inc.',
+        ...inDataCenter('Amazon.com, Inc.'),
         demoViews: [aDemoView()],
       });
     const report = reportOf([
       aVisit([aView({ activeSeconds: 40 })], { visitor: 'person', network: 'NetPoint LLC' }),
       fromAmazon('aws 1'),
       fromAmazon('aws 2'),
-      aVisit([aView({ activeSeconds: 0 })], { visitor: 'gcp', network: 'Google LLC' }),
+      aVisit([aView({ activeSeconds: 0 })], { visitor: 'gcp', ...inDataCenter('Google LLC') }),
       aVisit([], {
         visitor: 'scanner',
-        network: 'Microsoft Corporation',
+        ...inDataCenter('Microsoft Corporation'),
         demoViews: [aDemoView({ activeSeconds: 0 })],
       }),
     ]);
-    expect(report.period).toMatchObject({ visits: 1, dataCenterVisits: 4 });
+    expect(report.period.visits).toBe(1);
     expect(report.overview.today).toMatchObject({ visits: 1, pageViews: 1, openedDemo: 0 });
     expect(report.demos).toMatchObject({ opened: 0, demoOnly: 0 });
     expect(report.audience.countries).toEqual([{ name: 'AZ', visits: 1 }]);
-    expect(report.dataCenters).toEqual([
-      { owner: 'Amazon.com, Inc.', visits: 2, pageViews: 6, medianSeconds: 20 },
-      { owner: 'Google LLC', visits: 1, pageViews: 1, medianSeconds: 0 },
-      { owner: 'Microsoft Corporation', visits: 1, pageViews: 1, medianSeconds: 0 },
+    expect(report.dataCenters).toEqual({
+      demoOnly: 1,
+      list: [
+        { owner: 'Amazon.com, Inc.', visits: 2, pageViews: 6, medianSeconds: 20 },
+        { owner: 'Google LLC', visits: 1, pageViews: 1, medianSeconds: 0 },
+      ],
+    });
+  });
+
+  it('keeps 404s and script errors from every visit, and Web Vitals from people only', () => {
+    const report = reportOf([
+      aVisit([aView({ lcpMs: 1200 })], { visitor: 'person' }),
+      aVisit(
+        [
+          aView({ lcpMs: 9000 }),
+          aView({ path: '/gone', notFound: true, errors: [{ message: 'boom', source: '/x.js' }] }),
+        ],
+        { visitor: 'scanner', ...inDataCenter('Microsoft Corporation') },
+      ),
     ]);
+    expect(report.quality.vitals).toMatchObject([{ path: '/', lcp: { p75: 1200, samples: 1 } }]);
+    expect(report.quality.notFound).toMatchObject([{ path: '/gone', views: 1 }]);
+    expect(report.quality.errors).toMatchObject([{ message: 'boom', count: 1 }]);
   });
 
   it('counts a visit that only reloaded its one page as a quick exit', () => {

@@ -1,6 +1,5 @@
 import type { DemoSite } from '@portfolio/content/analytics';
 import type { Source } from '@portfolio/content/report';
-import { dataCenterOf } from './data-centers.js';
 import { dayTotals, type DayTotals } from './day-totals.js';
 import { demoTotals, touched, type DemoTotals } from './demos.js';
 import { sourceOf } from './sources.js';
@@ -101,7 +100,7 @@ function applicationsOf(rows: readonly VisitRow[]): RolledDay['applications'] {
 }
 
 export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): RolledDay {
-  const people = rows.filter((row) => dataCenterOf(row) === null);
+  const people = rows.filter(({ dataCenter }) => dataCenter === null);
   const visits = people.flatMap(inOrder);
   return {
     totals: dayTotals(visits),
@@ -112,7 +111,7 @@ export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): R
       visits: group.length,
     })),
     clicks: clicksOf(visits),
-    applications: applicationsOf(rows),
+    applications: applicationsOf(people),
     demos: demos.map((demo) => demoTotals(people, demo)).filter(touched),
   };
 }

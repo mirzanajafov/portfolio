@@ -131,8 +131,9 @@ function totalsColumn(totals: Totals): string[] {
   ];
 }
 
-function period({ period: { from, to, days, visits, dataCenterVisits } }: Report): ReportSection {
+function period({ period: { from, to, days, visits }, dataCenters }: Report): ReportSection {
   const utc = (when: Date) => when.toISOString().slice(0, 10);
+  const dataCenterVisits = dataCenters.list.reduce((total, { visits: count }) => total + count, 0);
   return [
     line(
       `Visits in the last ${counted(days, 'full day')} and today: ${utc(from)} to ${utc(to)} UTC, today until ${bakuTime(to)} Baku time`,
@@ -365,28 +366,27 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
   ];
 }
 
-function dataCenters({ dataCenters }: Report, all: boolean): ReportSection[] {
-  const table = section(
-    'Data centers',
-    ['visits', 'page views', 'median s'],
-    dataCenters.map(({ owner, visits, pageViews, medianSeconds }) => [
-      owner,
-      String(visits),
-      String(pageViews),
-      optional(medianSeconds),
-    ]),
-    all,
-  );
-  return dataCenters.length === 0
-    ? [table]
-    : [
-        table,
-        [
-          line(
-            `Data-center visits are told apart only within the last ${String(analyticsDays)} days.`,
-          ),
-        ],
-      ];
+function dataCenters({ dataCenters: { list, demoOnly } }: Report, all: boolean): ReportSection {
+  if (list.length === 0 && demoOnly === 0) {
+    return [line('Data centers: none')];
+  }
+  return [
+    ...(list.length > 0
+      ? section(
+          'Data centers',
+          ['visits', 'page views', 'median s'],
+          list.map(({ owner, visits, pageViews, medianSeconds }) => [
+            owner,
+            String(visits),
+            String(pageViews),
+            optional(medianSeconds),
+          ]),
+          all,
+        )
+      : []),
+    ...(demoOnly > 0 ? [line(`${counted(demoOnly, 'data-center visit')} saw only a demo`)] : []),
+    line(`Data-center visits are told apart only within the last ${String(analyticsDays)} days.`),
+  ];
 }
 
 function vital(value: Vital | null, shown: (p75: number) => string): string {
@@ -586,7 +586,7 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
           line('Applications, every visit kept rather than only the period, times in Baku'),
           ...listed(list, all, (application) => applicationParts(application, all), false),
           line(
-            `Guesses checked on ${counted(score.visits, 'coded visit')} to the site: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
+            `Guesses checked on ${counted(score.visits, 'coded visit')} to the site by people: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
           ),
           ...tallySection('By channel', applications.byChannel, all),
           ...tallySection('By CV variant', applications.byVariant, all),
@@ -647,7 +647,7 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     demos(report),
     ask(report),
     ...audience(report, all),
-    ...dataCenters(report, all),
+    dataCenters(report, all),
     ...quality(report, all),
     applications(report, all),
     filter(report),

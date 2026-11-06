@@ -120,13 +120,7 @@ const vitalSchema = z.object({
 });
 
 export const reportSchema = z.object({
-  period: z.object({
-    from: isoDate,
-    to: isoDate,
-    days: z.number(),
-    visits: z.number(),
-    dataCenterVisits: z.number(),
-  }),
+  period: z.object({ from: isoDate, to: isoDate, days: z.number(), visits: z.number() }),
   rollupBehind: z.nullable(z.object({ from: day, to: day })),
   overview: z.object({
     today: totalsSchema,
@@ -198,14 +192,17 @@ export const reportSchema = z.object({
     browsers: z.array(named),
     countries: z.array(named),
   }),
-  dataCenters: z.array(
-    z.object({
-      owner: z.string(),
-      visits: z.number(),
-      pageViews: z.number(),
-      medianSeconds: z.nullable(z.number()),
-    }),
-  ),
+  dataCenters: z.object({
+    demoOnly: z.number(),
+    list: z.array(
+      z.object({
+        owner: z.string(),
+        visits: z.number(),
+        pageViews: z.number(),
+        medianSeconds: z.nullable(z.number()),
+      }),
+    ),
+  }),
   quality: z.object({
     vitals: z.array(
       z.object({
