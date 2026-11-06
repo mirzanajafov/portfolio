@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { forwardEvent } from './forward';
 
+const session = 's'.repeat(43);
+
 describe('forwardEvent', () => {
-  it('passes the event, the caller address, the browser, its privacy signals and the origin, and finishes on its own clock even if the visitor has gone', async () => {
+  it('passes the event, the caller address, the browser, its privacy signals, the origin and the admin session, and finishes on its own clock even if the visitor has gone', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const request = new Request('http://site/api/events', {
       method: 'POST',
@@ -14,9 +16,10 @@ describe('forwardEvent', () => {
         dnt: '1',
         origin: 'https://najafov.dev',
         cookie: 'unrelated=1',
+        authorization: 'Bearer forged',
       },
     });
-    const response = await forwardEvent(request, 'http://api:3201', fetchImpl);
+    const response = await forwardEvent(request, 'http://api:3201', session, fetchImpl);
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://api:3201/events',
       expect.objectContaining({
@@ -28,6 +31,7 @@ describe('forwardEvent', () => {
           'sec-gpc': '1',
           dnt: '1',
           origin: 'https://najafov.dev',
+          authorization: `Bearer ${session}`,
         },
       }),
     );
@@ -44,7 +48,7 @@ describe('forwardEvent', () => {
       body: '{"type":"view"}',
       headers: { origin: 'https://example.com' },
     });
-    const response = await forwardEvent(request, 'http://api:3201', fetchImpl);
+    const response = await forwardEvent(request, 'http://api:3201', undefined, fetchImpl);
     expect(response.status).toBe(400);
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
     expect(await response.text()).toBe('');
@@ -64,6 +68,7 @@ describe('forwardEvent', () => {
       const response = await forwardEvent(
         from('https://poof.najafov.dev'),
         'http://api',
+        undefined,
         fetchImpl,
       );
       expect(response.headers.get('access-control-allow-origin')).toBe('https://poof.najafov.dev');
@@ -78,7 +83,7 @@ describe('forwardEvent', () => {
     ['no origin', undefined],
   ])('lets no page read the answer for %s', async (_, origin) => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
-    const response = await forwardEvent(from(origin), 'http://api', fetchImpl);
+    const response = await forwardEvent(from(origin), 'http://api', undefined, fetchImpl);
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
     expect(response.headers.get('vary')).toBe('Origin');
   });

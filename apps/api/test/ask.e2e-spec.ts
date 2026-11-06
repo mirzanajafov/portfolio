@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { AnswerEngine } from '../src/ask/answer-engine.js';
 import { AskLogService } from '../src/ask/ask-log.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { newSession, unknownToken } from './admin-session.js';
 import { chrome, sendEvent } from './send-event.js';
 import { FixedClock, siteOrigin, startApp } from './start-app.js';
 
@@ -144,6 +145,20 @@ describe('POST /ask against a real database', () => {
     await ask(app, 'Have you worked with Stripe payments?', '203.0.113.7', headers).expect(200);
     const [row] = await loggedRows(prisma, 'Have you worked with Stripe payments?');
     expect(row?.visitor).toBeNull();
+  });
+
+  it('answers a browser signed in to /admin within the same limits, and keeps its questions out of the log', async () => {
+    const signedIn = { 'User-Agent': chrome, Authorization: `Bearer ${await newSession(app)}` };
+    const answer = await ask(app, 'Stripe?', '198.51.100.7', signedIn).expect(200);
+    expect(sentencesOf(parseEvents(answer.text))).not.toEqual([]);
+    await ask(app, 'Kafka?', '198.51.100.7', signedIn).expect(200);
+    await ask(app, 'Postgres?', '198.51.100.7', signedIn).expect(200);
+    await ask(app, 'Redis?', '198.51.100.7', signedIn).expect(429);
+
+    const unknown = { 'User-Agent': chrome, Authorization: `Bearer ${unknownToken()}` };
+    await ask(app, 'What did you build with Kafka?', '198.51.100.8', unknown).expect(200);
+    expect(await loggedRows(prisma, 'What did you build with Kafka?')).toHaveLength(1);
+    expect(await prisma.askLog.count()).toBe(1);
   });
 
   it('marks a question it could not answer as refused', async () => {

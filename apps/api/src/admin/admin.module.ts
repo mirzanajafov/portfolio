@@ -1,16 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsReportModule } from '../analytics/report/analytics-report.module.js';
-import { VisitorSaltModule } from '../analytics/visitor-salt.module.js';
 import { ApplicationsModule } from '../applications/applications.module.js';
-import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
 import { AdminApplicationsController } from './admin-applications.controller.js';
-import { AdminSessionsService } from './admin-sessions.service.js';
+import { AdminSessionsModule } from './admin-sessions.module.js';
 import { AdminController } from './admin.controller.js';
 
 @Module({
-  imports: [RateLimitModule, VisitorSaltModule, AnalyticsReportModule, ApplicationsModule],
+  imports: [AdminSessionsModule, AnalyticsReportModule, ApplicationsModule],
   controllers: [AdminController, AdminApplicationsController],
-  providers: [AdminSessionsService],
-  exports: [AdminSessionsService],
 })
 export class AdminModule {}

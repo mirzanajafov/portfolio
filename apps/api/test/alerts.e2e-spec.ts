@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AlertSenderService } from '../src/alerts/alert-sender.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { newSession } from './admin-session.js';
 import { anApplication } from './applications.js';
 import { listenLocally } from './local-server.js';
 import { aView, sendEvent } from './send-event.js';
@@ -103,6 +104,16 @@ describe('first-visit alerts against a real database and a fake Bot API', () => 
     expect(bot.received).toEqual([message(firstCv)]);
     expect(await prisma.alert.count()).toBe(0);
     expect(await firstSeen(prisma)).toEqual({ firstSeenOn: new Date('2026-10-02') });
+  });
+
+  it('sends nothing and marks no first visit for a coded view from a browser signed in to /admin', async () => {
+    const signedIn = { Authorization: `Bearer ${await newSession(app)}` };
+    await sendEvent(app, aCodedView(), { headers: signedIn }).expect(204);
+    await sendDue();
+
+    expect(bot.received).toEqual([]);
+    expect(await prisma.alert.count()).toBe(0);
+    expect(await firstSeen(prisma)).toEqual({ firstSeenOn: null });
   });
 
   it('sends one message when two first views arrive at once', async () => {

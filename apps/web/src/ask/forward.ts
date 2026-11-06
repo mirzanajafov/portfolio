@@ -3,11 +3,12 @@ import { forwardToApi } from '@/lib/forward-to-api';
 export function forwardAsk(
   request: Request,
   apiUrl: string,
+  token: string | undefined,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response> {
   return forwardToApi(
     request,
-    { url: `${apiUrl}/ask`, fetchImpl, signal: request.signal },
+    { url: `${apiUrl}/ask`, fetchImpl, signal: request.signal, token },
     (upstream) =>
       upstream.body
         ? new Response(upstream.body, {

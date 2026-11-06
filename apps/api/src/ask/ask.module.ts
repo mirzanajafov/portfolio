@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
+import { AdminSessionsModule } from '../admin/admin-sessions.module.js';
 import { VisitorSaltModule } from '../analytics/visitor-salt.module.js';
 import { CONTENT } from '../content.js';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
@@ -12,7 +13,7 @@ import { KeywordAnswerEngine } from './keyword-engine.js';
 import { Knowledge, buildKnowledge } from './knowledge.js';
 
 @Module({
-  imports: [RateLimitModule, VisitorSaltModule],
+  imports: [AdminSessionsModule, RateLimitModule, VisitorSaltModule],
   controllers: [AskController],
   providers: [
     { provide: Knowledge, useFactory: buildKnowledge, inject: [CONTENT] },

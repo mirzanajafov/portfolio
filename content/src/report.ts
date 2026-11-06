@@ -214,7 +214,9 @@ export const reportSchema = z.object({
       z.object({ path: z.string(), views: z.number(), referrers: z.array(z.string()) }),
     ),
   }),
-  filter: z.array(z.object({ day, bot: z.number(), limited: z.number(), origin: z.number() })),
+  filter: z.array(
+    z.object({ day, bot: z.number(), limited: z.number(), origin: z.number(), own: z.number() }),
+  ),
   applications: z.object({
     list: z.array(applicationEntrySchema),
     byChannel: z.array(z.extend(applicationTallySchema, { name: z.enum(channels) })),

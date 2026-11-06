@@ -588,12 +588,13 @@ function filter({ filter }: Report): ReportSection {
   }
   return [
     table([
-      ['Filtered out, UTC day', 'bots', 'limited', 'other sites'],
-      ...filter.map(({ day, bot, limited, origin }) => [
+      ['Filtered out, UTC day', 'bots', 'limited', 'other sites', 'mine'],
+      ...filter.map(({ day, bot, limited, origin, own }) => [
         day,
         String(bot),
         String(limited),
         String(origin),
+        String(own),
       ]),
     ]),
   ];

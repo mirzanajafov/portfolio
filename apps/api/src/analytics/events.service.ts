@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { AdminSessionsService } from '../admin/admin-sessions.service.js';
 import { visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
@@ -14,6 +15,7 @@ type Outcome = { kind: 'accepted' } | Limited;
 @Injectable()
 export class EventsService {
   constructor(
+    private readonly sessions: AdminSessionsService,
     private readonly salts: VisitorSaltService,
     private readonly limiter: RateLimiterService,
     private readonly visits: VisitLogService,
@@ -29,6 +31,10 @@ export class EventsService {
     const now = this.clock.now();
     if (source.kind === 'elsewhere') {
       await this.visits.countDropped('origin', now);
+      return { kind: 'accepted' };
+    }
+    if ((await this.sessions.find(caller.sessionToken)) !== null) {
+      await this.visits.countDropped('own', now);
       return { kind: 'accepted' };
     }
     const userAgent = visitorAgent(caller);

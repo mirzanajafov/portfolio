@@ -13,10 +13,14 @@ function forward(request: Request, fetchImpl: typeof fetch) {
 }
 
 describe('forwardToApi', () => {
-  it('posts the body as JSON with only the caller headers, and answers with the caller', async () => {
+  it('posts the body as JSON with only the caller headers, never a cookie or an Authorization the browser sent, and answers with the caller', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
     const response = await forward(
-      post('{"a":1}', { 'x-forwarded-for': '203.0.113.7', cookie: 'secret=1' }),
+      post('{"a":1}', {
+        'x-forwarded-for': '203.0.113.7',
+        cookie: 'secret=1',
+        authorization: 'Bearer forged',
+      }),
       fetchImpl,
     );
     expect(fetchImpl).toHaveBeenCalledWith(

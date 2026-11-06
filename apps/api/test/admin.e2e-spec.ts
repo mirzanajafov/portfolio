@@ -6,12 +6,13 @@ import {
   applicationViewSchema,
 } from '@portfolio/content/applications';
 import { reportSchema } from '@portfolio/content/report';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { newSession, unknownToken } from './admin-session.js';
 import { anApplication } from './applications.js';
 import { address } from './send-event.js';
 import { FixedClock, startApp } from './start-app.js';
@@ -23,8 +24,6 @@ const later = (ms: number) => new Date(start.getTime() + ms);
 const minutes = (count: number) => count * 60 * 1000;
 
 const days = (count: number) => count * 24 * 60 * 60 * 1000;
-
-const unknownToken = () => randomBytes(32).toString('base64url');
 
 describe('admin sign-in against a real database', () => {
   let app: NestExpressApplication;
@@ -45,10 +44,6 @@ describe('admin sign-in against a real database', () => {
 
   const signOut = (token: string) =>
     request(app.getHttpServer()).delete('/admin/session').set('Authorization', `Bearer ${token}`);
-
-  const sessionFrom = async (link: string): Promise<string> => {
-    return adminSignInSchema.parse((await signIn(link).expect(201)).body).token;
-  };
 
   beforeAll(async () => {
     ({ app, clock, prisma } = await startApp());
@@ -103,7 +98,7 @@ describe('admin sign-in against a real database', () => {
 
   it('lets neither kind of token stand in for the other', async () => {
     const link = await sessions.link();
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
 
     await session(`Bearer ${link}`).expect(404);
     await signIn(token).expect(404);
@@ -112,7 +107,7 @@ describe('admin sign-in against a real database', () => {
 
   it('stores only the SHA-256 of each token', async () => {
     const link = await sessions.link();
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
     const sha256 = (value: string) => createHash('sha256').update(value).digest();
 
     expect((await prisma.adminLoginToken.findMany()).map(({ hash }) => hash)).toEqual([
@@ -129,13 +124,13 @@ describe('admin sign-in against a real database', () => {
     ['a malformed token', 'Bearer short'],
     ['an unknown token', `Bearer ${unknownToken()}`],
   ])('answers 404 to %s', async (_, authorization) => {
-    await sessionFrom(await sessions.link());
+    await newSession(app);
     await session(authorization).expect(404);
   });
 
   it('ends a session when it signs out', async () => {
-    const token = await sessionFrom(await sessions.link());
-    const other = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
+    const other = await newSession(app);
 
     await signOut(token).expect(204);
     await session(`Bearer ${token}`).expect(404);
@@ -144,7 +139,7 @@ describe('admin sign-in against a real database', () => {
   });
 
   it('ends a session after 30 days, however often it was used', async () => {
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
 
     clock.current = later(days(30) - 1000);
     await session(`Bearer ${token}`).expect(200);
@@ -153,8 +148,8 @@ describe('admin sign-in against a real database', () => {
   });
 
   it('ends every session and deletes every unused link on revoke', async () => {
-    const first = await sessionFrom(await sessions.link());
-    const second = await sessionFrom(await sessions.link());
+    const first = await newSession(app);
+    const second = await newSession(app);
     const unused = await sessions.link();
 
     expect(await sessions.revokeAll()).toEqual({ sessions: 2, links: 1 });
@@ -202,7 +197,7 @@ describe('admin sign-in against a real database', () => {
   });
 
   it('answers the report for the days asked, in the shape the site reads back with its dates', async () => {
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
 
     const answer = await request(app.getHttpServer())
       .get('/admin/report?days=1')
@@ -215,7 +210,7 @@ describe('admin sign-in against a real database', () => {
   });
 
   it('reports the last 7 days when none are asked for', async () => {
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
 
     const answer = await request(app.getHttpServer())
       .get('/admin/report')
@@ -226,7 +221,7 @@ describe('admin sign-in against a real database', () => {
   });
 
   it.each(['0', '31', '2.5', 'week', '0x1e', '1e1', '%207'])('refuses %s days', async (days) => {
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
 
     await request(app.getHttpServer())
       .get(`/admin/report?days=${days}`)
@@ -243,7 +238,7 @@ describe('admin sign-in against a real database', () => {
   });
 
   it('answers a registered application with nothing to undo yet, and a 404 for a code nobody has', async () => {
-    const token = await sessionFrom(await sessions.link());
+    const token = await newSession(app);
     await prisma.application.create({
       data: { ...anApplication({ appliedOn: start }), code: 'memh' },
     });
@@ -281,7 +276,7 @@ describe('admin sign-in against a real database', () => {
     };
 
     const signedInWithAcme = async () => {
-      const token = await sessionFrom(await sessions.link());
+      const token = await newSession(app);
       await write('post', '', token, acme).expect(201);
       return token;
     };
@@ -304,7 +299,7 @@ describe('admin sign-in against a real database', () => {
       );
 
     it('adds an application with its channel and variant, and answers it the way /admin reads it', async () => {
-      const token = await sessionFrom(await sessions.link());
+      const token = await newSession(app);
 
       const added = await write('post', '', token, acme).expect(201);
 
@@ -347,7 +342,7 @@ describe('admin sign-in against a real database', () => {
     });
 
     it('keeps only the lowercase host of an ATS link pasted whole', async () => {
-      const token = await sessionFrom(await sessions.link());
+      const token = await newSession(app);
 
       const added = await write('post', '', token, {
         ...acme,
@@ -666,9 +661,9 @@ describe('admin sign-in against a real database', () => {
 
   it('deletes expired links and sessions in the cleanup, and keeps the rest', async () => {
     await sessions.link();
-    await sessionFrom(await sessions.link());
+    await newSession(app);
     clock.current = later(minutes(20));
-    const kept = await sessionFrom(await sessions.link());
+    const kept = await newSession(app);
     clock.current = later(days(30) - minutes(5));
     const fresh = await sessions.link();
 
