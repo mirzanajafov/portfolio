@@ -63,7 +63,7 @@ describe('reportText', () => {
     const onlyDemos = reportText(aReport({ dataCenters: { demoOnly: 2, list: [] } }), {
       all: false,
     });
-    expect(onlyDemos).toContain('2 data-center visits saw only a demo');
+    expect(onlyDemos).toContain('Data centers: 2 visits saw only a demo');
     expect(onlyDemos).not.toContain('Data centers: none');
     expect(reportText(aReport(), { all: false })).not.toContain('told apart');
   });

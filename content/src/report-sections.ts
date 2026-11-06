@@ -72,8 +72,8 @@ function line(text: string): ReportPart {
   return { kind: 'line', text: printable(text), indent: false };
 }
 
-function none(title: string): ReportPart {
-  return { kind: 'none', text: printable(`${title}: none`) };
+function none(text: string): ReportPart {
+  return { kind: 'none', text: printable(text) };
 }
 
 function item(text: string): ReportPart {
@@ -114,7 +114,7 @@ function section(
   all: boolean,
 ): ReportSection {
   if (rows.length === 0) {
-    return [none(title)];
+    return [none(`${title}: none`)];
   }
   const shown = shownOf(rows, all);
   const hidden = rows.length - shown.length;
@@ -248,7 +248,7 @@ function traffic(report: Report, all: boolean): ReportSection[] {
 
 function reading({ reading }: Report): ReportSection[] {
   if (reading.length === 0) {
-    return [[line('Reading: no views of the home page or a case study')]];
+    return [[none('Reading: no views of the home page or a case study')]];
   }
   return reading.map((page) => [
     line(
@@ -286,7 +286,7 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function demos({ period: { visits }, demos }: Report): ReportSection {
   const { opened, didStep, demoOnly, list } = demos;
   if (list.length === 0) {
-    return [none('Demos')];
+    return [none('Demos: none')];
   }
   return [
     line(
@@ -373,7 +373,7 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
 
 function dataCenters({ dataCenters: { list, demoOnly } }: Report, all: boolean): ReportSection {
   if (list.length === 0 && demoOnly === 0) {
-    return [none('Data centers')];
+    return [none('Data centers: none')];
   }
   return [
     ...(list.length > 0
@@ -389,7 +389,15 @@ function dataCenters({ dataCenters: { list, demoOnly } }: Report, all: boolean):
           all,
         )
       : []),
-    ...(demoOnly > 0 ? [line(`${counted(demoOnly, 'data-center visit')} saw only a demo`)] : []),
+    ...(demoOnly > 0
+      ? [
+          line(
+            list.length > 0
+              ? `${counted(demoOnly, 'data-center visit')} saw only a demo`
+              : `Data centers: ${counted(demoOnly, 'visit')} saw only a demo`,
+          ),
+        ]
+      : []),
     line(`Data-center visits are told apart only within the last ${String(analyticsDays)} days.`),
   ];
 }
@@ -616,7 +624,7 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
 
 function filter({ filter }: Report): ReportSection {
   if (filter.length === 0) {
-    return [none('Filtered out')];
+    return [none('Filtered out: none')];
   }
   return [
     table([
