@@ -1,6 +1,7 @@
-import { Controller, HttpCode, HttpException, HttpStatus, Post, Req, Res } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import { Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { callerOf } from '../common/caller.js';
+import { TooManyRequestsException } from '../common/too-many-requests.exception.js';
 import { EventPipe, PostedEvent } from './event.pipe.js';
 import type { SourcedEvent } from './event.schema.js';
 import { EventsService } from './events.service.js';
@@ -11,18 +12,10 @@ export class EventsController {
 
   @Post()
   @HttpCode(HttpStatus.NO_CONTENT)
-  async record(
-    @PostedEvent(EventPipe) sourced: SourcedEvent,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<void> {
+  async record(@PostedEvent(EventPipe) sourced: SourcedEvent, @Req() req: Request): Promise<void> {
     const outcome = await this.events.accept(sourced, callerOf(req));
     if (outcome.kind === 'limited') {
-      res.set('Retry-After', String(outcome.retryAfterSeconds));
-      throw new HttpException(
-        { message: 'too many events', retryAfterSeconds: outcome.retryAfterSeconds },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new TooManyRequestsException('too many events', outcome.retryAfterSeconds);
     }
   }
 }

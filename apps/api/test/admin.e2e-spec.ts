@@ -170,6 +170,10 @@ describe('admin sign-in against a real database', () => {
     const link = await sessions.link();
     const limited = await signIn(link).expect(429);
     expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(limited.body).toEqual({
+      message: 'too many sign-ins',
+      retryAfterSeconds: Number(limited.headers['retry-after']),
+    });
 
     await signIn(link, '198.51.100.4').expect(201);
   });
@@ -653,6 +657,7 @@ describe('admin sign-in against a real database', () => {
       const refused = await edit(token, { notes: 'one too many' }, 429);
 
       expect(refused.headers['retry-after']).toBe('600');
+      expect(refused.body).toEqual({ message: 'too many changes', retryAfterSeconds: 600 });
       expect(await prisma.application.findUnique({ where: { code: 'memh' } })).toMatchObject({
         notes: '60',
       });
