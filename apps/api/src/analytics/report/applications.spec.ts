@@ -117,9 +117,9 @@ describe('applicationsOf', () => {
     });
   });
 
-  it('marks a coded visit and a guessed one from a data center with its owner, and keeps both', () => {
+  it("marks a coded visit and a guessed one from a data center with its owner, keeps both, and leaves them out of the guesser's score", () => {
     const amazon = applied('k7mpx', { company: 'Amazon', networks: ['Amazon.com, Inc.'] });
-    const { list } = sectionOf(
+    const { list, score } = sectionOf(
       [
         aVisit([aView({ ref: 'memh' })], { visitor: 'scanner', network: 'Microsoft Corporation' }),
         aVisit([aView()], { visitor: 'recruiter', network: 'Amazon.com, Inc.' }),
@@ -131,6 +131,7 @@ describe('applicationsOf', () => {
     expect(named('Amazon')?.guesses).toMatchObject([
       { confidence: 'high', dataCenter: 'Amazon.com, Inc.' },
     ]);
+    expect(score.visits).toBe(0);
   });
 
   it('never guesses a visit that came in with a code, even one that would match', () => {

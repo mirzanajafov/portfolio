@@ -205,7 +205,10 @@ export function applicationsOf(
       })),
     byChannel: tallyBy(applications, ({ channel }) => channel, windowStart),
     byVariant: tallyBy(applications, ({ cvVariant }) => cvVariant, windowStart),
-    score: scoreOf(coded.filter(sawTheSite), guess),
+    score: scoreOf(
+      coded.filter((each) => sawTheSite(each) && dataCenterOf(each.visit) === null),
+      guess,
+    ),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,
