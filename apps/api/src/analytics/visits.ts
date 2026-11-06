@@ -35,6 +35,7 @@ export type VisitRow = {
   country: string | null;
   city: string | null;
   network: string | null;
+  dataCenter: string | null;
   views: ViewRow[];
   demoViews: DemoViewRow[];
 };

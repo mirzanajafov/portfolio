@@ -64,6 +64,7 @@ const outcomesSchema = z.object({ right: z.number(), wrong: z.number(), tied: z.
 const visitStorySchema = z.object({
   at: isoDate,
   from: z.nullable(z.string()),
+  dataCenter: z.nullable(z.string()),
   pages: z.array(
     z.object({
       demo: z.nullable(z.string()),
@@ -190,6 +191,17 @@ export const reportSchema = z.object({
     devices: z.array(named),
     browsers: z.array(named),
     countries: z.array(named),
+  }),
+  dataCenters: z.object({
+    demoOnly: z.number(),
+    list: z.array(
+      z.object({
+        owner: z.string(),
+        visits: z.number(),
+        pageViews: z.number(),
+        medianSeconds: z.nullable(z.number()),
+      }),
+    ),
   }),
   quality: z.object({
     vitals: z.array(

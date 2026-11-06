@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { aDemoSite, aDemoView, anApplication, aView, aVisit, hoursAgo, now } from '../testing.js';
+import {
+  aDemoSite,
+  aDemoView,
+  anApplication,
+  aView,
+  aVisit,
+  hoursAgo,
+  inDataCenter,
+  now,
+} from '../testing.js';
 import type { VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import type { ApplicationRow, RolledApplicationDay } from './rows.js';
@@ -47,6 +56,7 @@ describe('applicationsOf', () => {
       {
         at: hoursAgo(1),
         from: null,
+        dataCenter: null,
         pages: [{ demo: null, path: '/', seconds: 0, read: [], did: [] }],
         clicks: [],
         questions: [],
@@ -55,6 +65,7 @@ describe('applicationsOf', () => {
       {
         at: hoursAgo(3),
         from: 'www.linkedin.com',
+        dataCenter: null,
         pages: [
           { demo: null, path: '/', seconds: 40, read: ['tuner'], did: [] },
           { demo: null, path: '/cv', seconds: 8, read: [], did: [] },
@@ -113,6 +124,26 @@ describe('applicationsOf', () => {
       daysAfter: 1,
       from: 'www.google.com',
     });
+  });
+
+  it("marks a coded visit and a guessed one from a data center with its owner, keeps both, and leaves them out of the guesser's score", () => {
+    const amazon = applied('k7mpx', { company: 'Amazon', networks: ['Amazon.com, Inc.'] });
+    const { list, score } = sectionOf(
+      [
+        aVisit([aView({ ref: 'memh' })], {
+          visitor: 'scanner',
+          ...inDataCenter('Microsoft Corporation'),
+        }),
+        aVisit([aView()], { visitor: 'recruiter', ...inDataCenter('Amazon.com, Inc.') }),
+      ],
+      [anApplication(), amazon],
+    );
+    const named = (company: string) => list.find((entry) => entry.company === company);
+    expect(named('Xsolla')?.visits).toMatchObject([{ dataCenter: 'Microsoft Corporation' }]);
+    expect(named('Amazon')?.guesses).toMatchObject([
+      { confidence: 'high', dataCenter: 'Amazon.com, Inc.' },
+    ]);
+    expect(score.visits).toBe(0);
   });
 
   it('never guesses a visit that came in with a code, even one that would match', () => {
@@ -243,6 +274,7 @@ describe('applicationsOf', () => {
       {
         at: hoursAgo(1),
         from: null,
+        dataCenter: null,
         pages: [
           {
             demo: 'tuner.najafov.dev',

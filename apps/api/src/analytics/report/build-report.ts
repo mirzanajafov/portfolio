@@ -9,7 +9,7 @@ import { firstRawDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
-import { inOrder, type Visit } from '../visits.js';
+import { inOrder, type Visit, type VisitRow } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import { demosOf } from './demos.js';
 import { qualityOf } from './quality.js';
@@ -222,6 +222,27 @@ function audienceOf(visits: readonly Visit[]): Report['audience'] {
   };
 }
 
+function dataCentersOf(rows: readonly VisitRow[]): Report['dataCenters'] {
+  const owned = rows.flatMap((visit) =>
+    visit.dataCenter === null ? [] : [{ owner: visit.dataCenter, visit }],
+  );
+  const sawTheSite = owned.filter(({ visit }) => visit.views.length > 0);
+  return {
+    demoOnly: owned.length - sawTheSite.length,
+    list: rankedGroups(sawTheSite, ({ owner }) => owner).map(([owner, group]) => {
+      const pages = group.map(({ visit }) => [...visit.views, ...visit.demoViews]);
+      return {
+        owner,
+        visits: group.length,
+        pageViews: pages.reduce((total, { length }) => total + length, 0),
+        medianSeconds: median(
+          pages.map((each) => each.reduce((total, { activeSeconds }) => total + activeSeconds, 0)),
+        ),
+      };
+    }),
+  };
+}
+
 function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] {
   const droppedFor = (rows: typeof dropped, reason: DropReason) =>
     rows.filter((row) => row.reason === reason).reduce((total, { count }) => total + count, 0);
@@ -243,13 +264,15 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const today = utcDay(now);
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
+  const people = everyVisit.filter(({ dataCenter }) => dataCenter === null);
+  const rowsInPeriod = startedBetween(rows.visits, from, now);
   const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
   const demos = [...demoSites(content).values()];
-  const visits = startedBetween(everyVisit, from, now);
+  const visits = startedBetween(people, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
     day >= rows.rawFrom
-      ? dayTotals(startedBetween(everyVisit, day, daysAfter(day, 1)))
+      ? dayTotals(startedBetween(people, day, daysAfter(day, 1)))
       : (rolled.get(day.getTime()) ?? null);
   const before = Array.from({ length: days }, (_, index) =>
     totalsOn(daysAfter(firstDayBefore(now, days), index)),
@@ -262,8 +285,8 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
         ? { from: dayOf(rows.rawFrom), to: dayOf(daysAfter(firstKeptRaw, -1)) }
         : null,
     overview: {
-      today: sumOf([dayTotals(startedBetween(everyVisit, today, now))]),
-      current: sumOf([dayTotals(startedBetween(everyVisit, from, today))]),
+      today: sumOf([dayTotals(startedBetween(people, today, now))]),
+      current: sumOf([dayTotals(startedBetween(people, from, today))]),
       previous: before.every(collected) ? sumOf(before) : null,
     },
     weeks: weeksOf(totalsOn, today),
@@ -272,10 +295,15 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), demos),
+    demos: demosOf(
+      rowsInPeriod.filter(({ dataCenter }) => dataCenter === null),
+      dayTotals(visits),
+      demos,
+    ),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
-    quality: qualityOf(visits),
+    dataCenters: dataCentersOf(rowsInPeriod),
+    quality: qualityOf(startedBetween(everyVisit, from, now)),
     filter: filterOf(rows.dropped, from),
     applications: applicationsOf(
       rows.visits,

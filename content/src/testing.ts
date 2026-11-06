@@ -235,6 +235,7 @@ export function aReport(overrides: Partial<Report> = {}): Report {
     demos: { opened: 0, didStep: 0, demoOnly: 0, list: [] },
     ask: { since: null, questions: 0, refused: 0, inVisits: 0, visits: 0, days: [] },
     audience: { devices: [], browsers: [], countries: [] },
+    dataCenters: { demoOnly: 0, list: [] },
     quality: { vitals: [], errors: [], notFound: [] },
     filter: [],
     applications: someApplications(),

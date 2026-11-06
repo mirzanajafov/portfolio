@@ -79,5 +79,9 @@ function notFoundOf(visits: readonly Visit[]): Report['quality']['notFound'] {
 }
 
 export function qualityOf(visits: readonly Visit[]): Report['quality'] {
-  return { vitals: vitalsOf(visits), errors: errorsOf(visits), notFound: notFoundOf(visits) };
+  return {
+    vitals: vitalsOf(visits.filter(({ dataCenter }) => dataCenter === null)),
+    errors: errorsOf(visits),
+    notFound: notFoundOf(visits),
+  };
 }

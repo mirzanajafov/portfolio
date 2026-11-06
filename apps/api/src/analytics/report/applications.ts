@@ -71,6 +71,7 @@ function storyOf(
   return {
     at: visit.startedAt,
     from: pages[0]?.from ?? null,
+    dataCenter: visit.dataCenter,
     pages: pages.map(({ page }) => page),
     clicks,
     questions,
@@ -203,7 +204,10 @@ export function applicationsOf(
       })),
     byChannel: tallyBy(applications, ({ channel }) => channel, windowStart),
     byVariant: tallyBy(applications, ({ cvVariant }) => cvVariant, windowStart),
-    score: scoreOf(coded.filter(sawTheSite), guess),
+    score: scoreOf(
+      coded.filter((each) => sawTheSite(each) && each.visit.dataCenter === null),
+      guess,
+    ),
     unknownCodes: rankedGroups(unknown, ({ code }) => code).map(([code, group]) => ({
       code,
       visits: group.length,

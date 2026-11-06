@@ -67,10 +67,15 @@ export function aVisit(
     country: 'AZ',
     city: 'Baku',
     network: null,
+    dataCenter: null,
     views,
     demoViews: [],
     ...overrides,
   };
+}
+
+export function inDataCenter(owner: string): Pick<VisitRow, 'network' | 'dataCenter'> {
+  return { network: owner, dataCenter: owner };
 }
 
 export function anApplication(overrides: Partial<ApplicationRow> = {}): ApplicationRow {

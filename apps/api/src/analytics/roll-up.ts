@@ -100,7 +100,8 @@ function applicationsOf(rows: readonly VisitRow[]): RolledDay['applications'] {
 }
 
 export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): RolledDay {
-  const visits = rows.flatMap(inOrder);
+  const people = rows.filter(({ dataCenter }) => dataCenter === null);
+  const visits = people.flatMap(inOrder);
   return {
     totals: dayTotals(visits),
     pages: pagesOf(visits),
@@ -110,7 +111,7 @@ export function rollUp(rows: readonly VisitRow[], demos: readonly DemoSite[]): R
       visits: group.length,
     })),
     clicks: clicksOf(visits),
-    applications: applicationsOf(rows),
-    demos: demos.map((demo) => demoTotals(rows, demo)).filter(touched),
+    applications: applicationsOf(people),
+    demos: demos.map((demo) => demoTotals(people, demo)).filter(touched),
   };
 }
