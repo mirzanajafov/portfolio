@@ -42,7 +42,7 @@ export class AskController {
     const askedAt = this.clock.now();
     const keys = await this.salts.dayKeys(askedAt);
     const verdict = await this.limits.admit(keys.limit(caller.ip));
-    if (!verdict.allowed) {
+    if (verdict.kind === 'limited') {
       throw new TooManyRequestsException('too many questions', verdict.retryAfterSeconds);
     }
     const agent = visitorAgent(caller);

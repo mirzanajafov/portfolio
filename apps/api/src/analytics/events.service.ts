@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
-import { RateLimiterService } from '../rate-limit/rate-limiter.service.js';
+import { RateLimiterService, type Limited } from '../rate-limit/rate-limiter.service.js';
 import type { SourcedEvent } from './event.schema.js';
 import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
 import { VisitorSaltService } from './visitor-salt.service.js';
 
-type Outcome = { kind: 'accepted' } | { kind: 'limited'; retryAfterSeconds: number };
+type Outcome = { kind: 'accepted' } | Limited;
 
 @Injectable()
 export class EventsService {
@@ -53,9 +53,9 @@ export class EventsService {
       ],
       [{ key: 'events:day:everyone', limit: this.env.EVENTS_PER_DAY, windowSeconds: 86_400 }],
     );
-    if (!verdict.allowed) {
+    if (verdict.kind === 'limited') {
       await this.visits.countDropped('limited', now);
-      return { kind: 'limited', retryAfterSeconds: verdict.retryAfterSeconds };
+      return verdict;
     }
     const demo = source.kind === 'demo' ? source.slug : null;
     if (event.type === 'view') {

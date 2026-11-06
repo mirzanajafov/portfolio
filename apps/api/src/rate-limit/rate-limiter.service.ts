@@ -6,7 +6,9 @@ import { PrismaService } from '../prisma/prisma.service.js';
 const cleanupEveryMs = 60 * 60 * 1000;
 const keepMs = 2 * 24 * 60 * 60 * 1000;
 
-export type Verdict = { allowed: boolean; retryAfterSeconds: number };
+export type Limited = { kind: 'limited'; retryAfterSeconds: number };
+
+export type Verdict = { kind: 'allowed' } | Limited;
 
 type Limit = { key: string; limit: number; windowSeconds: number };
 
@@ -39,26 +41,31 @@ export class RateLimiterService implements OnModuleInit, OnModuleDestroy {
     if (!row) {
       throw new Error(`counting ${key} returned no row`);
     }
+    if (row.count <= limit) {
+      return { kind: 'allowed' };
+    }
     return {
-      allowed: row.count <= limit,
+      kind: 'limited',
       retryAfterSeconds: Math.max(1, Math.ceil((windowStart.getTime() + windowMs - now) / 1000)),
     };
   }
 
   async admit(own: Limit[], shared: Limit[]): Promise<Verdict> {
     const verdict = await this.hitAll(own);
-    return verdict.allowed ? this.hitAll(shared) : verdict;
+    return verdict.kind === 'allowed' ? this.hitAll(shared) : verdict;
   }
 
   private async hitAll(limits: Limit[]): Promise<Verdict> {
-    let retryAfterSeconds = 0;
+    const waits: number[] = [];
     for (const limit of limits) {
       const verdict = await this.hit(limit);
-      if (!verdict.allowed) {
-        retryAfterSeconds = Math.max(retryAfterSeconds, verdict.retryAfterSeconds);
+      if (verdict.kind === 'limited') {
+        waits.push(verdict.retryAfterSeconds);
       }
     }
-    return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
+    return waits.length === 0
+      ? { kind: 'allowed' }
+      : { kind: 'limited', retryAfterSeconds: Math.max(...waits) };
   }
 
   private async cleanup(): Promise<void> {
