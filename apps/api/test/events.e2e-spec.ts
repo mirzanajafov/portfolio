@@ -1,11 +1,11 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
-import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
-import { dailyKey, keyed } from '../src/analytics/visitor-key.js';
-import { VisitorSaltService } from '../src/analytics/visitor-salt.service.js';
+import { AdminSessionsService } from '../src/admin-sessions/admin-sessions.service.js';
 import { ENV, type Env } from '../src/config/env.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { dailyKey, keyed } from '../src/visitor-keys/visitor-key.js';
+import { VisitorSaltService } from '../src/visitor-keys/visitor-salt.service.js';
 import { newSession, unknownToken } from './admin-session.js';
 import { fixtureContent } from './content.fixture.js';
 import { aView, address, chrome, sendEvent } from './send-event.js';

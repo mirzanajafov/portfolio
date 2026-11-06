@@ -1,7 +1,7 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { adminLinkMinutes } from '@portfolio/content/admin';
-import { AdminSessionsService } from '../admin/admin-sessions.service.js';
+import { AdminSessionsService } from '../admin-sessions/admin-sessions.service.js';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { CvFetchError, fetchApplicationCv } from '../applications/application-cv.js';
 import { ApplicationsService } from '../applications/applications.service.js';
