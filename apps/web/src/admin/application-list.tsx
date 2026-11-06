@@ -36,7 +36,7 @@ export function ApplicationList({ applications }: { applications: ApplicationVie
         <tbody>
           {applications.map((application) => (
             <tr key={application.code} className="border-t border-line">
-              <td className={`${bodyCell(0)} whitespace-nowrap`}>
+              <td className={bodyCell(0)}>
                 <Link
                   href={`/admin/applications/${application.code}`}
                   prefetch={false}
