@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpException,
-  HttpStatus,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { questionMaxLength } from '@portfolio/content/ask';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
@@ -17,6 +8,7 @@ import { callerOf, visitorAgent } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { SiteOriginGuard } from '../common/site-origin.guard.js';
 import { ZodPipe } from '../common/zod.pipe.js';
+import { TooManyRequestsException } from '../rate-limit/too-many-requests.filter.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';
 import { AskService } from './ask.service.js';
@@ -51,11 +43,7 @@ export class AskController {
     const keys = await this.salts.dayKeys(askedAt);
     const verdict = await this.limits.admit(keys.limit(caller.ip));
     if (!verdict.allowed) {
-      res.set('Retry-After', String(verdict.retryAfterSeconds));
-      throw new HttpException(
-        { message: 'too many questions', retryAfterSeconds: verdict.retryAfterSeconds },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new TooManyRequestsException('too many questions', verdict.retryAfterSeconds);
     }
     const agent = visitorAgent(caller);
     const visitor = agent === null ? null : keys.visitor(caller.ip, agent);

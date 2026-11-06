@@ -4,22 +4,21 @@ import {
   Delete,
   Get,
   HttpCode,
-  HttpException,
   HttpStatus,
   NotFoundException,
   Post,
   Query,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { adminToken } from '@portfolio/content/admin';
 import { reportDaysSchema, type Report } from '@portfolio/content/report';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { z } from 'zod';
 import { AnalyticsReportService } from '../analytics/report/analytics-report.service.js';
 import { clientAddress } from '../common/caller.js';
 import { ZodPipe } from '../common/zod.pipe.js';
+import { TooManyRequestsException } from '../rate-limit/too-many-requests.filter.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
 
@@ -42,15 +41,10 @@ export class AdminController {
   async signIn(
     @Body(new ZodPipe(signInSchema)) { token }: SignInRequest,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
   ): Promise<{ token: string; expiresAt: Date }> {
     const outcome = await this.sessions.signIn(token, clientAddress(req));
     if (outcome.kind === 'limited') {
-      res.set('Retry-After', String(outcome.retryAfterSeconds));
-      throw new HttpException(
-        { message: 'too many sign-ins', retryAfterSeconds: outcome.retryAfterSeconds },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new TooManyRequestsException('too many sign-ins', outcome.retryAfterSeconds);
     }
     if (outcome.kind === 'refused') {
       throw new NotFoundException();
