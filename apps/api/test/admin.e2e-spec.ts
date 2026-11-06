@@ -170,6 +170,10 @@ describe('admin sign-in against a real database', () => {
     const link = await sessions.link();
     const limited = await signIn(link).expect(429);
     expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(limited.body).toEqual({
+      message: 'too many sign-ins',
+      retryAfterSeconds: Number(limited.headers['retry-after']),
+    });
 
     await signIn(link, '198.51.100.4').expect(201);
   });

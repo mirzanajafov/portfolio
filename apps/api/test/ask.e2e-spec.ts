@@ -184,6 +184,10 @@ describe('POST /ask against a real database', () => {
       429,
     );
     expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(limited.body).toEqual({
+      message: 'too many questions',
+      retryAfterSeconds: Number(limited.headers['retry-after']),
+    });
     await ask(app, 'Have you worked with Stripe payments?', '198.51.100.2').expect(200);
   });
 

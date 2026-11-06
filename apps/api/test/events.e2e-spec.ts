@@ -326,6 +326,10 @@ describe('POST /events against a real database', () => {
     }
     const refused = await sendEvent(app, aView()).expect(429);
     expect(Number(refused.headers['retry-after'])).toBeGreaterThan(0);
+    expect(refused.body).toEqual({
+      message: 'too many events',
+      retryAfterSeconds: Number(refused.headers['retry-after']),
+    });
     await sendEvent(app, aView(), { ip: '198.51.100.4' }).expect(204);
 
     const { views, dropped, limits } = await everything();
