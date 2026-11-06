@@ -244,6 +244,83 @@ export function aReport(overrides: Partial<Report> = {}): Report {
   };
 }
 
+function aReading(path: string): Report['reading'][number] {
+  return {
+    path,
+    views: 3,
+    medianSeconds: 12,
+    medianScroll: 40,
+    blocks: [{ block: 'problem', readers: 2, medianSeconds: 8 }],
+  };
+}
+
+export function aFullReport(overrides: Partial<Report> = {}): Report {
+  const vital = { p75: 1200, samples: 4, rating: 'good' as const, missesMyBar: false };
+  return aReport({
+    rollupBehind: { from: '2026-09-28', to: '2026-09-29' },
+    weeks: [{ ...someVisits(5), start: '2026-10-26', partial: true }],
+    sources: [{ source: 'direct', visits: 9 }],
+    otherSites: [{ host: 'news.ycombinator.com', visits: 2 }],
+    entries: [{ path: '/', visits: 8 }],
+    journeys: [{ paths: ['/', '/cv'], visits: 3 }],
+    pages: [{ path: '/', views: 10, visits: 8, medianSeconds: 12, medianScroll: 40, exits: 4 }],
+    reading: [aReading('/'), aReading('/projects/matchium')],
+    links: {
+      cvViews: 3,
+      cvPdf: [{ from: '/cv', clicks: 2 }],
+      outbound: [{ label: 'Matchium live', clicks: 1 }],
+    },
+    demos: {
+      opened: 2,
+      didStep: 1,
+      demoOnly: 1,
+      list: [
+        {
+          name: 'Matchium',
+          clicked: 2,
+          fromSite: 2,
+          clickedNotOpened: 0,
+          demoOnly: [{ source: 'direct', visits: 1 }],
+          didStep: 1,
+          steps: [{ label: 'answered a question', visits: 1 }],
+          medianSeconds: 60,
+        },
+      ],
+    },
+    ask: {
+      since: null,
+      questions: 2,
+      refused: 0,
+      inVisits: 1,
+      visits: 1,
+      days: [{ day: '2026-10-30', questions: 2, refused: 0 }],
+    },
+    audience: {
+      devices: [{ name: 'desktop', visits: 9 }],
+      browsers: [{ name: 'chrome', visits: 9 }],
+      countries: [{ name: 'AZ', visits: 9 }],
+    },
+    dataCenters: {
+      demoOnly: 1,
+      list: [{ owner: 'Amazon.com, Inc.', visits: 2, pageViews: 3, medianSeconds: 0 }],
+    },
+    quality: {
+      vitals: [{ path: '/', device: 'desktop', lcp: vital, inp: vital, cls: null }],
+      errors: [{ message: 'boom', source: '/x.js', count: 1, paths: ['/'], browsers: ['chrome'] }],
+      notFound: [{ path: '/old', views: 1, referrers: [] }],
+    },
+    filter: [{ day: '2026-10-30', bot: 1, limited: 0, origin: 0, own: 1 }],
+    applications: someApplications({
+      list: [anEntry()],
+      byChannel: [aTally('direct')],
+      byVariant: [aTally('base')],
+      unknownCodes: [{ code: 'check1', visits: 1, firstSeen: new Date('2026-10-30T08:00:00Z') }],
+    }),
+    alerts: { givenUp: 1 },
+    ...overrides,
+  });
+}
+
 export function someApplications(
   overrides: Partial<Report['applications']> = {},
 ): Report['applications'] {

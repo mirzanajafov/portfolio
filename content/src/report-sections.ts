@@ -24,7 +24,15 @@ export type ReportPart =
   | { kind: 'table'; rows: string[][] }
   | { kind: 'more'; text: string; indent: boolean };
 
-export type ReportSection = ReportPart[];
+type Line = Extract<ReportPart, { kind: 'line' }>;
+
+type Table = Extract<ReportPart, { kind: 'table' }>;
+
+export type ReportSection =
+  | { kind: 'titled'; id: string; label: string; opening: Line | Table; parts: ReportPart[] }
+  | { kind: 'none'; text: string };
+
+type Heading = { id: string; label: string };
 
 const listLength = 10;
 const candidateLength = 3;
@@ -67,8 +75,20 @@ function optional(value: number | null, unit = ''): string {
   return value === null ? '-' : `${String(value)}${unit}`;
 }
 
-function line(text: string): ReportPart {
+function line(text: string): Line {
   return { kind: 'line', text: printable(text), indent: false };
+}
+
+function none(text: string): ReportSection {
+  return { kind: 'none', text: printable(text) };
+}
+
+function titled(
+  { id, label }: Heading,
+  opening: Line | Table,
+  parts: readonly ReportPart[] = [],
+): ReportSection {
+  return { kind: 'titled', id, label, opening, parts: [...parts] };
 }
 
 function item(text: string): ReportPart {
@@ -79,7 +99,7 @@ function applicationLine(text: string, code: string): ReportPart {
   return { kind: 'application', text: printable(text), code };
 }
 
-function table(rows: readonly (readonly string[])[]): ReportPart {
+function table(rows: readonly (readonly string[])[]): Table {
   return { kind: 'table', rows: rows.map((row) => row.map(printable)) };
 }
 
@@ -102,21 +122,35 @@ function listed<T>(
   return [...shown.flatMap(part), ...more(`and ${String(hidden)} more`, hidden, indent)];
 }
 
-function section(
+function tableParts(
   title: string,
   columns: readonly string[],
   rows: readonly (readonly string[])[],
   all: boolean,
-): ReportSection {
-  if (rows.length === 0) {
-    return [line(`${title}: none`)];
-  }
+): [Table, ...ReportPart[]] {
   const shown = shownOf(rows, all);
   const hidden = rows.length - shown.length;
   return [
     table([[title, ...columns], ...shown]),
     ...more(`and ${String(hidden)} more`, hidden, false),
   ];
+}
+
+function section(
+  heading: Heading,
+  title: string,
+  columns: readonly string[],
+  rows: readonly (readonly string[])[],
+  all: boolean,
+  after: readonly ReportPart[] = [],
+): ReportSection {
+  if (rows.length === 0) {
+    return after.length === 0
+      ? none(`${title}: none`)
+      : titled(heading, line(`${title}: none`), after);
+  }
+  const [opening, ...rest] = tableParts(title, columns, rows, all);
+  return titled(heading, opening, [...rest, ...after]);
 }
 
 function totalsColumn(totals: Totals): string[] {
@@ -134,14 +168,17 @@ function totalsColumn(totals: Totals): string[] {
 function period({ period: { from, to, days, visits }, dataCenters }: Report): ReportSection {
   const utc = (when: Date) => when.toISOString().slice(0, 10);
   const dataCenterVisits = dataCenters.list.reduce((total, { visits: count }) => total + count, 0);
-  return [
+  return titled(
+    { id: 'period', label: 'Period' },
     line(
       `Visits in the last ${counted(days, 'full day')} and today: ${utc(from)} to ${utc(to)} UTC, today until ${bakuTime(to)} Baku time`,
     ),
-    line(
-      `${counted(visits, 'visit')} by people, ${String(dataCenterVisits)} from data centers kept apart`,
-    ),
-  ];
+    [
+      line(
+        `${counted(visits, 'visit')} by people, ${String(dataCenterVisits)} from data centers kept apart`,
+      ),
+    ],
+  );
 }
 
 function overview({ period, overview: { today, current, previous } }: Report): ReportSection {
@@ -163,23 +200,25 @@ function overview({ period, overview: { today, current, previous } }: Report): R
     columns.push([`${days} before`, previous]);
   }
   const values = columns.map(([, totals]) => totalsColumn(totals));
-  return [
+  return titled(
+    { id: 'overview', label: 'Overview' },
     table([
       ['Overview', ...columns.map(([heading]) => heading)],
       ...labels.map((label, row) => [label, ...values.map((column) => column[row] ?? '')]),
     ]),
-    ...(previous
+    previous
       ? []
       : [
           line(
             `Some of the ${days} before were never collected, so there is nothing to compare with.`,
           ),
-        ]),
-  ];
+        ],
+  );
 }
 
 function weeks({ weeks }: Report): ReportSection {
-  return [
+  return titled(
+    { id: 'weeks', label: 'Weeks' },
     table([
       ['Weeks from Monday, UTC', 'visits', 'page views', 'median s', 'opened a demo'],
       ...weeks.map((week) => [
@@ -190,14 +229,15 @@ function weeks({ weeks }: Report): ReportSection {
         String(week.openedDemo),
       ]),
     ]),
-    line('* some days of the week were never collected or have not come yet'),
-  ];
+    [line('* some days of the week were never collected or have not come yet')],
+  );
 }
 
 function traffic(report: Report, all: boolean): ReportSection[] {
   const visits = report.period.visits;
   return [
     section(
+      { id: 'sources', label: 'Sources' },
       'Sources',
       ['visits', 'share'],
       report.sources.map(({ source, visits: count }) => [
@@ -208,24 +248,28 @@ function traffic(report: Report, all: boolean): ReportSection[] {
       all,
     ),
     section(
+      { id: 'other-sites', label: 'Other sites' },
       'Other sites',
       ['visits'],
       report.otherSites.map(({ host, visits: count }) => [host, String(count)]),
       all,
     ),
     section(
+      { id: 'entry-pages', label: 'Entry pages' },
       'Entry pages',
       ['visits'],
       report.entries.map(({ path, visits: count }) => [path, String(count)]),
       all,
     ),
     section(
+      { id: 'first-pages', label: 'First pages of a visit' },
       'First pages of a visit',
       ['visits'],
       report.journeys.map(({ paths, visits: count }) => [paths.join(' > '), String(count)]),
       all,
     ),
     section(
+      { id: 'pages', label: 'Pages' },
       'Pages',
       ['views', 'visits', 'median s', 'median scroll', 'left from here'],
       report.pages.map((page) => [
@@ -243,33 +287,46 @@ function traffic(report: Report, all: boolean): ReportSection[] {
 
 function reading({ reading }: Report): ReportSection[] {
   if (reading.length === 0) {
-    return [[line('Reading: no views of the home page or a case study')]];
+    return [none('Reading: no views of the home page or a case study')];
   }
-  return reading.map((page) => [
-    line(
-      `Reading ${page.path}: ${counted(page.views, 'view')}, median ${optional(page.medianSeconds, ' s')}, scroll ${optional(page.medianScroll, '%')}`,
+  return reading.map((page) =>
+    titled(
+      {
+        id: page.path === '/' ? 'reading-home' : `reading${page.path.replaceAll('/', '-')}`,
+        label: `Reading ${page.path}`,
+      },
+      line(
+        `Reading ${page.path}: ${counted(page.views, 'view')}, median ${optional(page.medianSeconds, ' s')}, scroll ${optional(page.medianScroll, '%')}`,
+      ),
+      [
+        table([
+          ['block', `read ${String(readSeconds)} s or more`, 'median s'],
+          ...page.blocks.map(({ block, readers, medianSeconds }) => [
+            block,
+            share(readers, page.views),
+            optional(medianSeconds),
+          ]),
+        ]),
+      ],
     ),
-    table([
-      ['block', `read ${String(readSeconds)} s or more`, 'median s'],
-      ...page.blocks.map(({ block, readers, medianSeconds }) => [
-        block,
-        share(readers, page.views),
-        optional(medianSeconds),
-      ]),
-    ]),
-  ]);
+  );
 }
 
 function links({ links }: Report, all: boolean): ReportSection[] {
   return [
-    [line(`CV page views: ${String(links.cvViews)}`)],
+    titled(
+      { id: 'cv-views', label: 'CV page views' },
+      line(`CV page views: ${String(links.cvViews)}`),
+    ),
     section(
+      { id: 'cv-pdf', label: 'CV PDF clicks' },
       'CV PDF clicks from',
       ['clicks'],
       links.cvPdf.map(({ from, clicks }) => [from, String(clicks)]),
       all,
     ),
     section(
+      { id: 'link-clicks', label: 'Link clicks' },
       'Link clicks',
       ['clicks'],
       links.outbound.map(({ label, clicks }) => [label, String(clicks)]),
@@ -281,57 +338,61 @@ function links({ links }: Report, all: boolean): ReportSection[] {
 function demos({ period: { visits }, demos }: Report): ReportSection {
   const { opened, didStep, demoOnly, list } = demos;
   if (list.length === 0) {
-    return [line('Demos: none')];
+    return none('Demos: none');
   }
-  return [
+  return titled(
+    { id: 'demos', label: 'Demos' },
     line(
       `Demos: of ${counted(visits, 'site visit')}, ${String(opened)} opened a demo (${share(opened, visits)}) and ${String(didStep)} did a step in one (${share(didStep, visits)}). ${counted(demoOnly, 'more visit')} saw only a demo.`,
     ),
-    table([
-      [
-        'Demo',
-        'clicked',
-        'opened in a site visit',
-        'clicked, not opened',
-        'only the demo',
-        'did a step',
-        'median s',
-      ],
-      ...list.map((demo) => [
-        demo.name,
-        String(demo.clicked),
-        String(demo.fromSite),
-        String(demo.clickedNotOpened),
-        String(demo.demoOnly.reduce((total, { visits: count }) => total + count, 0)),
-        String(demo.didStep),
-        optional(demo.medianSeconds),
+    [
+      table([
+        [
+          'Demo',
+          'clicked',
+          'opened in a site visit',
+          'clicked, not opened',
+          'only the demo',
+          'did a step',
+          'median s',
+        ],
+        ...list.map((demo) => [
+          demo.name,
+          String(demo.clicked),
+          String(demo.fromSite),
+          String(demo.clickedNotOpened),
+          String(demo.demoOnly.reduce((total, { visits: count }) => total + count, 0)),
+          String(demo.didStep),
+          optional(demo.medianSeconds),
+        ]),
       ]),
-    ]),
-    ...list.flatMap(({ name, steps, demoOnly: arrivals }) => [
-      ...(steps.length > 0
-        ? [
-            item(
-              `${name} steps: ${steps.map(({ label, visits: count }) => `${String(count)} ${label}`).join(', ')}`,
-            ),
-          ]
-        : []),
-      ...(arrivals.length > 0
-        ? [
-            item(
-              `${name} only the demo, from: ${arrivals.map(({ source, visits: count }) => `${sourceNames[source]} ${String(count)}`).join(', ')}`,
-            ),
-          ]
-        : []),
-    ]),
-  ];
+      ...list.flatMap(({ name, steps, demoOnly: arrivals }) => [
+        ...(steps.length > 0
+          ? [
+              item(
+                `${name} steps: ${steps.map(({ label, visits: count }) => `${String(count)} ${label}`).join(', ')}`,
+              ),
+            ]
+          : []),
+        ...(arrivals.length > 0
+          ? [
+              item(
+                `${name} only the demo, from: ${arrivals.map(({ source, visits: count }) => `${sourceNames[source]} ${String(count)}`).join(', ')}`,
+              ),
+            ]
+          : []),
+      ]),
+    ],
+  );
 }
 
 function ask({ ask }: Report): ReportSection {
-  return [
+  return titled(
+    { id: 'ask', label: 'Ask' },
     line(
       `Ask: ${counted(ask.questions, 'question')}, ${String(ask.refused)} refused${placedText(ask)}${ask.since ? `, since ${bakuTime(ask.since)} Baku time, as far back as the log keeps them` : ''}`,
     ),
-    ...(ask.days.length > 0
+    ask.days.length > 0
       ? [
           table([
             ['UTC day', 'questions', 'refused'],
@@ -342,8 +403,8 @@ function ask({ ask }: Report): ReportSection {
             ]),
           ]),
         ]
-      : []),
-  ];
+      : [],
+  );
 }
 
 function placedText({ questions, inVisits, visits }: Report['ask']): string {
@@ -360,33 +421,52 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
   const rows = (counts: { name: string; visits: number }[]) =>
     counts.map(({ name, visits: count }) => [name, String(count), share(count, visits)]);
   return [
-    section('Devices', ['visits', 'share'], rows(audience.devices), all),
-    section('Browsers', ['visits', 'share'], rows(audience.browsers), all),
-    section('Countries', ['visits', 'share'], rows(audience.countries), all),
+    section(
+      { id: 'devices', label: 'Devices' },
+      'Devices',
+      ['visits', 'share'],
+      rows(audience.devices),
+      all,
+    ),
+    section(
+      { id: 'browsers', label: 'Browsers' },
+      'Browsers',
+      ['visits', 'share'],
+      rows(audience.browsers),
+      all,
+    ),
+    section(
+      { id: 'countries', label: 'Countries' },
+      'Countries',
+      ['visits', 'share'],
+      rows(audience.countries),
+      all,
+    ),
   ];
 }
 
 function dataCenters({ dataCenters: { list, demoOnly } }: Report, all: boolean): ReportSection {
-  if (list.length === 0 && demoOnly === 0) {
-    return [line('Data centers: none')];
+  const heading = { id: 'data-centers', label: 'Data centers' };
+  const note = line(
+    `Data-center visits are told apart only within the last ${String(analyticsDays)} days.`,
+  );
+  const onlyDemos = line(`${counted(demoOnly, 'data-center visit')} saw only a demo`);
+  if (list.length === 0) {
+    return demoOnly === 0 ? none('Data centers: none') : titled(heading, onlyDemos, [note]);
   }
-  return [
-    ...(list.length > 0
-      ? section(
-          'Data centers',
-          ['visits', 'page views', 'median s'],
-          list.map(({ owner, visits, pageViews, medianSeconds }) => [
-            owner,
-            String(visits),
-            String(pageViews),
-            optional(medianSeconds),
-          ]),
-          all,
-        )
-      : []),
-    ...(demoOnly > 0 ? [line(`${counted(demoOnly, 'data-center visit')} saw only a demo`)] : []),
-    line(`Data-center visits are told apart only within the last ${String(analyticsDays)} days.`),
-  ];
+  return section(
+    heading,
+    'Data centers',
+    ['visits', 'page views', 'median s'],
+    list.map(({ owner, visits, pageViews, medianSeconds }) => [
+      owner,
+      String(visits),
+      String(pageViews),
+      optional(medianSeconds),
+    ]),
+    all,
+    [...(demoOnly > 0 ? [onlyDemos] : []), note],
+  );
 }
 
 function vital(value: Vital | null, shown: (p75: number) => string): string {
@@ -402,28 +482,28 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
     [lcp, inp, cls].some((value) => value?.missesMyBar),
   );
   return [
-    [
-      ...section(
-        'Web Vitals, p75 (samples)',
-        ['device', 'LCP', 'INP', 'CLS'],
-        quality.vitals.map(({ path, device, lcp, inp, cls }) => [
-          path,
-          device,
-          vital(lcp, lcpText),
-          vital(inp, inpText),
-          vital(cls, clsText),
-        ]),
-        all,
-      ),
-      ...(missesMyBar
+    section(
+      { id: 'web-vitals', label: 'Web Vitals' },
+      'Web Vitals, p75 (samples)',
+      ['device', 'LCP', 'INP', 'CLS'],
+      quality.vitals.map(({ path, device, lcp, inp, cls }) => [
+        path,
+        device,
+        vital(lcp, lcpText),
+        vital(inp, inpText),
+        vital(cls, clsText),
+      ]),
+      all,
+      missesMyBar
         ? [
             line(
               `* misses my own bar: LCP under ${lcpText(vitalBars.lcp.mine)}, INP under ${inpText(vitalBars.inp.mine)}, CLS under ${clsText(vitalBars.cls.mine)}`,
             ),
           ]
-        : []),
-    ],
+        : [],
+    ),
     section(
+      { id: 'script-errors', label: 'Script errors' },
       'Script errors',
       ['source', 'count', 'pages', 'browsers'],
       quality.errors.map((error) => [
@@ -436,6 +516,7 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
       all,
     ),
     section(
+      { id: 'not-found', label: '404s' },
       '404s',
       ['views', 'sent from'],
       quality.notFound.map(({ path, views, referrers }) => [
@@ -546,12 +627,15 @@ function answeredCell({ answered, oldEnough }: ApplicationTally): string {
     : share(answered, oldEnough);
 }
 
-function tallySection(
+function tallyParts(
   title: string,
   tallies: readonly ApplicationTally[],
   all: boolean,
-): ReportSection {
-  return section(
+): ReportPart[] {
+  if (tallies.length === 0) {
+    return [line(`${title}: none`)];
+  }
+  return tableParts(
     title,
     [
       'applications',
@@ -579,18 +663,8 @@ function outcomesText(confidence: Confidence, outcomes: Record<Outcome, number>)
 function applications({ applications, alerts }: Report, all: boolean): ReportSection {
   const { list, score, unknownCodes } = applications;
   const { high, medium, low } = score.levels;
-  return [
-    ...(list.length === 0
-      ? [line('Applications: none registered')]
-      : [
-          line('Applications, every visit kept rather than only the period, times in Baku'),
-          ...listed(list, all, (application) => applicationParts(application, all), false),
-          line(
-            `Guesses checked on ${counted(score.visits, 'coded visit')} to the site by people: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
-          ),
-          ...tallySection('By channel', applications.byChannel, all),
-          ...tallySection('By CV variant', applications.byVariant, all),
-        ]),
+  const heading = { id: 'applications', label: 'Applications' };
+  const after = [
     ...(unknownCodes.length > 0
       ? [
           line('Unknown codes, first seen in Baku time'),
@@ -607,13 +681,32 @@ function applications({ applications, alerts }: Report, all: boolean): ReportSec
         ]
       : []),
   ];
+  if (list.length === 0) {
+    return after.length === 0
+      ? none('Applications: none registered')
+      : titled(heading, line('Applications: none registered'), after);
+  }
+  return titled(
+    heading,
+    line('Applications, every visit kept rather than only the period, times in Baku'),
+    [
+      ...listed(list, all, (application) => applicationParts(application, all), false),
+      line(
+        `Guesses checked on ${counted(score.visits, 'coded visit')} to the site by people: ${outcomesText('high', high)}, ${outcomesText('medium', medium)}, ${outcomesText('low', low)}, ${String(score.unplaced)} not placed`,
+      ),
+      ...tallyParts('By channel', applications.byChannel, all),
+      ...tallyParts('By CV variant', applications.byVariant, all),
+      ...after,
+    ],
+  );
 }
 
 function filter({ filter }: Report): ReportSection {
   if (filter.length === 0) {
-    return [line('Filtered out: none')];
+    return none('Filtered out: none');
   }
-  return [
+  return titled(
+    { id: 'filtered-out', label: 'Filtered out' },
     table([
       ['Filtered out, UTC day', 'bots', 'limited', 'other sites', 'mine'],
       ...filter.map(({ day, bot, limited, origin, own }) => [
@@ -624,7 +717,7 @@ function filter({ filter }: Report): ReportSection {
         String(own),
       ]),
     ]),
-  ];
+  );
 }
 
 export function reportSections(report: Report, { all }: { all: boolean }): ReportSection[] {
@@ -632,11 +725,12 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     period(report),
     ...(report.rollupBehind
       ? [
-          [
+          titled(
+            { id: 'rollup-behind', label: 'Rollup behind' },
             line(
               `The daily rollup is behind: the visits of ${report.rollupBehind.from} to ${report.rollupBehind.to} should have been rolled up and deleted. The API's log says why.`,
             ),
-          ],
+          ),
         ]
       : []),
     overview(report),
@@ -651,6 +745,9 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     ...quality(report, all),
     applications(report, all),
     filter(report),
-    [line(`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`)],
+    titled(
+      { id: 'credits', label: 'Countries and networks' },
+      line(`Countries and networks: IP Geolocation by DB-IP, ${geolocationCredit}`),
+    ),
   ];
 }

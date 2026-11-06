@@ -1,5 +1,11 @@
-import { anApplicationView, aReport, anEntry, someApplications } from '@portfolio/content/testing';
-import { render, screen } from '@testing-library/react';
+import {
+  aFullReport,
+  anApplicationView,
+  aReport,
+  anEntry,
+  someApplications,
+} from '@portfolio/content/testing';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { request } from '@/admin/testing';
@@ -45,6 +51,36 @@ afterEach(() => {
 });
 
 describe('admin page', () => {
+  it('links from the top to the application list and to every report section with a heading', async () => {
+    render(await open());
+
+    const jumps = within(screen.getByRole('navigation', { name: 'Sections' }));
+    expect(jumps.getByRole('link', { name: 'Application list' })).toHaveAttribute(
+      'href',
+      '#application-list',
+    );
+    expect(jumps.getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '#overview');
+    expect(screen.getByRole('heading', { level: 2, name: 'Applications' })).toHaveAttribute(
+      'id',
+      'application-list',
+    );
+  });
+
+  it('points a jump link at every section of a full report and the application list, each at one element of its own', async () => {
+    api.fetchReport.mockResolvedValue(aFullReport());
+    const { container } = render(await open());
+
+    const hrefs = within(screen.getByRole('navigation', { name: 'Sections' }))
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href') ?? '');
+    expect(hrefs).toHaveLength(container.querySelectorAll('h2[id]').length);
+    expect(hrefs).toContain('#application-list');
+    for (const href of hrefs) {
+      expect(container.querySelectorAll(`[id="${href.slice(1)}"]`)).toHaveLength(1);
+    }
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
   it('says until when the session lasts in Baku time, and shows the report under it', async () => {
     render(await open());
 
@@ -56,7 +92,7 @@ describe('admin page', () => {
         'Visits in the last 7 full days and today: 2026-10-23 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time',
       ),
     ).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: 'Overview' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
   });
 
   it('leaves the default period to the API and marks the period the report covers', async () => {
