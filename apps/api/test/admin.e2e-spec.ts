@@ -9,7 +9,7 @@ import { reportSchema } from '@portfolio/content/report';
 import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
+import { AdminSessionsService } from '../src/admin-sessions/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { newSession, unknownToken } from './admin-session.js';

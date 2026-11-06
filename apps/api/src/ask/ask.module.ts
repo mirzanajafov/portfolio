@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import type { Content } from '@portfolio/content';
-import { AdminSessionsModule } from '../admin/admin-sessions.module.js';
-import { VisitorSaltModule } from '../analytics/visitor-salt.module.js';
+import { AdminSessionsModule } from '../admin-sessions/admin-sessions.module.js';
 import { CONTENT } from '../content.js';
 import { RateLimitModule } from '../rate-limit/rate-limit.module.js';
+import { VisitorSaltModule } from '../visitor-keys/visitor-salt.module.js';
 import { ANSWER_ENGINE } from './answer-engine.js';
 import { AskLimitsService } from './ask-limits.service.js';
 import { AskLogService } from './ask-log.service.js';

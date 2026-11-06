@@ -1,7 +1,6 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { adminLinkMinutes, adminSessionDays } from '@portfolio/content/admin';
 import { createHash, randomBytes } from 'node:crypto';
-import { VisitorSaltService } from '../analytics/visitor-salt.service.js';
 import { ClockService } from '../common/clock.service.js';
 import { runEvery } from '../common/run-every.js';
 import type { AdminSession } from '../generated/prisma/client.js';
@@ -11,6 +10,7 @@ import {
   type Limited,
   type Verdict,
 } from '../rate-limit/rate-limiter.service.js';
+import { VisitorSaltService } from '../visitor-keys/visitor-salt.service.js';
 
 const cleanupEveryMs = 60 * 60 * 1000;
 const linkLastsMs = adminLinkMinutes * 60 * 1000;

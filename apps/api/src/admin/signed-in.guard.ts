@@ -5,9 +5,9 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { AdminSessionsService } from '../admin-sessions/admin-sessions.service.js';
 import { sessionTokenOf } from '../common/caller.js';
 import type { AdminSession } from '../generated/prisma/client.js';
-import { AdminSessionsService } from './admin-sessions.service.js';
 
 export type SignedInRequest = Request & { adminSession: AdminSession };
 

@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AdminSessionsService } from '../admin/admin-sessions.service.js';
+import { AdminSessionsService } from '../admin-sessions/admin-sessions.service.js';
 import { visitorAgent, type Caller } from '../common/caller.js';
 import { ClockService } from '../common/clock.service.js';
 import { ENV, type Env } from '../config/env.js';
 import { RateLimiterService, type Limited } from '../rate-limit/rate-limiter.service.js';
+import { VisitorSaltService } from '../visitor-keys/visitor-salt.service.js';
 import type { SourcedEvent } from './event.schema.js';
 import { PLACE_LOOKUP, type PlaceLookup } from './place-lookup.js';
 import { browserOf, deviceOf } from './user-agent.js';
 import { VisitLogService } from './visit-log.service.js';
-import { VisitorSaltService } from './visitor-salt.service.js';
 
 type Outcome = { kind: 'accepted' } | Limited;
 

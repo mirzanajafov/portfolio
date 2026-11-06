@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AdminSessionsService } from '../src/admin/admin-sessions.service.js';
+import { AdminSessionsService } from '../src/admin-sessions/admin-sessions.service.js';
 import { ApplicationsService } from '../src/applications/applications.service.js';
 import { CliModule } from '../src/cli/cli.module.js';
 import { runCli } from '../src/cli/run.js';
