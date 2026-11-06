@@ -1,4 +1,10 @@
-import { anApplicationView, aReport, anEntry, someApplications } from '@portfolio/content/testing';
+import {
+  aFullReport,
+  anApplicationView,
+  aReport,
+  anEntry,
+  someApplications,
+} from '@portfolio/content/testing';
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
@@ -60,13 +66,15 @@ describe('admin page', () => {
     );
   });
 
-  it('points every jump link at one element on the page, and gives no two the same anchor', async () => {
+  it('points a jump link at every section of a full report and the application list, each at one element of its own', async () => {
+    api.fetchReport.mockResolvedValue(aFullReport());
     const { container } = render(await open());
 
     const hrefs = within(screen.getByRole('navigation', { name: 'Sections' }))
       .getAllByRole('link')
       .map((link) => link.getAttribute('href') ?? '');
-    expect(hrefs).not.toHaveLength(0);
+    expect(hrefs).toHaveLength(container.querySelectorAll('h2[id]').length);
+    expect(hrefs).toContain('#application-list');
     for (const href of hrefs) {
       expect(container.querySelectorAll(`[id="${href.slice(1)}"]`)).toHaveLength(1);
     }

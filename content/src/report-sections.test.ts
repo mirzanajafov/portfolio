@@ -1,49 +1,66 @@
 import { describe, expect, it } from 'vitest';
-import { reportSections } from './report-sections.ts';
-import { aReport, someApplications } from './testing.ts';
+import { reportSections, type ReportSection } from './report-sections.ts';
+import { aFullReport, aReport, aTally, anEntry, someApplications } from './testing.ts';
 
-const aReading = (path: string) => ({
-  path,
-  views: 3,
-  medianSeconds: 12,
-  medianScroll: 40,
-  blocks: [{ block: 'problem', readers: 2, medianSeconds: 8 }],
-});
+const idsOf = (sections: ReportSection[]) =>
+  sections.flatMap((section) => (section.kind === 'titled' ? [section.id] : []));
 
 describe('reportSections', () => {
-  it('gives every titled section of a full report an anchor of its own that no data can change', () => {
-    const report = aReport({
-      rollupBehind: { from: '2026-09-28', to: '2026-09-29' },
-      sources: [{ source: 'direct', visits: 3 }],
-      reading: [aReading('/'), aReading('/projects/matchium'), aReading('/projects/poof')],
-      ask: { since: null, questions: 1, refused: 0, inVisits: 0, visits: 0, days: [] },
-      dataCenters: { demoOnly: 2, list: [] },
-      filter: [{ day: '2026-10-30', bot: 1, limited: 0, origin: 0, own: 0 }],
-      applications: someApplications({
-        unknownCodes: [{ code: 'check1', visits: 1, firstSeen: new Date('2026-10-30T08:00:00Z') }],
-      }),
-    });
+  it('gives every section of a full report a title and an anchor of its own', () => {
+    const sections = reportSections(aFullReport(), { all: false });
 
-    const ids = reportSections(report, { all: false }).flatMap((section) =>
-      section.kind === 'titled' ? [section.id] : [],
-    );
-
-    expect(ids).toEqual([
+    expect(sections.every((section) => section.kind === 'titled')).toBe(true);
+    expect(idsOf(sections)).toEqual([
       'period',
       'rollup-behind',
       'overview',
       'weeks',
       'sources',
+      'other-sites',
+      'entry-pages',
+      'first-pages',
+      'pages',
       'reading-home',
       'reading-projects-matchium',
-      'reading-projects-poof',
       'cv-views',
+      'cv-pdf',
+      'link-clicks',
+      'demos',
       'ask',
+      'devices',
+      'browsers',
+      'countries',
       'data-centers',
+      'web-vitals',
+      'script-errors',
+      'not-found',
       'applications',
       'filtered-out',
       'credits',
     ]);
+  });
+
+  it('keeps the same anchors when the lists in a report change', () => {
+    const changed = aFullReport({
+      period: { from: new Date('2026-10-01'), to: new Date('2026-10-31'), days: 30, visits: 80 },
+      sources: [
+        { source: 'linkedin', visits: 40 },
+        { source: 'google', visits: 20 },
+      ],
+      dataCenters: {
+        demoOnly: 0,
+        list: [{ owner: 'Google LLC', visits: 5, pageViews: 5, medianSeconds: 0 }],
+      },
+      applications: someApplications({
+        list: [anEntry(), anEntry({ code: 'k7mpx', company: 'Local' })],
+        byChannel: [aTally('direct'), aTally('referral')],
+        byVariant: [aTally('base')],
+      }),
+    });
+
+    expect(idsOf(reportSections(changed, { all: true }))).toEqual(
+      idsOf(reportSections(aFullReport(), { all: false })),
+    );
   });
 
   it('leaves a section with nothing in it untitled, an Applications section included', () => {
@@ -51,5 +68,19 @@ describe('reportSections', () => {
 
     expect(quiet).toContainEqual({ kind: 'none', text: 'Applications: none registered' });
     expect(quiet).toContainEqual({ kind: 'none', text: 'Data centers: none' });
+  });
+
+  it('keeps the notes after an empty table under a titled none line', () => {
+    const sections = reportSections(aReport({ dataCenters: { demoOnly: 2, list: [] } }), {
+      all: false,
+    });
+
+    const dataCenters = sections.find(
+      (section) => section.kind === 'titled' && section.id === 'data-centers',
+    );
+    expect(dataCenters).toMatchObject({
+      opening: { text: '2 data-center visits saw only a demo' },
+      parts: [{ text: 'Data-center visits are told apart only within the last 30 days.' }],
+    });
   });
 });
