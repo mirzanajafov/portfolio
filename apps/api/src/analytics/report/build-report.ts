@@ -4,12 +4,13 @@ import { askLogDays } from '@portfolio/content/ask';
 import { readSeconds, type Report, type Totals, type Week } from '@portfolio/content/report';
 import { dayOf, daysAfter, mondayOf, utcDay } from '../../common/days.js';
 import { outboundLinks } from '../links.js';
+import { dataCenterOf } from '../data-centers.js';
 import { dayTotals, type DayTotals } from '../day-totals.js';
 import { firstRawDay } from '../retention.js';
 import { sourceOf } from '../sources.js';
 import { median, rankedGroups, tally } from '../statistics.js';
 import type { DropReason } from '../visit-log.service.js';
-import { inOrder, type Visit } from '../visits.js';
+import { inOrder, secondsOf, type Visit } from '../visits.js';
 import { applicationsOf } from './applications.js';
 import { demosOf } from './demos.js';
 import { qualityOf } from './quality.js';
@@ -222,6 +223,15 @@ function audienceOf(visits: readonly Visit[]): Report['audience'] {
   };
 }
 
+function dataCentersOf(visits: readonly Visit[]): Report['dataCenters'] {
+  return rankedGroups(visits, ({ network }) => network ?? '').map(([owner, group]) => ({
+    owner,
+    visits: group.length,
+    pageViews: group.reduce((total, { views }) => total + views.length, 0),
+    medianSeconds: median(group.map(secondsOf)),
+  }));
+}
+
 function filterOf(dropped: ReportRows['dropped'], from: Date): Report['filter'] {
   const droppedFor = (rows: typeof dropped, reason: DropReason) =>
     rows.filter((row) => row.reason === reason).reduce((total, { count }) => total + count, 0);
@@ -243,27 +253,37 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
   const today = utcDay(now);
   const from = daysAfter(today, -days);
   const everyVisit = rows.visits.flatMap(inOrder);
+  const people = everyVisit.filter((visit) => dataCenterOf(visit) === null);
+  const fromDataCenters = startedBetween(everyVisit, from, now).filter(
+    (visit) => dataCenterOf(visit) !== null,
+  );
   const labels = new Map(outboundLinks(content).map(({ href, label }) => [href, label]));
   const demos = [...demoSites(content).values()];
-  const visits = startedBetween(everyVisit, from, now);
+  const visits = startedBetween(people, from, now);
   const rolled = new Map(rows.rolled.map((day) => [day.day.getTime(), day]));
   const totalsOn = (day: Date): DayTotals | null =>
     day >= rows.rawFrom
-      ? dayTotals(startedBetween(everyVisit, day, daysAfter(day, 1)))
+      ? dayTotals(startedBetween(people, day, daysAfter(day, 1)))
       : (rolled.get(day.getTime()) ?? null);
   const before = Array.from({ length: days }, (_, index) =>
     totalsOn(daysAfter(firstDayBefore(now, days), index)),
   );
   const firstKeptRaw = firstRawDay(now);
   return {
-    period: { from, to: now, days, visits: visits.length },
+    period: {
+      from,
+      to: now,
+      days,
+      visits: visits.length,
+      dataCenterVisits: fromDataCenters.length,
+    },
     rollupBehind:
       daysAfter(rows.rawFrom, 1) < firstKeptRaw
         ? { from: dayOf(rows.rawFrom), to: dayOf(daysAfter(firstKeptRaw, -1)) }
         : null,
     overview: {
-      today: sumOf([dayTotals(startedBetween(everyVisit, today, now))]),
-      current: sumOf([dayTotals(startedBetween(everyVisit, from, today))]),
+      today: sumOf([dayTotals(startedBetween(people, today, now))]),
+      current: sumOf([dayTotals(startedBetween(people, from, today))]),
       previous: before.every(collected) ? sumOf(before) : null,
     },
     weeks: weeksOf(totalsOn, today),
@@ -272,9 +292,14 @@ export function buildReport(rows: ReportRows, content: Content, now: Date, days:
     pages: pagesOf(visits),
     reading: readingOf(visits, content),
     links: linksOf(visits, labels),
-    demos: demosOf(startedBetween(rows.visits, from, now), dayTotals(visits), demos),
+    demos: demosOf(
+      startedBetween(rows.visits, from, now).filter((visit) => dataCenterOf(visit) === null),
+      dayTotals(visits),
+      demos,
+    ),
     ask: askOf(rows.questions, everyVisit, from, now),
     audience: audienceOf(visits),
+    dataCenters: dataCentersOf(fromDataCenters),
     quality: qualityOf(visits),
     filter: filterOf(rows.dropped, from),
     applications: applicationsOf(

@@ -228,6 +228,28 @@ describe('the visitor report against a real database', () => {
     expect(totals(rolled)).toEqual(totals(raw));
   });
 
+  it('keeps a visit from a data center out of the numbers, lists it apart and rolls up only people', async () => {
+    at('12:00:00');
+    await send({ type: 'view', id: randomUUID(), path: '/' });
+    await send({ type: 'view', id: randomUUID(), path: '/cv' }, { ip: '203.0.113.44' });
+
+    clock.current = new Date('2026-10-03T12:00:00Z');
+    const report = await reports.build(7);
+    expect(report.period).toMatchObject({ visits: 1, dataCenterVisits: 1 });
+    expect(report.audience.countries).toEqual([{ name: 'AZ', visits: 1 }]);
+    expect(report.dataCenters).toEqual([
+      { owner: 'Amazon.com, Inc.', visits: 1, pageViews: 1, medianSeconds: 0 },
+    ]);
+    expect(throughJson(report)).toEqual(report);
+
+    clock.current = new Date('2026-11-02T00:00:00Z');
+    await app.get(RetentionService).cleanup();
+    expect(await prisma.dailyVisits.findMany()).toEqual([expect.objectContaining({ visits: 1 })]);
+    expect(await prisma.dailyCountry.findMany()).toEqual([
+      expect.objectContaining({ country: 'AZ', visits: 1 }),
+    ]);
+  });
+
   it('starts a visit at its first page, a demo page opened earlier that day included', async () => {
     at('00:30:00');
     await send(

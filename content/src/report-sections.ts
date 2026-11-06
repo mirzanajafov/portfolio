@@ -1,4 +1,4 @@
-import { alertHours, geolocationCredit } from './analytics.ts';
+import { alertHours, analyticsDays, geolocationCredit } from './analytics.ts';
 import { guessWindowDays } from './applications.ts';
 import {
   quickExitSeconds,
@@ -131,11 +131,14 @@ function totalsColumn(totals: Totals): string[] {
   ];
 }
 
-function period({ period: { from, to, days } }: Report): ReportSection {
+function period({ period: { from, to, days, visits, dataCenterVisits } }: Report): ReportSection {
   const utc = (when: Date) => when.toISOString().slice(0, 10);
   return [
     line(
       `Visits in the last ${counted(days, 'full day')} and today: ${utc(from)} to ${utc(to)} UTC, today until ${bakuTime(to)} Baku time`,
+    ),
+    line(
+      `${counted(visits, 'visit')} by people, ${String(dataCenterVisits)} from data centers kept apart`,
     ),
   ];
 }
@@ -362,6 +365,23 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
   ];
 }
 
+function dataCenters({ dataCenters }: Report, all: boolean): ReportSection[] {
+  return [
+    section(
+      'Data centers',
+      ['visits', 'page views', 'median s'],
+      dataCenters.map(({ owner, visits, pageViews, medianSeconds }) => [
+        owner,
+        String(visits),
+        String(pageViews),
+        optional(medianSeconds),
+      ]),
+      all,
+    ),
+    [line(`Data-center visits are told apart only within the last ${String(analyticsDays)} days.`)],
+  ];
+}
+
 function vital(value: Vital | null, shown: (p75: number) => string): string {
   if (value === null) {
     return '-';
@@ -422,7 +442,7 @@ function quality({ quality }: Report, all: boolean): ReportSection[] {
 }
 
 function storyText(
-  { at, from, pages, clicks, questions, interacted }: VisitStory,
+  { at, from, dataCenter, pages, clicks, questions, interacted }: VisitStory,
   all: boolean,
 ): string {
   const asked = shownOf(questions, all, questionsInStory);
@@ -432,7 +452,7 @@ function storyText(
     return `${demo ?? ''}${path} ${String(seconds)} s${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`;
   });
   return [
-    `${bakuTime(at)}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
+    `${bakuTime(at)}${dataCenter ? ` (data center: ${dataCenter})` : ''}${from ? `, from ${from}` : ''}: ${read.join(' > ')}`,
     ...(clicks.length > 0 ? [`clicked ${clicks.join(', ')}`] : []),
     ...(questions.length > 0
       ? [
@@ -620,6 +640,7 @@ export function reportSections(report: Report, { all }: { all: boolean }): Repor
     demos(report),
     ask(report),
     ...audience(report, all),
+    ...dataCenters(report, all),
     ...quality(report, all),
     applications(report, all),
     filter(report),

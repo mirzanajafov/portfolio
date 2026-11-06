@@ -10,6 +10,7 @@ import {
 } from '@portfolio/content/report';
 import { daysToAnswer } from '../../applications/days-to-answer.js';
 import { bakuDay, dayOf, dayOrNull, daysAfter } from '../../common/days.js';
+import { dataCenterOf } from '../data-centers.js';
 import { median, rankedGroups } from '../statistics.js';
 import { codeOf, secondsOf, type VisitRow } from '../visits.js';
 import { guesserFor, type Guess } from './guess.js';
@@ -71,6 +72,7 @@ function storyOf(
   return {
     at: visit.startedAt,
     from: pages[0]?.from ?? null,
+    dataCenter: dataCenterOf(visit),
     pages: pages.map(({ page }) => page),
     clicks,
     questions,

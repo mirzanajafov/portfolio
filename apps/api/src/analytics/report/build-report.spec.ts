@@ -147,6 +147,30 @@ describe('buildReport', () => {
     });
   });
 
+  it('counts people in the period, the overview, the demos and the audience, and lists data-center visits apart by owner', () => {
+    const fromAmazon = (visitor: string) =>
+      aVisit([aView({ activeSeconds: 0 }), aView({ path: '/cv', activeSeconds: 0 })], {
+        visitor,
+        country: 'US',
+        network: 'Amazon.com, Inc.',
+        demoViews: [aDemoView()],
+      });
+    const report = reportOf([
+      aVisit([aView({ activeSeconds: 40 })], { visitor: 'person', network: 'NetPoint LLC' }),
+      fromAmazon('aws 1'),
+      fromAmazon('aws 2'),
+      aVisit([aView({ activeSeconds: 0 })], { visitor: 'gcp', network: 'Google LLC' }),
+    ]);
+    expect(report.period).toMatchObject({ visits: 1, dataCenterVisits: 3 });
+    expect(report.overview.today).toMatchObject({ visits: 1, pageViews: 1, openedDemo: 0 });
+    expect(report.demos.opened).toBe(0);
+    expect(report.audience.countries).toEqual([{ name: 'AZ', visits: 1 }]);
+    expect(report.dataCenters).toEqual([
+      { owner: 'Amazon.com, Inc.', visits: 2, pageViews: 4, medianSeconds: 0 },
+      { owner: 'Google LLC', visits: 1, pageViews: 1, medianSeconds: 0 },
+    ]);
+  });
+
   it('counts a visit that only reloaded its one page as a quick exit', () => {
     const report = reportOf([
       aVisit([

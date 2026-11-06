@@ -6,6 +6,7 @@ import { reportText } from './report-text.js';
 const aStory = (overrides: Partial<VisitStory> = {}): VisitStory => ({
   at: new Date('2026-10-30T12:00:00Z'),
   from: null,
+  dataCenter: null,
   pages: [{ demo: null, path: '/', seconds: 30, read: [], did: [] }],
   clicks: [],
   questions: [],
@@ -34,6 +35,29 @@ describe('reportText', () => {
     );
   });
 
+  it('says under the period how many visits were people and how many came from data centers', () => {
+    const report = aReport({ period: { ...aReport().period, visits: 13, dataCenterVisits: 9 } });
+    expect(reportText(report, { all: false })).toContain(
+      'Baku time\n13 visits by people, 9 from data centers kept apart\n',
+    );
+  });
+
+  it('lists the data centers apart, and says they are told apart only in the raw days', () => {
+    const text = reportText(
+      aReport({
+        dataCenters: [
+          { owner: 'Amazon.com, Inc.', visits: 6, pageViews: 7, medianSeconds: 0 },
+          { owner: 'Google LLC', visits: 3, pageViews: 3, medianSeconds: null },
+        ],
+      }),
+      { all: false },
+    );
+    expect(text).toMatch(/^Data centers +visits +page views +median s$/m);
+    expect(text).toMatch(/^Amazon\.com, Inc\. +6 +7 +0$/m);
+    expect(text).toMatch(/^Google LLC +3 +3 +-$/m);
+    expect(text).toContain('Data-center visits are told apart only within the last 30 days.');
+  });
+
   it('puts today, the full days and the days before them side by side', () => {
     const text = reportText(aReport(), { all: false });
     expect(text).toMatch(/^Overview +today so far +last 7 days +7 days before$/m);
@@ -49,6 +73,7 @@ describe('reportText', () => {
           to: new Date('2026-10-30T12:00:00Z'),
           days: 16,
           visits: 14,
+          dataCenterVisits: 0,
         },
         overview: { today: someVisits(2), current: someVisits(12), previous: null },
       }),
@@ -108,6 +133,7 @@ describe('reportText', () => {
       'Devices: none',
       'Browsers: none',
       'Countries: none',
+      'Data centers: none',
       'Web Vitals, p75 (samples): none',
       'Script errors: none',
       '404s: none',
@@ -307,7 +333,7 @@ describe('reportText', () => {
     );
   });
 
-  it("tells an application's coded visits, rolled up days, guesses and how well the guesses do", () => {
+  it("tells an application's coded visits, rolled up days, guesses and how well the guesses do, marking a visit from a data center", () => {
     const text = reportText(
       aReport({
         applications: someApplications({
@@ -333,6 +359,7 @@ describe('reportText', () => {
                 }),
                 aStory({
                   at: new Date('2026-10-30T11:00:00Z'),
+                  dataCenter: 'Microsoft Corporation',
                   pages: [{ demo: null, path: '/', seconds: 0, read: [], did: [] }],
                   interacted: false,
                 }),
@@ -340,7 +367,7 @@ describe('reportText', () => {
               days: [{ day: '2026-09-12', visits: 2, views: 5 }],
               guesses: [
                 {
-                  ...aStory(),
+                  ...aStory({ dataCenter: 'Amazon.com, Inc.' }),
                   confidence: 'medium',
                   candidates: [
                     { company: 'Xsolla', role: 'Backend Engineer' },
@@ -376,9 +403,9 @@ describe('reportText', () => {
         'Applications, every visit kept rather than only the period, times in Baku',
         'Xsolla, Backend Engineer, applied 2026-10-29, code memh, direct, variant base, sent',
         '  2026-10-30 14:00, from www.linkedin.com: / 40 s (read tuner) > tuner.najafov.dev/ 140 s (answered a question) > /cv 8 s, clicked CV PDF, asked "Do you know Go?", "What did you build with Kafka?"',
-        '  2026-10-30 15:00: / 0 s, no interaction',
+        '  2026-10-30 15:00 (data center: Microsoft Corporation): / 0 s, no interaction',
         '  UTC day 2026-09-12, rolled up: 2 visits, 5 page views',
-        '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00: / 30 s',
+        '  possibly Xsolla or Local, medium (Baku, AZ, 1 day after applying): 2026-10-30 16:00 (data center: Amazon.com, Inc.): / 30 s',
         'Guesses checked on 3 coded visits to the site: high 1 right, 0 wrong, 0 tied, medium 0 right, 1 wrong, 0 tied, low 0 right, 0 wrong, 0 tied, 1 not placed',
       ].join('\n'),
     );
