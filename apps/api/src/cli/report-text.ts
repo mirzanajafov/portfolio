@@ -1,5 +1,9 @@
 import type { Report } from '@portfolio/content/report';
-import { reportSections, type ReportPart } from '@portfolio/content/report-sections';
+import {
+  reportSections,
+  type ReportPart,
+  type ReportSection,
+} from '@portfolio/content/report-sections';
 
 function aligned(rows: readonly (readonly string[])[]): string[] {
   const widths = rows.reduce<number[]>(
@@ -27,14 +31,19 @@ function partLines(part: ReportPart): string[] {
     case 'line':
       return [`${margin(part)}${part.text}`];
     case 'application':
-    case 'none':
       return [part.text];
     case 'more':
       return [`${margin(part)}${part.text}, --all shows them`];
   }
 }
 
+function sectionLines(section: ReportSection): string[] {
+  return section.kind === 'none'
+    ? [section.text]
+    : [...partLines(section.opening), ...section.parts.flatMap(partLines)];
+}
+
 export function reportText(report: Report, { all }: { all: boolean }): string {
   const sections = reportSections(report, { all });
-  return `${sections.map((section) => section.flatMap(partLines).join('\n')).join('\n\n')}\n`;
+  return `${sections.map((section) => sectionLines(section).join('\n')).join('\n\n')}\n`;
 }

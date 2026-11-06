@@ -6,11 +6,13 @@ import { signOut } from '@/admin/actions';
 import { fetchApplications, fetchReport, sessionExpiry } from '@/admin/api';
 import { ApplicationList } from '@/admin/application-list';
 import { sessionCookie, tokenIn } from '@/admin/cookies';
-import { ReportView, titledSections } from '@/admin/report-view';
+import { ReportView } from '@/admin/report-view';
 import { pill } from '@/admin/styles';
 import { apiUrl } from '@/lib/forward-to-api';
 
 export const dynamic = 'force-dynamic';
+
+const applicationListId = 'application-list';
 
 const periods = [
   { days: 1, label: '1 day' },
@@ -46,10 +48,12 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   if (!expiresAt || !applications || !report) {
     notFound();
   }
-  const sections = titledSections(reportSections(report, { all: view.all }), ['application-list']);
+  const sections = reportSections(report, { all: view.all });
   const jumps = [
-    { id: 'application-list', label: 'Application list' },
-    ...sections.flatMap(({ heading }) => (heading ? [heading] : [])),
+    { id: applicationListId, label: 'Application list' },
+    ...sections.flatMap((section) =>
+      section.kind === 'titled' ? [{ id: section.id, label: section.label }] : [],
+    ),
   ];
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:px-8">
@@ -93,7 +97,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
       </header>
       <section className="flex flex-col gap-3 border-t border-line pt-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="application-list" className="scroll-mt-4 text-2xl font-semibold tracking-tight">
+          <h2 id={applicationListId} className="scroll-mt-4 text-2xl font-semibold tracking-tight">
             Applications
           </h2>
           <Link href="/admin/add" prefetch={false} className={pill}>

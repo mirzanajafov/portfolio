@@ -3,53 +3,9 @@ import Link from 'next/link';
 import { ScrollRegion } from './scroll-region';
 import { bodyCell, headCell } from './styles';
 
-type Heading = { id: string; text: string; label: string };
-
 type TextPart = Exclude<ReportPart, { kind: 'table' }>;
 
-export type TitledSection = { heading: Heading | null; parts: ReportPart[]; titledTable: boolean };
-
 const letter = /\p{L}/u;
-
-function titleOf([first]: ReportSection): string | null {
-  if (first?.kind === 'table') {
-    return first.rows[0]?.[0] ?? null;
-  }
-  return first?.kind === 'line' ? first.text : null;
-}
-
-function slugOf(label: string): string {
-  return label
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-|-$/g, '');
-}
-
-export function titledSections(
-  sections: readonly ReportSection[],
-  reservedIds: readonly string[],
-): TitledSection[] {
-  const taken = new Set(reservedIds);
-  return sections.map((section) => {
-    const text = titleOf(section);
-    if (text === null) {
-      return { heading: null, parts: section, titledTable: false };
-    }
-    const label = text.split(/[:,]/)[0]?.trim() ?? text;
-    const slug = slugOf(label);
-    let id = slug;
-    for (let next = 2; taken.has(id); next += 1) {
-      id = `${slug}-${String(next)}`;
-    }
-    taken.add(id);
-    const titledTable = section[0]?.kind === 'table';
-    return {
-      heading: { id, text, label },
-      parts: titledTable ? section : section.slice(1),
-      titledTable,
-    };
-  });
-}
 
 function Table({
   rows: [head = [], ...body],
@@ -114,42 +70,43 @@ function Text({ part }: { part: TextPart }) {
       );
     case 'more':
       return <p className={`text-sm text-muted ${part.indent ? 'pl-4' : ''}`}>{part.text}</p>;
-    case 'none':
-      return <p className="text-sm text-muted">{part.text}</p>;
   }
 }
 
-export function ReportView({ sections }: { sections: readonly TitledSection[] }) {
+function Titled({ section }: { section: Extract<ReportSection, { kind: 'titled' }> }) {
+  const { id, label, opening, parts } = section;
+  return (
+    <section className="mt-8 flex flex-col gap-3 border-t border-line pt-8 break-words first:mt-0 [&>h2]:max-w-[75ch] [&>p]:max-w-[75ch]">
+      <h2 id={id} className="scroll-mt-4 text-lg font-semibold">
+        {opening.kind === 'line' ? opening.text : opening.rows[0]?.[0]}
+      </h2>
+      {opening.kind === 'table' && <Table rows={opening.rows} label={label} titled />}
+      {parts.map((part, position) =>
+        part.kind === 'table' ? (
+          <Table
+            key={position}
+            rows={part.rows}
+            label={`${label}, ${part.rows[0]?.[0] ?? ''}`}
+            titled={false}
+          />
+        ) : (
+          <Text key={position} part={part} />
+        ),
+      )}
+    </section>
+  );
+}
+
+export function ReportView({ sections }: { sections: readonly ReportSection[] }) {
   return (
     <div>
-      {sections.map(({ heading, parts, titledTable }, index) =>
-        heading === null ? (
-          <section key={index} className="mt-3 [&>p]:max-w-[75ch]">
-            {parts.map((part, position) =>
-              part.kind === 'table' ? null : <Text key={position} part={part} />,
-            )}
-          </section>
+      {sections.map((section, index) =>
+        section.kind === 'titled' ? (
+          <Titled key={section.id} section={section} />
         ) : (
-          <section
-            key={index}
-            className="mt-8 flex flex-col gap-3 border-t border-line pt-8 break-words first:mt-0 [&>h2]:max-w-[75ch] [&>p]:max-w-[75ch]"
-          >
-            <h2 id={heading.id} className="scroll-mt-4 text-lg font-semibold">
-              {heading.text}
-            </h2>
-            {parts.map((part, position) =>
-              part.kind === 'table' ? (
-                <Table
-                  key={position}
-                  rows={part.rows}
-                  label={heading.label}
-                  titled={titledTable && position === 0}
-                />
-              ) : (
-                <Text key={position} part={part} />
-              ),
-            )}
-          </section>
+          <p key={index} className="mt-3 max-w-[75ch] text-sm text-muted">
+            {section.text}
+          </p>
         ),
       )}
     </div>

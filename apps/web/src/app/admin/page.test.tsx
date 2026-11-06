@@ -60,6 +60,19 @@ describe('admin page', () => {
     );
   });
 
+  it('points every jump link at one element on the page, and gives no two the same anchor', async () => {
+    const { container } = render(await open());
+
+    const hrefs = within(screen.getByRole('navigation', { name: 'Sections' }))
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href') ?? '');
+    expect(hrefs).not.toHaveLength(0);
+    for (const href of hrefs) {
+      expect(container.querySelectorAll(`[id="${href.slice(1)}"]`)).toHaveLength(1);
+    }
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
   it('says until when the session lasts in Baku time, and shows the report under it', async () => {
     render(await open());
 
@@ -71,7 +84,7 @@ describe('admin page', () => {
         'Visits in the last 7 full days and today: 2026-10-23 to 2026-10-30 UTC, today until 2026-10-30 16:00 Baku time',
       ),
     ).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: 'Overview' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
   });
 
   it('leaves the default period to the API and marks the period the report covers', async () => {
