@@ -5,7 +5,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
   HttpStatus,
   NotFoundException,
   Param,
@@ -13,11 +12,9 @@ import {
   Post,
   PreconditionFailedException,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import type { ApplicationPage, ApplicationView } from '@portfolio/content/applications';
-import type { Response } from 'express';
 import {
   applicationEditSchema,
   codeSchema,
@@ -31,6 +28,7 @@ import { ApplicationsService } from '../applications/applications.service.js';
 import { dayOf, dayOrNull } from '../common/days.js';
 import { ZodPipe } from '../common/zod.pipe.js';
 import type { AdminSession, Application } from '../generated/prisma/client.js';
+import { TooManyRequestsException } from '../rate-limit/too-many-requests.filter.js';
 import { AdminSessionsService } from './admin-sessions.service.js';
 import { SignedInGuard, type SignedInRequest } from './signed-in.guard.js';
 
@@ -98,9 +96,8 @@ export class AdminApplicationsController {
   async add(
     @Req() { adminSession }: SignedInRequest,
     @Body(new ZodPipe(newApplicationSchema)) application: NewApplication,
-    @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
-    await this.admitWrite(adminSession, res);
+    await this.admitWrite(adminSession);
     const outcome = await this.applications.add(application);
     if (outcome.kind === 'code taken') {
       throw new ConflictException(outcome.reason);
@@ -116,9 +113,8 @@ export class AdminApplicationsController {
     @Req() { adminSession }: SignedInRequest,
     @Param('code', new ZodPipe(codeSchema)) code: string,
     @Body(new ZodPipe(applicationEditSchema)) edit: ApplicationEdit,
-    @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
-    await this.admitWrite(adminSession, res);
+    await this.admitWrite(adminSession);
     const outcome = await this.applications.edit(code, edit);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
@@ -144,9 +140,8 @@ export class AdminApplicationsController {
     @Req() { adminSession }: SignedInRequest,
     @Param('code', new ZodPipe(codeSchema)) code: string,
     @Body(new ZodPipe(undoSchema)) expected: Undo,
-    @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationView> {
-    await this.admitWrite(adminSession, res);
+    await this.admitWrite(adminSession);
     const outcome = await this.applications.undo(code, expected);
     if (outcome.kind === 'missing') {
       throw new NotFoundException();
@@ -160,14 +155,10 @@ export class AdminApplicationsController {
     return viewOf(outcome.application);
   }
 
-  private async admitWrite(session: AdminSession, res: Response): Promise<void> {
+  private async admitWrite(session: AdminSession): Promise<void> {
     const verdict = await this.sessions.admitWrite(session);
     if (!verdict.allowed) {
-      res.set('Retry-After', String(verdict.retryAfterSeconds));
-      throw new HttpException(
-        { message: 'too many changes', retryAfterSeconds: verdict.retryAfterSeconds },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new TooManyRequestsException('too many changes', verdict.retryAfterSeconds);
     }
   }
 }
