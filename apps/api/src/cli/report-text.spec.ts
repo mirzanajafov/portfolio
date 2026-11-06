@@ -56,6 +56,7 @@ describe('reportText', () => {
     expect(text).toMatch(/^Amazon\.com, Inc\. +6 +7 +0$/m);
     expect(text).toMatch(/^Google LLC +3 +3 +-$/m);
     expect(text).toContain('Data-center visits are told apart only within the last 30 days.');
+    expect(reportText(aReport(), { all: false })).not.toContain('told apart');
   });
 
   it('puts today, the full days and the days before them side by side', () => {

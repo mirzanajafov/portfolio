@@ -366,20 +366,27 @@ function audience({ audience, period }: Report, all: boolean): ReportSection[] {
 }
 
 function dataCenters({ dataCenters }: Report, all: boolean): ReportSection[] {
-  return [
-    section(
-      'Data centers',
-      ['visits', 'page views', 'median s'],
-      dataCenters.map(({ owner, visits, pageViews, medianSeconds }) => [
-        owner,
-        String(visits),
-        String(pageViews),
-        optional(medianSeconds),
-      ]),
-      all,
-    ),
-    [line(`Data-center visits are told apart only within the last ${String(analyticsDays)} days.`)],
-  ];
+  const table = section(
+    'Data centers',
+    ['visits', 'page views', 'median s'],
+    dataCenters.map(({ owner, visits, pageViews, medianSeconds }) => [
+      owner,
+      String(visits),
+      String(pageViews),
+      optional(medianSeconds),
+    ]),
+    all,
+  );
+  return dataCenters.length === 0
+    ? [table]
+    : [
+        table,
+        [
+          line(
+            `Data-center visits are told apart only within the last ${String(analyticsDays)} days.`,
+          ),
+        ],
+      ];
 }
 
 function vital(value: Vital | null, shown: (p75: number) => string): string {
